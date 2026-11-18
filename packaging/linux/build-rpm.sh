@@ -117,7 +117,7 @@ priority: "optional"
 maintainer: "TundraLab <Gustavo Henrique Novaes Gomes>"
 vendor: "TundraLab"
 homepage: "https://github.com/TundraLab/TundraDrive"
-license: "MIT"
+license: "Proprietary"
 description: |
   TundraDrive by TundraLab - Cliente nativo do Google Drive para Linux.
   Sincronizacao bidirecional, backup unidirecional, gerenciador multimidia e API REST local.
