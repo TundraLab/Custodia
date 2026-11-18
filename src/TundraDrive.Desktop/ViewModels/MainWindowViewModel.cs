@@ -15,7 +15,7 @@ namespace TundraDrive.Desktop.ViewModels;
 
 public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
-    public const string RepositoryUrl = "https://github.com/TundraLab/Tundra-Nuvem";
+    public const string RepositoryUrl = "https://github.com/TundraLab/TundraDrive";
 
     private readonly IDriveSyncService _syncService;
     private readonly IEmbeddedApiServer _apiServer;
