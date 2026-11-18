@@ -186,6 +186,20 @@
                     Command="{Binding AddAccountFromSettingsCommand}" />
           </Grid>
 
+          <Border Background="#13171F"
+                  BorderBrush="#334155"
+                  BorderThickness="1"
+                  CornerRadius="6"
+                  Padding="12,10"
+                  IsVisible="{Binding IsAddAccountPromptVisible}">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+              <TextBlock Grid.Column="0" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" Text="{Binding Loc.AddAccountPromptTitle}" />
+              <Button Grid.Column="1" Classes="PrimaryAction" Padding="10,5" FontSize="12" Content="{Binding Loc.AddAccountImportNewJson}" Command="{Binding ImportJsonAndAddAccountFromSettingsCommand}" />
+              <Button Grid.Column="2" Classes="SecondaryAction" Padding="10,5" FontSize="12" Content="{Binding Loc.AddAccountUseCurrentJson}" Command="{Binding ContinueWithCurrentJsonFromSettingsCommand}" />
+              <Button Grid.Column="3" Classes="SecondaryAction" Padding="8,5" FontSize="12" Content="✕" Command="{Binding CancelAddAccountPromptFromSettingsCommand}" />
+            </Grid>
+          </Border>
+
           <!-- Cartão de status do arquivo credentials.json (revogação unitária) -->
           <Border Classes="FlatRow" Background="#13171F" Padding="14,12">
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">

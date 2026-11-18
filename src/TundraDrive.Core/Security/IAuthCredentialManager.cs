@@ -6,8 +6,10 @@ public interface IAuthCredentialManager
 {
     string CredentialsFilePath { get; }
     string TokensDirectoryPath { get; }
-    bool CredentialsFileExists();
-    Task ImportCredentialsFileAsync(string sourceJsonPath, CancellationToken cancellationToken = default);
+    bool CredentialsFileExists(string? userKey = null);
+    Task ImportCredentialsFileAsync(string sourceJsonPath, string? userKey = null, CancellationToken cancellationToken = default);
+    Task CopyCredentialsAsync(string sourceUserKey, string targetUserKey, CancellationToken cancellationToken = default);
+    void DeleteAccountCredentialsFile(string userKey);
     Task<bool> HasStoredTokenAsync(string userKey = "default");
     Task<UserCredential> AuthorizeInteractiveAsync(string userKey = "default", CancellationToken cancellationToken = default);
     Task<UserCredential?> TryRestoreSilentAsync(string userKey = "default", CancellationToken cancellationToken = default);

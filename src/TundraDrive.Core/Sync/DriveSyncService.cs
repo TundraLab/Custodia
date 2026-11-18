@@ -137,6 +137,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
     public async Task<DriveAccount> ConnectAccountAsync(
         bool addNewAccount = false,
+        string? customCredentialsJsonPath = null,
         CancellationToken cancellationToken = default)
     {
         var existingAccounts = await _repository.GetAllAccountsAsync(cancellationToken);
@@ -144,7 +145,25 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             ? "default"
             : $"acc_{Guid.NewGuid():N}"[..16];
 
-        var account = await _driveClient.ConnectInteractiveAsync(candidateKey, cancellationToken);
+        var hasCustomJson = !string.IsNullOrWhiteSpace(customCredentialsJsonPath);
+        if (hasCustomJson)
+        {
+            await _authManager.ImportCredentialsFileAsync(customCredentialsJsonPath!, candidateKey, cancellationToken);
+        }
+
+        DriveAccount account;
+        try
+        {
+            account = await _driveClient.ConnectInteractiveAsync(candidateKey, cancellationToken);
+        }
+        catch
+        {
+            if (hasCustomJson)
+            {
+                _authManager.DeleteAccountCredentialsFile(candidateKey);
+            }
+            throw;
+        }
 
         var duplicate = existingAccounts.FirstOrDefault(a =>
             !string.Equals(a.Id, candidateKey, StringComparison.Ordinal) &&
@@ -153,6 +172,11 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
         if (duplicate is not null)
         {
+            if (hasCustomJson)
+            {
+                await _authManager.CopyCredentialsAsync(candidateKey, duplicate.Id, cancellationToken);
+                _authManager.DeleteAccountCredentialsFile(candidateKey);
+            }
             await _authManager.CopyTokenAsync(candidateKey, duplicate.Id, cancellationToken);
             await _authManager.DeleteLocalTokenAsync(candidateKey, cancellationToken);
             account.Id = duplicate.Id;

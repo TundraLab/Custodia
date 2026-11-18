@@ -135,6 +135,9 @@ public sealed partial class AccountsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isConnecting;
 
+    [ObservableProperty]
+    private bool _isAddAccountPromptVisible;
+
     public Func<Task<string?>>? PickCredentialsFileCallback { get; set; }
     public Func<Uri, Task>? OpenExternalUriCallback { get; set; }
     public Func<string, Task>? CopyTextCallback { get; set; }
@@ -391,14 +394,54 @@ public sealed partial class AccountsViewModel : ViewModelBase
     private Task ConnectAsync() => ConnectInternalAsync(addNewAccount: false);
 
     [RelayCommand(AllowConcurrentExecutions = true)]
-    private Task AddAccountAsync() => ConnectInternalAsync(addNewAccount: true);
-
-    private async Task ConnectInternalAsync(bool addNewAccount)
+    private async Task AddAccountAsync()
     {
-        _connectCts?.Cancel();
-
         RefreshCredentialDiagnostics();
         if (!CredentialsFilePresent)
+        {
+            await ImportJsonAndAddAccountAsync();
+            return;
+        }
+
+        IsAddAccountPromptVisible = !IsAddAccountPromptVisible;
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task ImportJsonAndAddAccountAsync()
+    {
+        IsAddAccountPromptVisible = false;
+        if (PickCredentialsFileCallback is null)
+        {
+            return;
+        }
+
+        var selectedFile = await PickCredentialsFileCallback.Invoke();
+        if (string.IsNullOrWhiteSpace(selectedFile))
+        {
+            StatusMessage = Loc.Text("MissingCredsPromptPicker");
+            return;
+        }
+
+        await ConnectInternalAsync(addNewAccount: true, customCredentialsJsonPath: selectedFile);
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task ContinueWithCurrentJsonAsync()
+    {
+        IsAddAccountPromptVisible = false;
+        await ConnectInternalAsync(addNewAccount: true);
+    }
+
+    [RelayCommand]
+    private void CancelAddAccountPrompt() => IsAddAccountPromptVisible = false;
+
+    private async Task ConnectInternalAsync(bool addNewAccount, string? customCredentialsJsonPath = null)
+    {
+        _connectCts?.Cancel();
+        IsAddAccountPromptVisible = false;
+
+        RefreshCredentialDiagnostics();
+        if (string.IsNullOrWhiteSpace(customCredentialsJsonPath) && !CredentialsFilePresent)
         {
             await ImportCredentialsAsync();
             RefreshCredentialDiagnostics();
@@ -417,7 +460,7 @@ public sealed partial class AccountsViewModel : ViewModelBase
         StatusMessage = Loc.Text("OpeningBrowserAuth");
         try
         {
-            var account = await _syncService.ConnectAccountAsync(addNewAccount, localCts.Token);
+            var account = await _syncService.ConnectAccountAsync(addNewAccount, customCredentialsJsonPath, localCts.Token);
             ApplyAccount(account);
             RefreshSavedAccountsList();
             StatusMessage = Loc.Format("ConnectedAsFmt", account.EmailAddress);

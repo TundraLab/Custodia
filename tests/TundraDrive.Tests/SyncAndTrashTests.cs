@@ -1,10 +1,36 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using TundraDrive.Core.Drive;
+using TundraDrive.Core.Security;
 using TundraDrive.Core.Sync;
 
 namespace TundraDrive.Tests;
 
 public sealed class SyncAndTrashTests
 {
+    [Fact]
+    public void AuthCredentialManager_ResolvesPerAccountCredentialsPathWhenPresent()
+    {
+        var mgr = new AuthCredentialManager(NullLogger<AuthCredentialManager>.Instance);
+        var defaultResolved = mgr.ResolveCredentialsFilePath("acc_nonexistent_999");
+        Assert.Equal(mgr.CredentialsFilePath, defaultResolved);
+
+        var perAccountPath = mgr.GetAccountCredentialsFilePath("acc_test_isolated");
+        Directory.CreateDirectory(Path.GetDirectoryName(perAccountPath)!);
+        try
+        {
+            File.WriteAllText(perAccountPath, "{}");
+            Assert.Equal(perAccountPath, mgr.ResolveCredentialsFilePath("acc_test_isolated"));
+            mgr.DeleteAccountCredentialsFile("acc_test_isolated");
+            Assert.False(File.Exists(perAccountPath));
+        }
+        finally
+        {
+            if (File.Exists(perAccountPath))
+            {
+                File.Delete(perAccountPath);
+            }
+        }
+    }
     [Theory]
     [InlineData("/home/user/Docs/arquivo com espaço.pdf", "/home/user/Docs/arquivo%20com%20espa%C3%A7o.pdf")]
     [InlineData("/home/user/file#1.txt", "/home/user/file%231.txt")]

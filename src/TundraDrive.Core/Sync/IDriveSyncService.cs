@@ -20,7 +20,7 @@ public interface IDriveSyncService
     void ReportNetworkFailure();
 
     Task InitializeAsync(CancellationToken cancellationToken = default);
-    Task<DriveAccount> ConnectAccountAsync(bool addNewAccount = false, CancellationToken cancellationToken = default);
+    Task<DriveAccount> ConnectAccountAsync(bool addNewAccount = false, string? customCredentialsJsonPath = null, CancellationToken cancellationToken = default);
     Task<DriveAccount?> SwitchAccountAsync(string accountId, CancellationToken cancellationToken = default);
     Task DisconnectAccountAsync(string? accountId = null, CancellationToken cancellationToken = default);
     Task RevokeCredentialsFileAsync(CancellationToken cancellationToken = default);

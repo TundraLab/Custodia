@@ -210,6 +210,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(CanRevokeCredentialsJson))]
     private bool _isCredentialsBusy;
 
+    [ObservableProperty]
+    private bool _isAddAccountPromptVisible;
+
     public string CredentialsStatusBadgeText => HasCredentialsJson
         ? Loc.Text("CredentialsActiveBadge")
         : Loc.Text("CredentialsMissingBadge");
@@ -435,18 +438,52 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private async Task AddAccountFromSettingsAsync()
     {
+        if (!_authManager.CredentialsFileExists())
+        {
+            await ImportJsonAndAddAccountFromSettingsAsync();
+            return;
+        }
+
+        IsAddAccountPromptVisible = !IsAddAccountPromptVisible;
+    }
+
+    [RelayCommand]
+    private async Task ImportJsonAndAddAccountFromSettingsAsync()
+    {
+        IsAddAccountPromptVisible = false;
+        if (PickCredentialsFileCallback is null)
+        {
+            return;
+        }
+
+        var path = await PickCredentialsFileCallback.Invoke();
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
         IsCredentialsBusy = true;
         try
         {
-            if (!_authManager.CredentialsFileExists())
-            {
-                await ImportCredentialsJsonAsync();
-                if (!_authManager.CredentialsFileExists())
-                {
-                    return;
-                }
-            }
+            await _syncService.ConnectAccountAsync(addNewAccount: true, customCredentialsJsonPath: path);
+            RefreshCredentialsAndAccounts();
+        }
+        catch
+        {
+        }
+        finally
+        {
+            IsCredentialsBusy = false;
+        }
+    }
 
+    [RelayCommand]
+    private async Task ContinueWithCurrentJsonFromSettingsAsync()
+    {
+        IsAddAccountPromptVisible = false;
+        IsCredentialsBusy = true;
+        try
+        {
             await _syncService.ConnectAccountAsync(addNewAccount: true);
             RefreshCredentialsAndAccounts();
         }
@@ -458,6 +495,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
             IsCredentialsBusy = false;
         }
     }
+
+    [RelayCommand]
+    private void CancelAddAccountPromptFromSettings() => IsAddAccountPromptVisible = false;
 
     [RelayCommand]
     private async Task ImportCredentialsJsonAsync()
