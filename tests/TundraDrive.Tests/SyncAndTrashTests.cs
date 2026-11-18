@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using TundraDrive.Api;
 using TundraDrive.Core.Drive;
 using TundraDrive.Core.Security;
 using TundraDrive.Core.Sync;
@@ -7,6 +8,35 @@ namespace TundraDrive.Tests;
 
 public sealed class SyncAndTrashTests
 {
+    [Theory]
+    [InlineData("../../evil.txt", ".._.._evil.txt")]
+    [InlineData("..", "_")]
+    [InlineData(".", "_")]
+    [InlineData("a/b\\c\0d.pdf", "a_b_c_d.pdf")]
+    public void SanitizeRemoteSegment_PreventsTraversalCharacters(string rawName, string expected)
+    {
+        Assert.Equal(expected, DriveSyncService.SanitizeRemoteSegment(rawName));
+    }
+
+    [Fact]
+    public void ResolveSafeLocalPath_BlocksParentDirectoryEscape()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "tundra_root_test");
+        Assert.Throws<UnauthorizedAccessException>(() => DriveSyncService.ResolveSafeLocalPath(root, "../../etc/passwd"));
+
+        var safe = DriveSyncService.ResolveSafeLocalPath(root, "sub/doc.pdf");
+        Assert.StartsWith(Path.GetFullPath(root), safe);
+    }
+
+    [Theory]
+    [InlineData("127.0.0.1:5080", null, true)]
+    [InlineData("localhost:5080", "http://127.0.0.1:3000", true)]
+    [InlineData("127.0.0.1:5080", "https://evil.example", false)]
+    [InlineData("evil.example:5080", null, false)]
+    public void EmbeddedApiServer_BlocksCrossOriginCsrfAndDnsRebinding(string? host, string? origin, bool expected)
+    {
+        Assert.Equal(expected, EmbeddedApiServer.IsAllowedLoopbackRequest(host, origin));
+    }
     [Fact]
     public void AuthCredentialManager_ResolvesPerAccountCredentialsPathWhenPresent()
     {
