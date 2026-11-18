@@ -73,11 +73,9 @@ Cada pasta mapeada pode operar em **Espelho Bidirecional (`PC <-> Drive`)** ou *
 
 ## Instalação
 
-A forma recomendada e principal de instalar o TundraDrive no Linux é pelo **Instalador Proprietário TundraDrive by TundraLab**, que gerencia os formatos **`.AppImage`** e **`.rpm`**, cria atalhos no menu, registra ícones (GNOME, COSMIC e KDE Plasma 5/6) e configura a inicialização automática.
+### 1. Instalador Proprietário (`TundraDrive by TundraLab` - Recomendado)
 
-### Opção 1 (Principal): Instalador Proprietário (`TundraDrive by TundraLab`)
-
-Baixe e execute o instalador oficial (em desktop Linux `x86_64`, ele baixa os recursos necessários e abre automaticamente a interface gráfica acima; em servidores/SSH ou passando `--cli`, abre o menu interativo no terminal):
+Abra o terminal e execute os 3 comandos abaixo. Em desktop Linux (`x86_64`), ele abre automaticamente a **interface gráfica do instalador** para escolher entre **`.AppImage`** (usuário local) ou **`.rpm`** (Fedora/sistema), criar ícones e ativar a inicialização automática:
 
 ```bash
 curl -fsSL https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-Installer-2.6.0-x86_64.sh -o install-tundradrive.sh
@@ -85,47 +83,43 @@ chmod +x install-tundradrive.sh
 ./install-tundradrive.sh
 ```
 
-Atalhos diretos via terminal pelo instalador:
+### 2. Baixar pacote direto pelo terminal (opcional)
 
-```bash
-./install-tundradrive.sh --appimage   # Baixa e instala o .AppImage integrado ao usuário
-./install-tundradrive.sh --rpm        # Baixa e instala o .rpm no sistema (Fedora / RHEL)
-./install-tundradrive.sh --cli        # Abre o menu interativo no terminal
-./TundraDrive-2.6.0-x86_64.AppImage --installer  # Abre a janela do instalador direto do AppImage
-```
-
-### Opção 2: Baixar pacotes avulsos pelo terminal (`.AppImage`, `.rpm` e `.deb`)
-
-- **AppImage (`x86_64`, independente, sem instalar `.NET`):**
+- **AppImage (`x86_64`, roda direto sem instalar):**
   ```bash
   curl -fLO https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-2.6.0-x86_64.AppImage
   chmod +x TundraDrive-2.6.0-x86_64.AppImage
   ./TundraDrive-2.6.0-x86_64.AppImage
   ```
-  *(Em sistemas sem FUSE habilitado, adicione `--appimage-extract-and-run`.)*
-
 - **Fedora / RHEL / openSUSE (`.rpm`):**
   ```bash
   curl -fLO https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-2.6.0-1.x86_64.rpm
   sudo dnf install -y ./TundraDrive-2.6.0-1.x86_64.rpm
   ```
 
-- **Pop!_OS / Ubuntu / Debian (`.deb`):**
+<details>
+<summary>Opções avançadas (flags do instalador, pacote .deb, mídia e ícone no GNOME)</summary>
+
+- **Atalhos do `install-tundradrive.sh`:**
+  - `./install-tundradrive.sh --appimage`: baixa e instala o `.AppImage` sem pedir confirmação.
+  - `./install-tundradrive.sh --rpm`: baixa e instala o `.rpm` pelo terminal.
+  - `./install-tundradrive.sh --cli`: abre o menu de texto no terminal.
+  - `./install-tundradrive.sh --uninstall`: remove a instalação local ou `.rpm`.
+- **AppImage sem FUSE ou abrir o instalador direto pelo AppImage:**
+  - `./TundraDrive-2.6.0-x86_64.AppImage --installer`
+  - `./TundraDrive-2.6.0-x86_64.AppImage --appimage-extract-and-run`
+- **Pop!_OS / Ubuntu / Debian (`.deb`):** `sudo apt install ./TundraDrive-*.deb`
+- **Pacotes opcionais para pré-visualização completa (PDF, Office, áudio e vídeo):**
+  - Fedora: `sudo dnf install poppler-utils ghostscript ffmpeg libreoffice ImageMagick`
+  - Pop!_OS / Ubuntu: `sudo apt install poppler-utils ghostscript ffmpeg libreoffice imagemagick`
+- **Ícone da nuvem na barra superior do GNOME Workstation** *(no KDE Plasma e Pop!_OS já funciona nativamente)*:
   ```bash
-  sudo apt install ./TundraDrive-*.deb
+  sudo dnf install gnome-shell-extension-appindicator
+  gsettings set org.gnome.shell enabled-extensions "['appindicatorsupport@rgcjonas.gmail.com']"
   ```
+  *(Faça logout e login no GNOME após habilitar pela primeira vez.)*
 
-### Extras opcionais do sistema
-
-1. **Pré-visualização completa** de PDF, documentos Office, áudio, vídeo e miniaturas:
-   - **Fedora:** `sudo dnf install poppler-utils ghostscript ffmpeg libreoffice ImageMagick`
-   - **Pop!_OS / Ubuntu / Debian:** `sudo apt install poppler-utils ghostscript ffmpeg libreoffice imagemagick`
-2. **Ícone na barra superior do GNOME Workstation** (no KDE Plasma e no Pop!_OS o ícone da bandeja já aparece nativamente):
-   ```bash
-   sudo dnf install gnome-shell-extension-appindicator
-   gsettings set org.gnome.shell enabled-extensions "['appindicatorsupport@rgcjonas.gmail.com']"
-   ```
-   *(Faça logout e login no GNOME após habilitar a extensão pela primeira vez.)*
+</details>
 
 ## Como configurar o Google Drive (`credentials.json`)
 
