@@ -101,6 +101,14 @@ Se escolher **Ajude-me a escolher**, marque **Google Drive API** e **Dados do us
 
 ![Tipo de credencial Dados do usuário](docs/images/03-tipo-credencial-dados-usuario.png)
 
+3. Se aparecer o aviso *"Para criar um ID do cliente OAuth, primeiro é preciso configurar sua tela de permissão"*, clique em **Configurar tela de consentimento**:
+
+![Configurar tela de consentimento](docs/images/02b-configurar-tela-consentimento.png)
+
+4. Na tela seguinte (**Branding**), clique em **Vamos começar** para abrir a configuração:
+
+![Tela inicial do Google Auth Platform Vamos começar](docs/images/02c-branding-vamos-comecar.png)
+
 ### Passo 3: Configurar a Tela de permissão OAuth (primeira vez do projeto)
 Se for a primeira credencial do projeto, o Google pede a configuração da tela de consentimento (**Google Auth Platform**):
 1. Em **Informações do app**, coloque o nome (por exemplo, `TundraDrive`) e seu e-mail de suporte. Clique em **Avançar**.
@@ -122,13 +130,18 @@ Enquanto o aplicativo estiver em modo **Testando** (*Testing*), o Google bloquei
 ![Adicionar usuários de teste](docs/images/06-adicionar-usuarios-modal.png)
 
 ### Passo 5: Selecionar "App para computador" e baixar o JSON
-1. No menu esquerdo, clique em **Clientes** (ou volte em **APIs e serviços > Credenciais > + Criar credenciais > ID do cliente OAuth**).
+1. No menu esquerdo, clique em **Clientes** e depois em **+ Criar cliente**:
+
+![Menu Clientes e botão Criar cliente](docs/images/07a-clientes-criar-cliente.png)
+
 2. Em **Tipo de aplicativo**, selecione **App para computador** (*Desktop app*):
 
 ![Criar ID do cliente do OAuth](docs/images/07-criar-cliente-oauth.png)
 
 3. Coloque `TundraDrive` no campo **Nome** e clique em **Criar**.
-4. Na janela que abrir, clique em **Fazer o download do JSON** (o arquivo baixado terá um nome como `client_secret_...json`).
+4. Na janela **Cliente OAuth criado**, clique em **Baixar o JSON** (o arquivo baixado terá um nome como `client_secret_...json`):
+
+![Janela Cliente OAuth criado com botão Baixar o JSON](docs/images/07b-cliente-oauth-criado-json.png)
 
 ### Passo 6: Importar no TundraDrive e conectar
 1. Abra o TundraDrive e olhe o cartão de conta no rodapé da barra lateral esquerda.
