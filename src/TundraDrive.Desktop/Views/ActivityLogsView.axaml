@@ -1,0 +1,113 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TundraDrive.Desktop.ViewModels"
+             x:Class="TundraDrive.Desktop.Views.ActivityLogsView"
+             x:DataType="vm:ActivityLogsViewModel">
+
+  <!-- Aba de logs de atividade -->
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="24" RowSpacing="14">
+    <Grid Grid.Row="0" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="8" ColumnSpacing="12">
+      <TextBlock Grid.Row="0" Grid.Column="0" Classes="PageTitle" VerticalAlignment="Center" Text="{Binding Loc.ActivityLogsTitle}" />
+
+      <WrapPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+        <Button Classes="SecondaryAction"
+                Margin="0,0,8,4"
+                Content="{Binding Loc.OpenLocalFolderMenu}"
+                IsEnabled="{Binding CanOpenSelectedTarget}"
+                Command="{Binding OpenSelectedTargetFolderCommand}" />
+        <Button Classes="SecondaryAction"
+                Margin="0,0,8,4"
+                Content="{Binding Loc.RefreshButton}"
+                Command="{Binding RefreshLogsCommand}" />
+        <Button Classes="DangerAction"
+                Margin="0,0,0,4"
+                Content="{Binding Loc.ClearLogsButton}"
+                Command="{Binding ClearLogsCommand}" />
+      </WrapPanel>
+    </Grid>
+
+    <Grid Grid.Row="1" ColumnDefinitions="180,*,Auto" ColumnSpacing="10">
+      <ComboBox Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                ItemsSource="{Binding SeverityFilterOptions}"
+                SelectedIndex="{Binding SelectedSeverityFilterIndex}" />
+
+      <TextBox Grid.Column="1"
+               Watermark="{Binding Loc.FilterLogsWatermark}"
+               Text="{Binding SearchText}"
+               KeyDown="OnSearchBoxKeyDown" />
+
+      <Button Grid.Column="2"
+              Classes="SecondaryAction"
+              Content="{Binding Loc.ApplyFilterButton}"
+              Command="{Binding RefreshLogsCommand}" />
+    </Grid>
+
+    <Border Grid.Row="2" Classes="SurfaceCard" Padding="0">
+      <Grid>
+        <ListBox Classes="FlatRowList"
+                 ItemsSource="{Binding Logs}"
+                 SelectedItem="{Binding SelectedLog}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ActivityLogItemViewModel">
+              <Border Padding="14,10" Background="Transparent">
+                <Border.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="{Binding CopyMessageLabel}" Command="{Binding CopyMessageCommand}" />
+                    <MenuItem Header="{Binding CopyTargetLabel}"
+                              IsVisible="{Binding HasTargetPath}"
+                              Command="{Binding CopyTargetCommand}" />
+                    <MenuItem Header="{Binding OpenFolderLabel}"
+                              IsVisible="{Binding HasTargetPath}"
+                              Command="{Binding OpenTargetFolderCommand}" />
+                  </ContextMenu>
+                </Border.ContextMenu>
+                <StackPanel Spacing="4">
+                  <WrapPanel Orientation="Horizontal">
+                    <TextBlock Classes="MutedMeta"
+                               FontSize="11.5"
+                               Margin="0,0,10,0"
+                               VerticalAlignment="Center"
+                               Text="{Binding TimestampDisplay}" />
+                    <TextBlock FontSize="11.5"
+                               FontWeight="SemiBold"
+                               Margin="0,0,10,0"
+                               VerticalAlignment="Center"
+                               Foreground="{Binding AccentBrush}"
+                               Text="{Binding SeverityLabel}" />
+                    <TextBlock Classes="MutedMeta"
+                               FontSize="11.5"
+                               FontFamily="monospace"
+                               VerticalAlignment="Center"
+                               Text="{Binding Action}" />
+                  </WrapPanel>
+
+                  <TextBlock FontSize="13"
+                             Foreground="{StaticResource TundraTextPrimary}"
+                             TextWrapping="Wrap"
+                             Text="{Binding Message}" />
+
+                  <TextBlock Classes="MutedMeta"
+                             FontFamily="monospace"
+                             FontSize="11.5"
+                             Foreground="#9AA4B2"
+                             TextWrapping="Wrap"
+                             IsVisible="{Binding HasTargetPath}"
+                             Text="{Binding TargetPath}" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+
+        <TextBlock VerticalAlignment="Center"
+                   HorizontalAlignment="Center"
+                   Classes="Subtitle"
+                   Text="{Binding Loc.NoLogsHint}"
+                   IsVisible="{Binding HasNoLogs}" />
+      </Grid>
+    </Border>
+
+    <TextBlock Grid.Row="3" Classes="MutedMeta" Text="{Binding StatusSummary}" />
+  </Grid>
+</UserControl>

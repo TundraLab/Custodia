@@ -1,0 +1,38 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TundraDrive.Desktop.ViewModels"
+             xmlns:views="using:TundraDrive.Desktop.Views"
+             x:Class="TundraDrive.Desktop.App"
+             Name="TundraDrive"
+             RequestedThemeVariant="Dark">
+
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://TundraDrive/Styles/TundraTheme.axaml" />
+  </Application.Styles>
+
+  <Application.DataTemplates>
+    <DataTemplate DataType="vm:AccountsViewModel">
+      <views:AccountsView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:FileHubViewModel">
+      <views:FileHubView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:SyncFoldersViewModel">
+      <views:SyncFoldersView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:TransferQueueViewModel">
+      <views:TransferQueueView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:ActivityLogsViewModel">
+      <views:ActivityLogsView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:SettingsViewModel">
+      <views:SettingsView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:AboutViewModel">
+      <views:AboutView />
+    </DataTemplate>
+  </Application.DataTemplates>
+
+</Application>

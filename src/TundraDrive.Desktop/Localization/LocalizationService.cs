@@ -1,0 +1,1029 @@
+using System.Globalization;
+using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace TundraDrive.Desktop.Localization;
+
+public sealed class LocalizationService : ObservableObject, ILocalizationService
+{
+    private static readonly IReadOnlyDictionary<string, string> PtBr = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["WindowTitle"] = "TundraDrive",
+        ["BrandSubtitle"] = "Sincronização Local Google Drive",
+        ["NavAccounts"] = "Contas",
+        ["NavFileHub"] = "Meu Driver",
+        ["NavSyncFolders"] = "Pastas de Sincronização",
+        ["NavTransferQueue"] = "Fila de Transferências",
+        ["NavActivityLogs"] = "Logs de Atividade",
+        ["NavSettings"] = "Configurações",
+        ["NavAbout"] = "Sobre",
+
+        ["AccountsTitle"] = "Contas",
+        ["ConnectGoogleButton"] = "Conectar Conta Google",
+        ["CancelAuthButton"] = "Cancelar Login",
+        ["ImportCredentialsButton"] = "Importar credentials.json",
+        ["RefreshQuotaButton"] = "Atualizar Cota",
+        ["DisconnectButton"] = "Desconectar",
+        ["StorageLabel"] = "Armazenamento no Google Drive",
+        ["BuyMoreStorageButton"] = "Comprar mais armazenamento",
+        ["BuyMoreShortButton"] = "Comprar mais",
+        ["OpenInDriveButton"] = "Abrir no Drive",
+        ["StorageShortFmt"] = "{0} de {1}",
+        ["StorageDriveLegend"] = "Drive",
+        ["StorageOtherLegend"] = "Gmail / Fotos",
+        ["StorageTrashLegend"] = "Lixeira",
+        ["StorageDriveValueFmt"] = "Drive: {0}",
+        ["StorageOtherValueFmt"] = "Gmail / Fotos: {0}",
+        ["StorageTrashValueFmt"] = "Lixeira: {0}",
+        ["ImportJsonShortButton"] = "Importar JSON",
+        ["ConnectShortButton"] = "Conectar",
+        ["AddAccountShortButton"] = "+ Conta",
+        ["AddAccountMenu"] = "Adicionar outra conta Google",
+        ["SwitchAccountLabel"] = "Contas conectadas",
+        ["SwitchedToFmt"] = "Conta ativa alternada para {0}.",
+        ["StorageWarningFmt"] = "Alerta: armazenamento quase cheio ({0:0}% utilizado). Considere liberar espaço ou ampliar seu plano.",
+        ["StorageFullFmt"] = "Armazenamento cheio ({0:0}% utilizado). Novos envios para o Google Drive podem falhar.",
+        ["OnboardingTitle"] = "Assistente de Conexão ao Google Drive (3 Passos)",
+        ["OnboardingStep1Title"] = "1. Crie seu ID de Cliente OAuth2 no Google Cloud",
+        ["OnboardingStep1Desc"] = "Ative a Google Drive API, crie um ID de cliente OAuth 2.0 do tipo \"App para computador\" (Desktop) e baixe o arquivo JSON.",
+        ["OpenEnableDriveApiButton"] = "Ativar Google Drive API",
+        ["OpenCloudConsoleButton"] = "Abrir Credenciais Google Cloud",
+        ["OnboardingStep2Title"] = "2. Importe o arquivo JSON baixado",
+        ["OnboardingStep2Desc"] = "Selecione o arquivo client_secret_*.json ou credentials.json. O TundraDrive valida e protege o arquivo automaticamente com permissão 0600.",
+        ["OnboardingStep3Title"] = "3. Autorize o acesso no navegador",
+        ["OnboardingStep3Desc"] = "Com as credenciais prontas, clique em \"Conectar Conta Google\" acima para concluir o login OAuth2.",
+        ["SecuritySectionTitle"] = "Segurança e Armazenamento de Credenciais (OAuth2)",
+        ["CredentialsFileLabel"] = "Arquivo OAuth2 do Cliente (credentials.json)",
+        ["TokensDirLabel"] = "Diretório de Tokens de Usuário",
+        ["SafeDeletionNotice"] = "Exclusões em pastas sincronizadas movem itens para a Lixeira do Google Drive; exclusões definitivas podem ser feitas manualmente na aba Lixeira.",
+
+        ["FileHubTitle"] = "Meu Driver",
+        ["SearchFilesWatermark"] = "Buscar arquivo por nome ou caminho...",
+        ["UploadFileButton"] = "Enviar Arquivo",
+        ["LayoutListButton"] = "Lista",
+        ["LayoutGridButton"] = "Grade",
+        ["DownloadButton"] = "Baixar",
+        ["PreviewButton"] = "Visualizar",
+        ["PreviewTitle"] = "Pré-visualização",
+        ["PreviewLoading"] = "Carregando pré-visualização...",
+        ["PreviewPlayAudio"] = "Reproduzir Áudio",
+        ["PreviewStopAudio"] = "Parar Áudio",
+        ["PreviewPlayVideo"] = "Reproduzir Vídeo",
+        ["PreviewPrevPage"] = "Anterior",
+        ["PreviewNextPage"] = "Próxima",
+        ["PreviewPageFmt"] = "Página {0}",
+        ["PreviewPageOfFmt"] = "Página {0} / {1}",
+        ["PreviewPlayingAudio"] = "Reproduzindo áudio...",
+        ["PreviewUnsupported"] = "Pré-visualização direta indisponível para este formato. Use Baixar ou Abrir.",
+        ["PreviewErrorFmt"] = "Não foi possível gerar pré-visualização: {0}",
+        ["DownloadingFileFmt"] = "Baixando {0}...",
+        ["DownloadedToFmt"] = "Arquivo salvo em: {0}",
+        ["FileHubEmptyFolder"] = "Esta pasta está vazia.",
+        ["ColOrigin"] = "Origem",
+        ["FileHubFilterDrive"] = "Meu Drive",
+        ["FileHubFilterLocal"] = "Sincronizados localmente",
+        ["FileHubFilterTrash"] = "Lixeira",
+        ["BackButton"] = "Voltar",
+        ["TrashTabButton"] = "Lixeira",
+        ["OpenTrashTooltip"] = "Abrir Lixeira do Google Drive",
+        ["TrashBannerTitle"] = "Lixeira do Google Drive — restaure itens ou esvazie a lixeira para liberar armazenamento.",
+        ["MoveToTrashButton"] = "Mover para Lixeira",
+        ["RestoreFromTrashButton"] = "Restaurar",
+        ["DeletePermanentlyButton"] = "Excluir permanentemente",
+        ["EmptyTrashButton"] = "Esvaziar Lixeira",
+        ["EmptyTrashConfirmTitle"] = "Excluir permanentemente todos os itens da Lixeira?",
+        ["ConfirmButton"] = "Confirmar",
+        ["TrashEmptiedFmt"] = "Lixeira do Google Drive esvaziada.",
+        ["TrashEmptyHint"] = "A Lixeira está vazia.",
+        ["ItemMovedToTrashFmt"] = "'{0}' movido para a Lixeira.",
+        ["ItemRestoredFmt"] = "'{0}' restaurado da Lixeira.",
+        ["ItemDeletedPermanentlyFmt"] = "'{0}' excluído permanentemente.",
+        ["SelectAllButton"] = "Selecionar tudo",
+        ["ClearSelectionButton"] = "Limpar seleção",
+        ["FileHubSelectedCountFmt"] = "{0} selecionado(s)",
+        ["FilesDownloadedBatchFmt"] = "{0} arquivo(s) baixado(s).",
+        ["FilesTrashedBatchFmt"] = "{0} item(ns) movido(s) para a Lixeira do Drive.",
+        ["FilesRestoredBatchFmt"] = "{0} item(ns) restaurado(s) da Lixeira.",
+        ["FilesDeletedPermanentBatchFmt"] = "{0} item(ns) excluído(s) permanentemente.",
+        ["CopyNameMenu"] = "Copiar nome",
+        ["CopyDriveLinkMenu"] = "Copiar link do Drive",
+        ["CopiedFeedbackFmt"] = "Copiado para a área de transferência.",
+        ["OpenLocalFolderMenu"] = "Abrir pasta no PC",
+        ["CopyMessageMenu"] = "Copiar descrição",
+        ["CopyTargetPathMenu"] = "Copiar caminho alvo",
+        ["SyncThisFolderMenu"] = "Sincronizar esta pasta",
+        ["CopyEmailMenu"] = "Copiar e-mail",
+        ["NoTransfersHint"] = "Nenhuma transferência na fila no momento.",
+        ["NoLogsHint"] = "Nenhum registro encontrado para os filtros selecionados.",
+        ["FileHubStatusSynced"] = "Sincronizado",
+        ["FileHubStatusLocal"] = "Local",
+        ["FileHubStatusRemoteOnly"] = "Google Drive",
+        ["FileHubStatusFolder"] = "Pasta",
+        ["FileHubCountFmt"] = "{0} item(ns) em {1}",
+        ["FileHubSearchCountFmt"] = "{0} resultado(s) encontrado(s)",
+        ["FileHubLoading"] = "Carregando arquivos...",
+        ["FileHubOpenFolder"] = "Abrir pasta",
+        ["FileHubOpenLocal"] = "Abrir",
+        ["FileHubOpenDrive"] = "Ver no Drive",
+        ["FileHubUploadingFmt"] = "Enviando {0} para o Google Drive...",
+        ["FileHubUploadedFmt"] = "Arquivo {0} enviado com sucesso.",
+        ["FileHubErrorFmt"] = "Erro ao carregar arquivos: {0}",
+
+        ["SyncFoldersTitle"] = "Pastas de Sincronização",
+        ["MappedFoldersButton"] = "Pastas Mapeadas",
+        ["RemoteBrowserButton"] = "Navegador Remoto do Drive",
+        ["MapLocalFolderButton"] = "Mapear Pasta Local",
+        ["SyncAllButton"] = "Sincronizar Tudo",
+        ["SyncNowButton"] = "Sincronizar Agora",
+        ["RemoveButton"] = "Remover",
+        ["EmptyFoldersHint"] = "Nenhuma pasta mapeada ainda. Clique em \"Mapear Pasta Local\" ou explore o \"Navegador Remoto do Drive\".",
+        ["AllFoldersPausedHint"] = "Todas as pastas mapeadas estão pausadas. Clique em \"Retomar\" em uma pasta para sincronizar.",
+
+        ["MyDriveLabel"] = "Meu Drive",
+        ["SearchRemoteWatermark"] = "Pesquisar pastas ou arquivos no Google Drive...",
+        ["SearchButton"] = "Buscar",
+        ["SyncSelectedFolderButton"] = "Sincronizar Pasta Selecionada",
+        ["RefreshButton"] = "Atualizar",
+        ["ColName"] = "Nome",
+        ["ColType"] = "Tipo",
+        ["ColSize"] = "Tamanho",
+        ["ColModified"] = "Modificado",
+        ["ColAction"] = "Ação",
+        ["OpenFolderButton"] = "Abrir",
+
+        ["TransferQueueTitle"] = "Fila de Transferências",
+        ["ClearCompletedButton"] = "Limpar Concluídas",
+        ["CancelButton"] = "Cancelar",
+
+        ["ActivityLogsTitle"] = "Logs de Atividade",
+        ["ClearLogsButton"] = "Limpar Logs",
+        ["FilterLogsWatermark"] = "Filtrar por mensagem, ação ou caminho...",
+        ["ApplyFilterButton"] = "Aplicar Filtro",
+        ["ColTimestamp"] = "Data / Hora",
+        ["ColLevel"] = "Nível",
+        ["ColEvent"] = "Evento",
+        ["ColDescription"] = "Descrição",
+        ["ColTarget"] = "Alvo",
+
+        ["SettingsTitle"] = "Configurações",
+        ["ReloadButton"] = "Recarregar",
+        ["ReloadingButton"] = "Recarregando...",
+        ["ReloadedButton"] = "Recarregado!",
+        ["SaveChangesButton"] = "Salvar Alterações",
+        ["SavingButton"] = "Salvando...",
+        ["SavedButton"] = "Salvo!",
+        ["GeneralSectionTitle"] = "Sistema e Idioma",
+        ["LanguageLabel"] = "Idioma da interface",
+        ["LanguageHint"] = "A alteração é aplicada imediatamente em toda a interface.",
+        ["UiScaleLabel"] = "Proporção da interface (Zoom)",
+        ["UiScaleHint"] = "Ajuste entre 100% e 300% (ou use Ctrl +, Ctrl - e Ctrl 0).",
+        ["DownloadDirectoryLabel"] = "Pasta padrão de downloads da nuvem",
+        ["DownloadDirectoryHint"] = "Destino usado ao clicar em \"Baixar\" no Hub de Arquivos ou Navegador Remoto.",
+        ["BrowseFolderButton"] = "Escolher Pasta...",
+        ["StartOnBootCheckbox"] = "Iniciar automaticamente com o dispositivo (XDG Autostart)",
+        ["StartOnBootHint"] = "Cria a entrada de inicialização automática em ~/.config/autostart/tundradrive.desktop.",
+        ["NotificationsEnabledCheckbox"] = "Enviar notificações nativas do sistema (GNOME / libnotify)",
+        ["MinimizeToTrayCheckbox"] = "Manter na barra superior do GNOME ao fechar a janela",
+        ["TestNotificationButton"] = "Testar Notificação",
+        ["TestNotificationTitle"] = "TundraDrive ativo",
+        ["TestNotificationBody"] = "As notificações nativas do sistema estão funcionando.",
+        ["TrayOpen"] = "Abrir TundraDrive",
+        ["TrayOpenFileHub"] = "Abrir Meu Driver",
+        ["TraySyncNow"] = "Sincronizar Tudo Agora",
+        ["TrayPauseAll"] = "Pausar Todas as Pastas",
+        ["TrayResumeAll"] = "Retomar Todas as Pastas",
+        ["TrayOpenDownloads"] = "Abrir Pasta de Downloads",
+        ["TraySettings"] = "Configurações",
+        ["TrayExit"] = "Sair",
+        ["TrayAccountFmt"] = "Conta: {0}",
+        ["TrayStatusFmt"] = "Status: {0}",
+        ["TrayStorageFmt"] = "Armazenamento: {0} / {1} ({2:0.#}%)",
+        ["TrayStorageDisconnected"] = "Armazenamento: —",
+        ["TrayFoldersTransfersFmt"] = "Pastas: {0} ativa(s) • Fila: {1}",
+        ["TrayTooltipFmt"] = "TundraDrive — {0}",
+        ["NotifyDownloadedTitle"] = "Download concluído",
+        ["NotifyDownloadFailedTitle"] = "Erro no download",
+        ["NotifyConnectedTitle"] = "Conta Google conectada",
+        ["NotifyAccountSwitchedTitle"] = "Conta ativa alternada",
+        ["NotifyAccountDisconnectedTitle"] = "Conta Google desconectada",
+        ["NotifyCredentialsRevokedTitle"] = "Credenciais revogadas",
+        ["NotifySyncErrorTitle"] = "Erro na sincronização",
+        ["NotifyFileSyncedTitle"] = "Sincronização concluída",
+        ["NotifyUploadedTitle"] = "Enviado para o Google Drive",
+        ["NotifyConflictTitle"] = "Conflito de sincronização",
+        ["NotifyFolderMappedTitle"] = "Pasta vinculada",
+        ["NotifyFolderUnmappedTitle"] = "Pasta removida",
+        ["NotifyModeChangedTitle"] = "Modo de sincronização alterado",
+        ["NotifyFolderPausedTitle"] = "Sincronização pausada",
+        ["NotifyFolderResumedTitle"] = "Sincronização retomada",
+        ["NotifyRemoteTrashedTitle"] = "Movido para a Lixeira do Drive",
+        ["NotifyLocalTrashedTitle"] = "Movido para a Lixeira do PC",
+        ["NotifyRestoredTitle"] = "Restaurado da Lixeira",
+        ["NotifyDeletedPermanentTitle"] = "Excluído permanentemente",
+        ["NotifyTrashEmptiedTitle"] = "Lixeira do Drive esvaziada",
+        ["NotifyOfflineTitle"] = "Conexão perdida",
+        ["NotifyOfflineBody"] = "Sem acesso à internet. Exibindo apenas arquivos locais.",
+        ["NotifyOnlineTitle"] = "Conexão restabelecida",
+        ["NotifyOnlineBody"] = "Internet detectada. Sincronização automática reativada.",
+        ["SyncEngineSectionTitle"] = "Motor de Sincronização",
+        ["AutoMemoryCleanupLabel"] = "Limpador automático de memória RAM",
+        ["AutoMemoryCleanupHint"] = "Libera caches de mídia fora de tela, conexões ociosas e compacta a memória periodicamente.",
+        ["MemoryCleanupIntervalLabel"] = "Intervalo (min)",
+        ["CleanMemoryNowButton"] = "Limpar RAM agora",
+        ["MemoryStatusCurrentFmt"] = "Uso atual de RAM: {0:F1} MB",
+        ["MemoryStatusCleanedFmt"] = "Uso atual de RAM: {0:F1} MB • Liberados {1:F1} MB",
+        ["SyncIntervalLabel"] = "Intervalo de verificação periódica (segundos)",
+        ["SyncIntervalHint"] = "Verifica alterações automaticamente a cada intervalo definido enquanto o app estiver aberto.",
+        ["CredentialsAccountsSectionTitle"] = "Credenciais JSON e Contas Conectadas",
+        ["CredentialsAccountsSubtitle"] = "Gerencie o arquivo credentials.json e revogue apenas o JSON ou cada conta individualmente.",
+        ["CredentialsJsonStatusReadyFmt"] = "credentials.json ativo em {0}",
+        ["CredentialsJsonStatusMissing"] = "Nenhum arquivo credentials.json importado.",
+        ["RevokeJsonOnlyButton"] = "Revogar JSON",
+        ["RevokeAccountButton"] = "Revogar",
+        ["SwitchToAccountButton"] = "Alternar",
+        ["CredentialsActiveBadge"] = "Ativo • 0600",
+        ["CredentialsMissingBadge"] = "Ausente",
+        ["ActiveAccountBadge"] = "Ativa",
+        ["ConnectedAccountsEmptyHint"] = "Nenhuma conta Google conectada.",
+        ["ConflictPolicyLabel"] = "Resolução de conflitos",
+        ["ConflictPolicyHint"] = "Comportamento quando o arquivo local e o remoto forem modificados simultaneamente.",
+        ["WatchLocalChangesCheckbox"] = "Monitorar alterações locais em tempo real (FileSystemWatcher)",
+        ["IgnorePatternsLabel"] = "Padrões ignorados (um por linha)",
+        ["LocalApiSectionTitle"] = "API REST Local (Loopback)",
+        ["EnableLocalApiCheckbox"] = "Habilitar servidor REST local em 127.0.0.1 (requer reinício ao alterar porta)",
+        ["LocalApiPortLabel"] = "Porta loopback (127.0.0.1)",
+        ["LocalApiPortHint"] = "Nunca exposta em 0.0.0.0 por isolamento de rede.",
+        ["CurrentApiStatusLabel"] = "Status atual da API",
+        ["OpenApiDocsButton"] = "Documentação da API (PDF)",
+        ["OpenApiSpecButton"] = "Abrir OpenAPI JSON",
+        ["SystemPathsSectionTitle"] = "Caminhos no Sistema Linux",
+        ["AboutSectionTitle"] = "Sobre o TundraDrive",
+        ["AboutDescription"] = "Cliente do Google Drive para Linux para sincronizar pastas, fazer backups e gerenciar seus arquivos direto do computador.",
+        ["AboutCompanyLabel"] = "Empresa",
+        ["AboutProductLabel"] = "Produto",
+        ["AboutDeveloperLabel"] = "Desenvolvedor",
+        ["AboutVersionLabel"] = "Versão 2.6v",
+        ["AboutTechStack"] = "Tecnologias: C# 10 / .NET 10, Avalonia UI 11, Google Drive API v3, SQLite + Dapper, FFmpeg",
+
+        ["NoAccountConnected"] = "Nenhuma conta conectada",
+        ["ConnectHintSubtitle"] = "Conecte sua conta Google Drive para sincronizar pastas locais",
+        ["GoogleAccountFallback"] = "Conta Google",
+        ["Unlimited"] = "Ilimitado",
+        ["QuotaUsageFmt"] = "{0} de {1} utilizados",
+        ["QuotaBreakdownFmt"] = "Drive: {0} • Gmail / Fotos / Outros: {1} • Lixeira: {2}",
+        ["QuotaSummaryFmt"] = "{0} de {1} utilizados no Google Drive",
+        ["AccountDisconnected"] = "Conta Google desconectada",
+        ["CredentialsReady"] = "Arquivo credentials.json validado e pronto para autenticação OAuth2.",
+        ["CredentialsMissing"] = "Arquivo credentials.json ainda não importado. Use o passo 2 acima para importar o JSON do Google Cloud.",
+        ["TokenSecurityFmt"] = "Armazenamento local isolado (diretório {0}, tokens com permissão 0600)",
+        ["CredentialsImportedSuccess"] = "Credenciais importadas e protegidas (0600). Agora clique em \"Conectar Conta Google\".",
+        ["CredentialsImportErrorFmt"] = "Não foi possível importar o arquivo JSON: {0}",
+        ["MissingCredsPromptPicker"] = "Importe primeiro o arquivo credentials.json do Google Cloud (Passo 2).",
+        ["OpeningBrowserAuth"] = "Abrindo navegador para autorização OAuth2...",
+        ["AuthCancelledMessage"] = "Autenticação cancelada ou tempo esgotado. Tente conectar novamente.",
+        ["ConnectedAsFmt"] = "Conectado com sucesso como {0}.",
+        ["ConnectErrorFmt"] = "Falha ao conectar conta Google: {0}",
+        ["RevokingTokens"] = "Revogando tokens locais...",
+        ["DisconnectedSuccess"] = "Conta desconectada e tokens locais removidos com segurança.",
+        ["DisconnectErrorFmt"] = "Erro ao desconectar: {0}",
+        ["AccountUpdated"] = "Cota e informações da conta atualizadas.",
+        ["AccountUpdateErrorFmt"] = "Não foi possível atualizar a conta: {0}",
+
+        ["SidebarDisconnected"] = "Conta Google desconectada",
+        ["SidebarWaitingAuth"] = "Aguardando autenticação",
+        ["SidebarSyncing"] = "Sincronizando...",
+        ["SidebarUploading"] = "Enviando arquivo...",
+        ["SidebarDownloading"] = "Baixando arquivo...",
+        ["SidebarDeleting"] = "Excluindo arquivo...",
+        ["SidebarMonitoring"] = "Monitorando pastas",
+        ["SidebarReady"] = "Conectado • Pronto",
+        ["SidebarWaiting"] = "Aguardando",
+        ["SidebarOffline"] = "Sem internet (modo offline)",
+        ["OfflineModeNotice"] = "Sem conexão com a internet. Exibindo apenas arquivos locais.",
+        ["SidebarApiActiveFmt"] = "API Local: {0}",
+        ["SidebarApiInactive"] = "API Local: inativa",
+
+        ["ModeTwoWay"] = "Espelho Bidirecional (PC ↔ Drive — envia e baixa arquivos nos dois sentidos)",
+        ["ModeOneWay"] = "Backup Unidirecional (PC → Drive — envia do PC sem baixar o Drive)",
+        ["SyncOriginLocalLabel"] = "Pasta no PC (Origem Local)",
+        ["SyncDestinationCloudLabel"] = "Pasta no Google Drive (Nuvem)",
+        ["DirectionBadgeTwoWay"] = "Bidirecional",
+        ["DirectionBadgeOneWay"] = "Somente envio",
+        ["DirectionExplainTwoWay"] = "Sincronização nos dois sentidos: o que mudar nesta pasta do PC vai para esta pasta no Drive, e o que mudar no Drive vem para o PC.",
+        ["DirectionExplainOneWay"] = "Somente envio (Backup): arquivos adicionados ou editados nesta pasta do PC são enviados para o Drive, sem baixar nada da nuvem.",
+        ["SwitchToBackup"] = "Alternar para Backup",
+        ["SwitchToTwoWay"] = "Alternar para Bidirecional",
+        ["Pause"] = "Pausar",
+        ["Resume"] = "Retomar",
+        ["LastSyncedFmt"] = "Última sincronização: {0} • {1} arquivo(s)",
+        ["StateSyncing"] = "Sincronizando alterações...",
+        ["StatePaused"] = "Sincronização pausada",
+        ["StateErrorDefault"] = "Erro de sincronização",
+        ["StateErrorFmt"] = "Erro: {0}",
+        ["StateIdle"] = "Sincronizado e monitorando alterações",
+        ["RemoteDestFmt"] = "Destino no Google Drive: {0}",
+        ["ConnectBeforeSync"] = "Conecte sua conta Google antes de sincronizar.",
+        ["SyncingAllFolders"] = "Sincronizando todas as pastas ativas...",
+        ["SyncFinished"] = "Sincronização concluída.",
+        ["FolderMappedFmt"] = "Pasta '{0}' vinculada a '{1}'.",
+        ["FolderMapErrorFmt"] = "Não foi possível mapear a pasta: {0}",
+
+        ["BrowserDefaultStatus"] = "Navegue pelas pastas do Google Drive para selecionar um diretório para sincronização.",
+        ["BrowserConnectHint"] = "Conecte sua conta Google na aba Contas para navegar no Drive remoto.",
+        ["BrowserLoadingFmt"] = "Carregando {0}...",
+        ["BrowserCountFmt"] = "{0} item(ns) em {1}.",
+        ["BrowserListErrorFmt"] = "Erro ao listar pasta remota: {0}",
+        ["BrowserSearchAuthHint"] = "Conecte sua conta Google para pesquisar arquivos remotos.",
+        ["BrowserSearchingFmt"] = "Buscando \"{0}\" no Google Drive...",
+        ["BrowserSearchResultsFmt"] = "{0} resultado(s) encontrado(s) para \"{1}\".",
+        ["BrowserSearchErrorFmt"] = "Erro na busca remota: {0}",
+        ["NodeTypeFolder"] = "Pasta",
+        ["NodeTypeGoogleDoc"] = "Documento Google",
+        ["NodeTypeFile"] = "Arquivo",
+
+        ["TransferDirectionUpload"] = "Envio (Upload)",
+        ["TransferDirectionDownload"] = "Download",
+        ["TransferDirectionDelete"] = "Exclusão",
+        ["TransferQueued"] = "Na fila",
+        ["TransferInProgress"] = "Transferindo...",
+        ["TransferCompleted"] = "Concluído",
+        ["TransferCancelled"] = "Cancelado",
+        ["TransferFailed"] = "Falha",
+        ["TransferFailedFmt"] = "Falha: {0}",
+        ["TransferEmpty"] = "Nenhuma transferência registrada nesta sessão.",
+        ["TransferSummaryFmt"] = "{0} em andamento • {1} concluída(s) • {2} total (clique em um item para detalhes)",
+        ["TransferDetailLocalPath"] = "Caminho local",
+        ["TransferDetailRelativePath"] = "Na pasta sincronizada",
+        ["TransferDetailRemoteId"] = "ID no Google Drive",
+        ["TransferDetailStarted"] = "Iniciado em",
+        ["TransferDetailCompleted"] = "Concluído em",
+        ["TransferDetailDuration"] = "Duração",
+        ["TransferDetailAvgSpeed"] = "Velocidade média",
+        ["TransferDetailError"] = "Detalhes do erro",
+        ["TransferCopyPathButton"] = "Copiar caminho",
+        ["TransferCopyDriveIdButton"] = "Copiar ID do Drive",
+
+        ["SeverityFilterAll"] = "Todos os eventos",
+        ["SeverityFilterWarnErr"] = "Avisos e erros",
+        ["SeverityFilterErr"] = "Somente erros",
+        ["SeveritySuccess"] = "SUCESSO",
+        ["SeverityWarning"] = "AVISO",
+        ["SeverityError"] = "ERRO",
+        ["SeverityInfo"] = "INFO",
+        ["LogsCountFmt"] = "{0} registro(s) exibido(s)",
+
+        ["ConflictKeepNewest"] = "Manter arquivo mais recente",
+        ["ConflictPreferLocal"] = "Priorizar arquivo local",
+        ["ConflictPreferRemote"] = "Priorizar arquivo do Drive",
+        ["ConflictRenameCopy"] = "Preservar cópia de conflito",
+        ["ApiStatusActiveFmt"] = "Ativa em {0} (somente loopback 127.0.0.1)",
+        ["ApiStatusInactive"] = "Inativa",
+        ["ApiStatusErrorFmt"] = "Erro ao iniciar: {0}",
+        ["SettingsSaved"] = "Configurações salvas em ~/.config/tundradrive/settings.json.",
+        ["SettingsReloaded"] = "Configurações recarregadas.",
+        ["PathCredsFmt"] = "Credenciais OAuth2: {0}",
+        ["PathTokensFmt"] = "Tokens (0600):      {0}",
+        ["PathDbFmt"] = "Banco SQLite:       {0}",
+        ["PathAutostartFmt"] = "Autostart Linux:    {0}",
+
+        ["NeverSynced"] = "Nunca sincronizado",
+        ["JustNow"] = "Agora mesmo",
+        ["OneMinuteAgo"] = "Há 1 minuto",
+        ["MinutesAgoFmt"] = "Há {0} minutos",
+        ["OneHourAgo"] = "Há 1 hora",
+        ["HoursAgoFmt"] = "Há {0} horas"
+    };
+
+    private static readonly IReadOnlyDictionary<string, string> EnUs = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["WindowTitle"] = "TundraDrive",
+        ["BrandSubtitle"] = "Local Google Drive Sync",
+        ["NavAccounts"] = "Accounts",
+        ["NavFileHub"] = "My Drive",
+        ["NavSyncFolders"] = "Sync Folders",
+        ["NavTransferQueue"] = "Transfer Queue",
+        ["NavActivityLogs"] = "Activity Logs",
+        ["NavSettings"] = "Settings",
+        ["NavAbout"] = "About",
+
+        ["AccountsTitle"] = "Accounts",
+        ["ConnectGoogleButton"] = "Connect Google Account",
+        ["CancelAuthButton"] = "Cancel Sign-In",
+        ["ImportCredentialsButton"] = "Import credentials.json",
+        ["RefreshQuotaButton"] = "Refresh Quota",
+        ["DisconnectButton"] = "Disconnect",
+        ["StorageLabel"] = "Google Drive Storage",
+        ["BuyMoreStorageButton"] = "Buy more storage",
+        ["BuyMoreShortButton"] = "Upgrade",
+        ["OpenInDriveButton"] = "Open in Drive",
+        ["StorageShortFmt"] = "{0} of {1}",
+        ["StorageDriveLegend"] = "Drive",
+        ["StorageOtherLegend"] = "Gmail / Photos",
+        ["StorageTrashLegend"] = "Trash",
+        ["StorageDriveValueFmt"] = "Drive: {0}",
+        ["StorageOtherValueFmt"] = "Gmail / Photos: {0}",
+        ["StorageTrashValueFmt"] = "Trash: {0}",
+        ["ImportJsonShortButton"] = "Import JSON",
+        ["ConnectShortButton"] = "Connect",
+        ["AddAccountShortButton"] = "+ Account",
+        ["AddAccountMenu"] = "Add another Google account",
+        ["SwitchAccountLabel"] = "Connected accounts",
+        ["SwitchedToFmt"] = "Switched active account to {0}.",
+        ["StorageWarningFmt"] = "Warning: storage almost full ({0:0}% used). Consider freeing space or upgrading your plan.",
+        ["StorageFullFmt"] = "Storage full ({0:0}% used). New uploads to Google Drive may fail.",
+        ["OnboardingTitle"] = "Google Drive Connection Guide (3 Steps)",
+        ["OnboardingStep1Title"] = "1. Create an OAuth2 Client ID in Google Cloud",
+        ["OnboardingStep1Desc"] = "Enable the Google Drive API, create an OAuth 2.0 Client ID of type \"Desktop app\", and download the JSON file.",
+        ["OpenEnableDriveApiButton"] = "Enable Google Drive API",
+        ["OpenCloudConsoleButton"] = "Open Google Cloud Credentials",
+        ["OnboardingStep2Title"] = "2. Import the downloaded JSON file",
+        ["OnboardingStep2Desc"] = "Select the client_secret_*.json or credentials.json file. TundraDrive validates and secures it automatically with 0600 permissions.",
+        ["OnboardingStep3Title"] = "3. Authorize access in your browser",
+        ["OnboardingStep3Desc"] = "Once credentials are ready, click \"Connect Google Account\" above to complete OAuth2 sign-in.",
+        ["SecuritySectionTitle"] = "Security & Credential Storage (OAuth2)",
+        ["CredentialsFileLabel"] = "OAuth2 Client File (credentials.json)",
+        ["TokensDirLabel"] = "User Token Directory",
+        ["SafeDeletionNotice"] = "Deletions in synced folders move items to Google Drive Trash; permanent deletion is only performed manually from the Trash tab.",
+
+        ["FileHubTitle"] = "My Drive",
+        ["SearchFilesWatermark"] = "Search files by name or path...",
+        ["UploadFileButton"] = "Upload File",
+        ["LayoutListButton"] = "List",
+        ["LayoutGridButton"] = "Grid",
+        ["DownloadButton"] = "Download",
+        ["PreviewButton"] = "Preview",
+        ["PreviewTitle"] = "Preview",
+        ["PreviewLoading"] = "Loading preview...",
+        ["PreviewPlayAudio"] = "Play Audio",
+        ["PreviewStopAudio"] = "Stop Audio",
+        ["PreviewPlayVideo"] = "Play Video",
+        ["PreviewPrevPage"] = "Prev",
+        ["PreviewNextPage"] = "Next",
+        ["PreviewPageFmt"] = "Page {0}",
+        ["PreviewPageOfFmt"] = "Page {0} / {1}",
+        ["PreviewPlayingAudio"] = "Playing audio...",
+        ["PreviewUnsupported"] = "Quick preview unavailable for this format. Use Download or Open.",
+        ["PreviewErrorFmt"] = "Could not render preview: {0}",
+        ["DownloadingFileFmt"] = "Downloading {0}...",
+        ["DownloadedToFmt"] = "Saved to: {0}",
+        ["FileHubEmptyFolder"] = "This folder is empty.",
+        ["ColOrigin"] = "Origin",
+        ["FileHubFilterDrive"] = "My Drive",
+        ["FileHubFilterLocal"] = "Synced locally",
+        ["FileHubFilterTrash"] = "Trash",
+        ["BackButton"] = "Back",
+        ["TrashTabButton"] = "Trash",
+        ["OpenTrashTooltip"] = "Open Google Drive Trash",
+        ["TrashBannerTitle"] = "Google Drive Trash — restore items or empty trash to reclaim storage.",
+        ["MoveToTrashButton"] = "Move to Trash",
+        ["RestoreFromTrashButton"] = "Restore",
+        ["DeletePermanentlyButton"] = "Delete permanently",
+        ["EmptyTrashButton"] = "Empty Trash",
+        ["EmptyTrashConfirmTitle"] = "Permanently delete all items in Trash?",
+        ["ConfirmButton"] = "Confirm",
+        ["TrashEmptiedFmt"] = "Google Drive Trash emptied.",
+        ["TrashEmptyHint"] = "Trash is empty.",
+        ["ItemMovedToTrashFmt"] = "Moved '{0}' to Trash.",
+        ["ItemRestoredFmt"] = "Restored '{0}' from Trash.",
+        ["ItemDeletedPermanentlyFmt"] = "Permanently deleted '{0}'.",
+        ["SelectAllButton"] = "Select all",
+        ["ClearSelectionButton"] = "Clear selection",
+        ["FileHubSelectedCountFmt"] = "{0} selected",
+        ["FilesDownloadedBatchFmt"] = "{0} file(s) downloaded.",
+        ["FilesTrashedBatchFmt"] = "{0} item(s) moved to Google Drive Trash.",
+        ["FilesRestoredBatchFmt"] = "{0} item(s) restored from Trash.",
+        ["FilesDeletedPermanentBatchFmt"] = "{0} item(s) permanently deleted.",
+        ["CopyNameMenu"] = "Copy name",
+        ["CopyDriveLinkMenu"] = "Copy Drive link",
+        ["CopiedFeedbackFmt"] = "Copied to clipboard.",
+        ["OpenLocalFolderMenu"] = "Open folder on PC",
+        ["CopyMessageMenu"] = "Copy description",
+        ["CopyTargetPathMenu"] = "Copy target path",
+        ["SyncThisFolderMenu"] = "Sync this folder",
+        ["CopyEmailMenu"] = "Copy email",
+        ["NoTransfersHint"] = "No transfers in the queue right now.",
+        ["NoLogsHint"] = "No activity logs match the current filters.",
+        ["FileHubStatusSynced"] = "Synced",
+        ["FileHubStatusLocal"] = "Local",
+        ["FileHubStatusRemoteOnly"] = "Google Drive",
+        ["FileHubStatusFolder"] = "Folder",
+        ["FileHubCountFmt"] = "{0} item(s) in {1}",
+        ["FileHubSearchCountFmt"] = "{0} result(s) found",
+        ["FileHubLoading"] = "Loading files...",
+        ["FileHubOpenFolder"] = "Open folder",
+        ["FileHubOpenLocal"] = "Open",
+        ["FileHubOpenDrive"] = "Open in Drive",
+        ["FileHubUploadingFmt"] = "Uploading {0} to Google Drive...",
+        ["FileHubUploadedFmt"] = "File {0} uploaded successfully.",
+        ["FileHubErrorFmt"] = "Error loading files: {0}",
+
+        ["SyncFoldersTitle"] = "Sync Folders",
+        ["MappedFoldersButton"] = "Mapped Folders",
+        ["RemoteBrowserButton"] = "Remote Drive Browser",
+        ["MapLocalFolderButton"] = "Map Local Folder",
+        ["SyncAllButton"] = "Sync All",
+        ["SyncNowButton"] = "Sync Now",
+        ["RemoveButton"] = "Remove",
+        ["EmptyFoldersHint"] = "No folders mapped yet. Click \"Map Local Folder\" or explore \"Remote Drive Browser\".",
+        ["AllFoldersPausedHint"] = "All mapped folders are currently paused. Click \"Resume\" on a folder to synchronize.",
+
+        ["MyDriveLabel"] = "My Drive",
+        ["SearchRemoteWatermark"] = "Search folders or files in Google Drive...",
+        ["SearchButton"] = "Search",
+        ["SyncSelectedFolderButton"] = "Sync Selected Folder",
+        ["RefreshButton"] = "Refresh",
+        ["ColName"] = "Name",
+        ["ColType"] = "Type",
+        ["ColSize"] = "Size",
+        ["ColModified"] = "Modified",
+        ["ColAction"] = "Action",
+        ["OpenFolderButton"] = "Open",
+
+        ["TransferQueueTitle"] = "Transfer Queue",
+        ["ClearCompletedButton"] = "Clear Completed",
+        ["CancelButton"] = "Cancel",
+
+        ["ActivityLogsTitle"] = "Activity Logs",
+        ["ClearLogsButton"] = "Clear Logs",
+        ["FilterLogsWatermark"] = "Filter by message, action, or path...",
+        ["ApplyFilterButton"] = "Apply Filter",
+        ["ColTimestamp"] = "Date / Time",
+        ["ColLevel"] = "Level",
+        ["ColEvent"] = "Event",
+        ["ColDescription"] = "Description",
+        ["ColTarget"] = "Target",
+
+        ["SettingsTitle"] = "Settings",
+        ["ReloadButton"] = "Reload",
+        ["ReloadingButton"] = "Reloading...",
+        ["ReloadedButton"] = "Reloaded!",
+        ["SaveChangesButton"] = "Save Changes",
+        ["SavingButton"] = "Saving...",
+        ["SavedButton"] = "Saved!",
+        ["GeneralSectionTitle"] = "System & Language",
+        ["LanguageLabel"] = "Interface language",
+        ["LanguageHint"] = "Changes apply immediately across the entire application.",
+        ["UiScaleLabel"] = "Interface scaling (Zoom)",
+        ["UiScaleHint"] = "Scale between 100% and 300% (or press Ctrl +, Ctrl -, and Ctrl 0).",
+        ["DownloadDirectoryLabel"] = "Default cloud download folder",
+        ["DownloadDirectoryHint"] = "Destination used when clicking \"Download\" in File Hub or Remote Browser.",
+        ["BrowseFolderButton"] = "Choose Folder...",
+        ["StartOnBootCheckbox"] = "Start automatically on system boot (XDG Autostart)",
+        ["StartOnBootHint"] = "Creates an autostart desktop entry at ~/.config/autostart/tundradrive.desktop.",
+        ["NotificationsEnabledCheckbox"] = "Send native system notifications (GNOME / libnotify)",
+        ["MinimizeToTrayCheckbox"] = "Keep running in GNOME top bar when closing window",
+        ["TestNotificationButton"] = "Test Notification",
+        ["TestNotificationTitle"] = "TundraDrive active",
+        ["TestNotificationBody"] = "Native desktop notifications are working.",
+        ["TrayOpen"] = "Open TundraDrive",
+        ["TrayOpenFileHub"] = "Open My Drive",
+        ["TraySyncNow"] = "Sync All Now",
+        ["TrayPauseAll"] = "Pause All Folders",
+        ["TrayResumeAll"] = "Resume All Folders",
+        ["TrayOpenDownloads"] = "Open Downloads Folder",
+        ["TraySettings"] = "Settings",
+        ["TrayExit"] = "Quit",
+        ["TrayAccountFmt"] = "Account: {0}",
+        ["TrayStatusFmt"] = "Status: {0}",
+        ["TrayStorageFmt"] = "Storage: {0} / {1} ({2:0.#}%)",
+        ["TrayStorageDisconnected"] = "Storage: —",
+        ["TrayFoldersTransfersFmt"] = "Folders: {0} active • Queue: {1}",
+        ["TrayTooltipFmt"] = "TundraDrive — {0}",
+        ["NotifyDownloadedTitle"] = "Download completed",
+        ["NotifyDownloadFailedTitle"] = "Download error",
+        ["NotifyConnectedTitle"] = "Google account connected",
+        ["NotifyAccountSwitchedTitle"] = "Active account switched",
+        ["NotifyAccountDisconnectedTitle"] = "Google account disconnected",
+        ["NotifyCredentialsRevokedTitle"] = "Credentials revoked",
+        ["NotifySyncErrorTitle"] = "Synchronization error",
+        ["NotifyFileSyncedTitle"] = "Sync completed",
+        ["NotifyUploadedTitle"] = "Uploaded to Google Drive",
+        ["NotifyConflictTitle"] = "Sync conflict detected",
+        ["NotifyFolderMappedTitle"] = "Folder mapped",
+        ["NotifyFolderUnmappedTitle"] = "Folder unmapped",
+        ["NotifyModeChangedTitle"] = "Sync mode changed",
+        ["NotifyFolderPausedTitle"] = "Sync paused",
+        ["NotifyFolderResumedTitle"] = "Sync resumed",
+        ["NotifyRemoteTrashedTitle"] = "Moved to Google Drive Trash",
+        ["NotifyLocalTrashedTitle"] = "Moved to PC Trash",
+        ["NotifyRestoredTitle"] = "Restored from Trash",
+        ["NotifyDeletedPermanentTitle"] = "Permanently deleted",
+        ["NotifyTrashEmptiedTitle"] = "Google Drive Trash emptied",
+        ["NotifyOfflineTitle"] = "Connection lost",
+        ["NotifyOfflineBody"] = "No internet access. Showing local files only.",
+        ["NotifyOnlineTitle"] = "Connection restored",
+        ["NotifyOnlineBody"] = "Internet detected. Automatic sync resumed.",
+        ["SyncEngineSectionTitle"] = "Sync Engine",
+        ["AutoMemoryCleanupLabel"] = "Automatic RAM cleaner",
+        ["AutoMemoryCleanupHint"] = "Periodically clears offscreen media caches, idle connections, and compacts memory.",
+        ["MemoryCleanupIntervalLabel"] = "Interval (min)",
+        ["CleanMemoryNowButton"] = "Clean RAM now",
+        ["MemoryStatusCurrentFmt"] = "Current RAM usage: {0:F1} MB",
+        ["MemoryStatusCleanedFmt"] = "Current RAM usage: {0:F1} MB • Freed {1:F1} MB",
+        ["SyncIntervalLabel"] = "Periodic sync interval (seconds)",
+        ["SyncIntervalHint"] = "Continuously checks for changes at regular intervals while the app is open.",
+        ["CredentialsAccountsSectionTitle"] = "OAuth2 JSON Credentials & Connected Accounts",
+        ["CredentialsAccountsSubtitle"] = "Manage your OAuth2 credentials.json file and revoke the JSON or each connected account individually.",
+        ["CredentialsJsonStatusReadyFmt"] = "credentials.json active at {0}",
+        ["CredentialsJsonStatusMissing"] = "No credentials.json file imported.",
+        ["RevokeJsonOnlyButton"] = "Revoke JSON",
+        ["RevokeAccountButton"] = "Revoke",
+        ["SwitchToAccountButton"] = "Switch",
+        ["CredentialsActiveBadge"] = "Active • 0600",
+        ["CredentialsMissingBadge"] = "Missing",
+        ["ActiveAccountBadge"] = "Active",
+        ["ConnectedAccountsEmptyHint"] = "No Google accounts connected.",
+        ["ConflictPolicyLabel"] = "Conflict resolution",
+        ["ConflictPolicyHint"] = "Behavior when both local and remote files were modified.",
+        ["WatchLocalChangesCheckbox"] = "Watch local changes in real time (FileSystemWatcher)",
+        ["IgnorePatternsLabel"] = "Ignore patterns (one per line)",
+        ["LocalApiSectionTitle"] = "Embedded Local REST API (Loopback)",
+        ["EnableLocalApiCheckbox"] = "Enable local REST server on 127.0.0.1 (restart required when changing port)",
+        ["LocalApiPortLabel"] = "Loopback port (127.0.0.1)",
+        ["LocalApiPortHint"] = "Never bound to 0.0.0.0 for network isolation.",
+        ["CurrentApiStatusLabel"] = "Current API status",
+        ["OpenApiDocsButton"] = "API Docs (PDF)",
+        ["OpenApiSpecButton"] = "Open OpenAPI JSON",
+        ["SystemPathsSectionTitle"] = "Linux System Paths",
+        ["AboutSectionTitle"] = "About TundraDrive",
+        ["AboutDescription"] = "Google Drive client for Linux to sync folders, run backups, and manage your cloud files from your desktop.",
+        ["AboutCompanyLabel"] = "Company",
+        ["AboutProductLabel"] = "Product",
+        ["AboutDeveloperLabel"] = "Developer",
+        ["AboutVersionLabel"] = "Version 2.6v",
+        ["AboutTechStack"] = "Stack: C# 10 / .NET 10, Avalonia UI 11, Google Drive API v3, SQLite + Dapper, FFmpeg",
+
+        ["NoAccountConnected"] = "No account connected",
+        ["ConnectHintSubtitle"] = "Connect your Google Drive account to synchronize local folders",
+        ["GoogleAccountFallback"] = "Google Account",
+        ["Unlimited"] = "Unlimited",
+        ["QuotaUsageFmt"] = "{0} of {1} used",
+        ["QuotaBreakdownFmt"] = "Drive: {0} • Gmail / Photos / Other: {1} • Trash: {2}",
+        ["QuotaSummaryFmt"] = "{0} of {1} used in Google Drive",
+        ["AccountDisconnected"] = "Google account disconnected",
+        ["CredentialsReady"] = "credentials.json validated and ready for OAuth2 sign-in.",
+        ["CredentialsMissing"] = "credentials.json not imported yet. Use Step 2 above to import your Google Cloud JSON.",
+        ["TokenSecurityFmt"] = "Isolated local storage (directory {0}, tokens set to 0600)",
+        ["CredentialsImportedSuccess"] = "Credentials imported and secured (0600). Click \"Connect Google Account\" now.",
+        ["CredentialsImportErrorFmt"] = "Failed to import JSON file: {0}",
+        ["MissingCredsPromptPicker"] = "Import your Google Cloud credentials.json first (Step 2).",
+        ["OpeningBrowserAuth"] = "Opening browser for OAuth2 authorization...",
+        ["AuthCancelledMessage"] = "Authentication cancelled or timed out. Please try connecting again.",
+        ["ConnectedAsFmt"] = "Successfully connected as {0}.",
+        ["ConnectErrorFmt"] = "Failed to connect Google account: {0}",
+        ["RevokingTokens"] = "Revoking local tokens...",
+        ["DisconnectedSuccess"] = "Account disconnected and local tokens removed securely.",
+        ["DisconnectErrorFmt"] = "Error disconnecting: {0}",
+        ["AccountUpdated"] = "Account information and quota updated.",
+        ["AccountUpdateErrorFmt"] = "Could not refresh account: {0}",
+
+        ["SidebarDisconnected"] = "Google account disconnected",
+        ["SidebarWaitingAuth"] = "Waiting for sign-in",
+        ["SidebarSyncing"] = "Synchronizing...",
+        ["SidebarUploading"] = "Uploading file...",
+        ["SidebarDownloading"] = "Downloading file...",
+        ["SidebarDeleting"] = "Deleting file...",
+        ["SidebarMonitoring"] = "Watching folders",
+        ["SidebarReady"] = "Connected • Ready",
+        ["SidebarWaiting"] = "Idle",
+        ["SidebarOffline"] = "Offline (no internet)",
+        ["OfflineModeNotice"] = "No internet connection. Showing local files only.",
+        ["SidebarApiActiveFmt"] = "Local API: {0}",
+        ["SidebarApiInactive"] = "Local API: inactive",
+
+        ["ModeTwoWay"] = "Two-Way Mirror (PC ↔ Drive — syncs uploads and downloads both ways)",
+        ["ModeOneWay"] = "One-Way Backup (PC → Drive — uploads PC files without downloading Drive)",
+        ["SyncOriginLocalLabel"] = "PC Folder (Local Source)",
+        ["SyncDestinationCloudLabel"] = "Google Drive Folder (Cloud)",
+        ["DirectionBadgeTwoWay"] = "Two-way",
+        ["DirectionBadgeOneWay"] = "Upload only",
+        ["DirectionExplainTwoWay"] = "Two-way sync: changes in this PC folder upload to this Drive folder, and changes in Drive download back to this PC.",
+        ["DirectionExplainOneWay"] = "Upload-only backup: files added or updated in this PC folder are uploaded to Drive without downloading cloud files.",
+        ["SwitchToBackup"] = "Switch to Backup",
+        ["SwitchToTwoWay"] = "Switch to Two-Way",
+        ["Pause"] = "Pause",
+        ["Resume"] = "Resume",
+        ["LastSyncedFmt"] = "Last synced: {0} • {1} file(s)",
+        ["StateSyncing"] = "Syncing changes...",
+        ["StatePaused"] = "Sync paused",
+        ["StateErrorDefault"] = "Sync error",
+        ["StateErrorFmt"] = "Error: {0}",
+        ["StateIdle"] = "Synced and watching changes",
+        ["RemoteDestFmt"] = "Google Drive target: {0}",
+        ["ConnectBeforeSync"] = "Connect your Google account before syncing.",
+        ["SyncingAllFolders"] = "Syncing all active folders...",
+        ["SyncFinished"] = "Synchronization complete.",
+        ["FolderMappedFmt"] = "Folder '{0}' mapped to '{1}'.",
+        ["FolderMapErrorFmt"] = "Could not map folder: {0}",
+
+        ["BrowserDefaultStatus"] = "Browse your Google Drive folders to select a directory for local sync.",
+        ["BrowserConnectHint"] = "Connect your Google account in the Accounts tab to browse Google Drive.",
+        ["BrowserLoadingFmt"] = "Loading {0}...",
+        ["BrowserCountFmt"] = "{0} item(s) in {1}.",
+        ["BrowserListErrorFmt"] = "Error listing remote folder: {0}",
+        ["BrowserSearchAuthHint"] = "Connect your Google account to search remote files.",
+        ["BrowserSearchingFmt"] = "Searching \"{0}\" in Google Drive...",
+        ["BrowserSearchResultsFmt"] = "{0} result(s) found for \"{1}\".",
+        ["BrowserSearchErrorFmt"] = "Remote search error: {0}",
+        ["NodeTypeFolder"] = "Folder",
+        ["NodeTypeGoogleDoc"] = "Google Doc",
+        ["NodeTypeFile"] = "File",
+
+        ["TransferDirectionUpload"] = "Upload",
+        ["TransferDirectionDownload"] = "Download",
+        ["TransferDirectionDelete"] = "Delete",
+        ["TransferQueued"] = "Queued",
+        ["TransferInProgress"] = "Transferring...",
+        ["TransferCompleted"] = "Completed",
+        ["TransferCancelled"] = "Cancelled",
+        ["TransferFailed"] = "Failed",
+        ["TransferFailedFmt"] = "Failed: {0}",
+        ["TransferEmpty"] = "No transfers recorded in this session.",
+        ["TransferSummaryFmt"] = "{0} active • {1} completed • {2} total (click an item for details)",
+        ["TransferDetailLocalPath"] = "Local path",
+        ["TransferDetailRelativePath"] = "In synced folder",
+        ["TransferDetailRemoteId"] = "Google Drive ID",
+        ["TransferDetailStarted"] = "Started at",
+        ["TransferDetailCompleted"] = "Finished at",
+        ["TransferDetailDuration"] = "Duration",
+        ["TransferDetailAvgSpeed"] = "Avg speed",
+        ["TransferDetailError"] = "Error details",
+        ["TransferCopyPathButton"] = "Copy path",
+        ["TransferCopyDriveIdButton"] = "Copy Drive ID",
+
+        ["SeverityFilterAll"] = "All events",
+        ["SeverityFilterWarnErr"] = "Warnings & errors",
+        ["SeverityFilterErr"] = "Errors only",
+        ["SeveritySuccess"] = "SUCCESS",
+        ["SeverityWarning"] = "WARN",
+        ["SeverityError"] = "ERROR",
+        ["SeverityInfo"] = "INFO",
+        ["LogsCountFmt"] = "{0} entry(ies) shown",
+
+        ["ConflictKeepNewest"] = "Keep newest file",
+        ["ConflictPreferLocal"] = "Prefer local file",
+        ["ConflictPreferRemote"] = "Prefer Google Drive file",
+        ["ConflictRenameCopy"] = "Keep conflict copy",
+        ["ApiStatusActiveFmt"] = "Active on {0} (loopback 127.0.0.1 only)",
+        ["ApiStatusInactive"] = "Inactive",
+        ["ApiStatusErrorFmt"] = "Failed to start: {0}",
+        ["SettingsSaved"] = "Settings saved to ~/.config/tundradrive/settings.json.",
+        ["SettingsReloaded"] = "Settings reloaded.",
+        ["PathCredsFmt"] = "OAuth2 Credentials: {0}",
+        ["PathTokensFmt"] = "Tokens (0600):      {0}",
+        ["PathDbFmt"] = "SQLite Database:    {0}",
+        ["PathAutostartFmt"] = "Linux Autostart:    {0}",
+
+        ["NeverSynced"] = "Never synced",
+        ["JustNow"] = "Just now",
+        ["OneMinuteAgo"] = "1 minute ago",
+        ["MinutesAgoFmt"] = "{0} minutes ago",
+        ["OneHourAgo"] = "1 hour ago",
+        ["HoursAgoFmt"] = "{0} hours ago"
+    };
+
+    public string CurrentLanguage { get; private set; } = "pt-BR";
+    public bool IsEnglish => string.Equals(CurrentLanguage, "en-US", StringComparison.OrdinalIgnoreCase);
+
+    public event EventHandler<string>? LanguageChanged;
+
+    public void SetLanguage(string languageCode)
+    {
+        var normalized = string.Equals(languageCode, "en-US", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(languageCode, "en", StringComparison.OrdinalIgnoreCase)
+            ? "en-US"
+            : "pt-BR";
+
+        if (string.Equals(CurrentLanguage, normalized, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        CurrentLanguage = normalized;
+        OnPropertyChanged(string.Empty);
+        LanguageChanged?.Invoke(this, CurrentLanguage);
+    }
+
+    public string Text(string key)
+    {
+        var map = IsEnglish ? EnUs : PtBr;
+        return map.TryGetValue(key, out var value) ? value : key;
+    }
+
+    public string Format(string key, params object[] args)
+    {
+        var culture = CultureInfo.GetCultureInfo(CurrentLanguage);
+        return string.Format(culture, Text(key), args);
+    }
+
+    public string FormatRelativeTimestamp(DateTimeOffset? utcTimestamp)
+    {
+        if (!utcTimestamp.HasValue)
+        {
+            return Text("NeverSynced");
+        }
+
+        var local = utcTimestamp.Value.ToLocalTime();
+        var elapsed = DateTimeOffset.Now - local;
+
+        if (elapsed.TotalSeconds < 60)
+        {
+            return Text("JustNow");
+        }
+
+        if (elapsed.TotalMinutes < 60)
+        {
+            var mins = (int)elapsed.TotalMinutes;
+            return mins == 1 ? Text("OneMinuteAgo") : Format("MinutesAgoFmt", mins);
+        }
+
+        if (elapsed.TotalHours < 24)
+        {
+            var hours = (int)elapsed.TotalHours;
+            return hours == 1 ? Text("OneHourAgo") : Format("HoursAgoFmt", hours);
+        }
+
+        return local.ToString("dd/MM/yyyy HH:mm", CultureInfo.GetCultureInfo(CurrentLanguage));
+    }
+
+    public string WindowTitle => Text("WindowTitle");
+    public string BrandSubtitle => Text("BrandSubtitle");
+    public string NavAccounts => Text("NavAccounts");
+    public string NavFileHub => Text("NavFileHub");
+    public string NavSyncFolders => Text("NavSyncFolders");
+    public string NavTransferQueue => Text("NavTransferQueue");
+    public string NavActivityLogs => Text("NavActivityLogs");
+    public string NavSettings => Text("NavSettings");
+    public string NavAbout => Text("NavAbout");
+
+    public string AccountsTitle => Text("AccountsTitle");
+    public string ConnectGoogleButton => Text("ConnectGoogleButton");
+    public string CancelAuthButton => Text("CancelAuthButton");
+    public string ImportCredentialsButton => Text("ImportCredentialsButton");
+    public string RefreshQuotaButton => Text("RefreshQuotaButton");
+    public string DisconnectButton => Text("DisconnectButton");
+    public string StorageLabel => Text("StorageLabel");
+    public string BuyMoreStorageButton => Text("BuyMoreStorageButton");
+    public string BuyMoreShortButton => Text("BuyMoreShortButton");
+    public string OpenInDriveButton => Text("OpenInDriveButton");
+    public string StorageDriveLegend => Text("StorageDriveLegend");
+    public string StorageOtherLegend => Text("StorageOtherLegend");
+    public string StorageTrashLegend => Text("StorageTrashLegend");
+    public string ImportJsonShortButton => Text("ImportJsonShortButton");
+    public string ConnectShortButton => Text("ConnectShortButton");
+    public string AddAccountShortButton => Text("AddAccountShortButton");
+    public string AddAccountMenu => Text("AddAccountMenu");
+    public string SwitchAccountLabel => Text("SwitchAccountLabel");
+    public string OnboardingTitle => Text("OnboardingTitle");
+    public string OnboardingStep1Title => Text("OnboardingStep1Title");
+    public string OnboardingStep1Desc => Text("OnboardingStep1Desc");
+    public string OpenEnableDriveApiButton => Text("OpenEnableDriveApiButton");
+    public string OpenCloudConsoleButton => Text("OpenCloudConsoleButton");
+    public string OnboardingStep2Title => Text("OnboardingStep2Title");
+    public string OnboardingStep2Desc => Text("OnboardingStep2Desc");
+    public string OnboardingStep3Title => Text("OnboardingStep3Title");
+    public string OnboardingStep3Desc => Text("OnboardingStep3Desc");
+    public string SecuritySectionTitle => Text("SecuritySectionTitle");
+    public string CredentialsFileLabel => Text("CredentialsFileLabel");
+    public string TokensDirLabel => Text("TokensDirLabel");
+    public string SafeDeletionNotice => Text("SafeDeletionNotice");
+
+    public string FileHubTitle => Text("FileHubTitle");
+    public string SearchFilesWatermark => Text("SearchFilesWatermark");
+    public string UploadFileButton => Text("UploadFileButton");
+    public string LayoutListButton => Text("LayoutListButton");
+    public string LayoutGridButton => Text("LayoutGridButton");
+    public string DownloadButton => Text("DownloadButton");
+    public string PreviewButton => Text("PreviewButton");
+    public string PreviewTitle => Text("PreviewTitle");
+    public string PreviewPlayAudio => Text("PreviewPlayAudio");
+    public string PreviewStopAudio => Text("PreviewStopAudio");
+    public string PreviewPlayVideo => Text("PreviewPlayVideo");
+    public string PreviewPrevPage => Text("PreviewPrevPage");
+    public string PreviewNextPage => Text("PreviewNextPage");
+    public string FileHubOpenLocal => Text("FileHubOpenLocal");
+    public string BackButton => Text("BackButton");
+    public string TrashTabButton => Text("TrashTabButton");
+    public string MoveToTrashButton => Text("MoveToTrashButton");
+    public string RestoreFromTrashButton => Text("RestoreFromTrashButton");
+    public string DeletePermanentlyButton => Text("DeletePermanentlyButton");
+    public string EmptyTrashButton => Text("EmptyTrashButton");
+    public string EmptyTrashConfirmTitle => Text("EmptyTrashConfirmTitle");
+    public string ConfirmButton => Text("ConfirmButton");
+    public string CopyNameMenu => Text("CopyNameMenu");
+    public string CopyDriveLinkMenu => Text("CopyDriveLinkMenu");
+    public string OpenLocalFolderMenu => Text("OpenLocalFolderMenu");
+    public string CopyMessageMenu => Text("CopyMessageMenu");
+    public string CopyTargetPathMenu => Text("CopyTargetPathMenu");
+    public string SyncThisFolderMenu => Text("SyncThisFolderMenu");
+    public string CopyEmailMenu => Text("CopyEmailMenu");
+    public string NoTransfersHint => Text("NoTransfersHint");
+    public string NoLogsHint => Text("NoLogsHint");
+    public string FileHubEmptyFolder => Text("FileHubEmptyFolder");
+    public string ColOrigin => Text("ColOrigin");
+    public string FileHubFilterDrive => Text("FileHubFilterDrive");
+    public string FileHubFilterLocal => Text("FileHubFilterLocal");
+    public string OpenTrashTooltip => Text("OpenTrashTooltip");
+    public string TrashBannerTitle => Text("TrashBannerTitle");
+    public string SyncFoldersTitle => Text("SyncFoldersTitle");
+    public string MappedFoldersButton => Text("MappedFoldersButton");
+    public string RemoteBrowserButton => Text("RemoteBrowserButton");
+    public string MapLocalFolderButton => Text("MapLocalFolderButton");
+    public string SyncAllButton => Text("SyncAllButton");
+    public string SyncNowButton => Text("SyncNowButton");
+    public string RemoveButton => Text("RemoveButton");
+    public string EmptyFoldersHint => Text("EmptyFoldersHint");
+    public string AllFoldersPausedHint => Text("AllFoldersPausedHint");
+    public string SyncOriginLocalLabel => Text("SyncOriginLocalLabel");
+    public string SyncDestinationCloudLabel => Text("SyncDestinationCloudLabel");
+
+    public string MyDriveLabel => Text("MyDriveLabel");
+    public string SearchRemoteWatermark => Text("SearchRemoteWatermark");
+    public string SearchButton => Text("SearchButton");
+    public string SyncSelectedFolderButton => Text("SyncSelectedFolderButton");
+    public string RefreshButton => Text("RefreshButton");
+    public string ColName => Text("ColName");
+    public string ColType => Text("ColType");
+    public string ColSize => Text("ColSize");
+    public string ColModified => Text("ColModified");
+    public string ColAction => Text("ColAction");
+    public string OpenFolderButton => Text("OpenFolderButton");
+
+    public string TransferQueueTitle => Text("TransferQueueTitle");
+    public string ClearCompletedButton => Text("ClearCompletedButton");
+    public string CancelButton => Text("CancelButton");
+
+    public string ActivityLogsTitle => Text("ActivityLogsTitle");
+    public string ClearLogsButton => Text("ClearLogsButton");
+    public string FilterLogsWatermark => Text("FilterLogsWatermark");
+    public string ApplyFilterButton => Text("ApplyFilterButton");
+    public string ColTimestamp => Text("ColTimestamp");
+    public string ColLevel => Text("ColLevel");
+    public string ColEvent => Text("ColEvent");
+    public string ColDescription => Text("ColDescription");
+    public string ColTarget => Text("ColTarget");
+
+    public string SettingsTitle => Text("SettingsTitle");
+    public string ReloadButton => Text("ReloadButton");
+    public string ReloadingButton => Text("ReloadingButton");
+    public string ReloadedButton => Text("ReloadedButton");
+    public string SaveChangesButton => Text("SaveChangesButton");
+    public string SavingButton => Text("SavingButton");
+    public string SavedButton => Text("SavedButton");
+    public string GeneralSectionTitle => Text("GeneralSectionTitle");
+    public string LanguageLabel => Text("LanguageLabel");
+    public string LanguageHint => Text("LanguageHint");
+    public string UiScaleLabel => Text("UiScaleLabel");
+    public string UiScaleHint => Text("UiScaleHint");
+    public string DownloadDirectoryLabel => Text("DownloadDirectoryLabel");
+    public string DownloadDirectoryHint => Text("DownloadDirectoryHint");
+    public string BrowseFolderButton => Text("BrowseFolderButton");
+    public string StartOnBootCheckbox => Text("StartOnBootCheckbox");
+    public string StartOnBootHint => Text("StartOnBootHint");
+    public string NotificationsEnabledCheckbox => Text("NotificationsEnabledCheckbox");
+    public string MinimizeToTrayCheckbox => Text("MinimizeToTrayCheckbox");
+    public string TestNotificationButton => Text("TestNotificationButton");
+    public string AutoMemoryCleanupLabel => Text("AutoMemoryCleanupLabel");
+    public string AutoMemoryCleanupHint => Text("AutoMemoryCleanupHint");
+    public string MemoryCleanupIntervalLabel => Text("MemoryCleanupIntervalLabel");
+    public string CleanMemoryNowButton => Text("CleanMemoryNowButton");
+    public string SyncEngineSectionTitle => Text("SyncEngineSectionTitle");
+    public string SyncIntervalLabel => Text("SyncIntervalLabel");
+    public string SyncIntervalHint => Text("SyncIntervalHint");
+    public string CredentialsAccountsSectionTitle => Text("CredentialsAccountsSectionTitle");
+    public string CredentialsAccountsSubtitle => Text("CredentialsAccountsSubtitle");
+    public string RevokeJsonOnlyButton => Text("RevokeJsonOnlyButton");
+    public string RevokeAccountButton => Text("RevokeAccountButton");
+    public string SwitchToAccountButton => Text("SwitchToAccountButton");
+    public string ConnectedAccountsEmptyHint => Text("ConnectedAccountsEmptyHint");
+    public string ConflictPolicyLabel => Text("ConflictPolicyLabel");
+    public string ConflictPolicyHint => Text("ConflictPolicyHint");
+    public string WatchLocalChangesCheckbox => Text("WatchLocalChangesCheckbox");
+    public string IgnorePatternsLabel => Text("IgnorePatternsLabel");
+    public string LocalApiSectionTitle => Text("LocalApiSectionTitle");
+    public string EnableLocalApiCheckbox => Text("EnableLocalApiCheckbox");
+    public string LocalApiPortLabel => Text("LocalApiPortLabel");
+    public string LocalApiPortHint => Text("LocalApiPortHint");
+    public string CurrentApiStatusLabel => Text("CurrentApiStatusLabel");
+    public string OpenApiDocsButton => Text("OpenApiDocsButton");
+    public string OpenApiSpecButton => Text("OpenApiSpecButton");
+    public string SystemPathsSectionTitle => Text("SystemPathsSectionTitle");
+    public string AboutSectionTitle => Text("AboutSectionTitle");
+    public string AboutDescription => Text("AboutDescription");
+    public string AboutCompanyLabel => Text("AboutCompanyLabel");
+    public string AboutProductLabel => Text("AboutProductLabel");
+    public string AboutDeveloperLabel => Text("AboutDeveloperLabel");
+    public string AboutVersionLabel => Text("AboutVersionLabel");
+    public string AboutTechStack => Text("AboutTechStack");
+    public string TransferDetailLocalPath => Text("TransferDetailLocalPath");
+    public string TransferDetailRelativePath => Text("TransferDetailRelativePath");
+    public string TransferDetailRemoteId => Text("TransferDetailRemoteId");
+    public string TransferDetailStarted => Text("TransferDetailStarted");
+    public string TransferDetailCompleted => Text("TransferDetailCompleted");
+    public string TransferDetailDuration => Text("TransferDetailDuration");
+    public string TransferDetailAvgSpeed => Text("TransferDetailAvgSpeed");
+    public string TransferDetailError => Text("TransferDetailError");
+    public string TransferCopyPathButton => Text("TransferCopyPathButton");
+    public string TransferCopyDriveIdButton => Text("TransferCopyDriveIdButton");
+    public string SelectAllButton => Text("SelectAllButton");
+    public string ClearSelectionButton => Text("ClearSelectionButton");
+}
