@@ -146,13 +146,25 @@ launch_gui_installer() {
   local publish_bin="${REPO_ROOT}/packaging/linux/build/publish/TundraDrive"
   local debug_bin="${REPO_ROOT}/src/TundraDrive.Desktop/bin/Debug/net10.0/TundraDrive"
   local appimage_bin=""
-  appimage_bin="$(find_appimage || true)"
 
   if [[ -x "${publish_bin}" ]]; then
     echo -e "${CYAN}==> Abrindo Instalador Gráfico TundraDrive by TundraLab...${RESET}"
     exec "${publish_bin}" --installer "$@"
-  elif [[ -n "${appimage_bin}" && -x "${appimage_bin}" ]]; then
-    echo -e "${CYAN}==> Abrindo Instalador Gráfico TundraDrive by TundraLab (via AppImage)...${RESET}"
+  fi
+
+  if [[ -n "${TERMUX_VERSION:-}" ]] || [[ "$(uname -m)" != "x86_64" ]]; then
+    return 1
+  fi
+
+  appimage_bin="$(find_appimage || true)"
+  if [[ -z "${appimage_bin}" ]]; then
+    echo -e "${CYAN}==> Baixando interface do Instalador Gráfico TundraDrive by TundraLab...${RESET}"
+    appimage_bin="$(resolve_or_fetch_appimage || true)"
+  fi
+
+  if [[ -n "${appimage_bin}" ]]; then
+    chmod +x "${appimage_bin}"
+    echo -e "${CYAN}==> Abrindo Instalador Gráfico TundraDrive by TundraLab...${RESET}"
     exec "${appimage_bin}" --appimage-extract-and-run --installer "$@"
   elif [[ -x "${debug_bin}" ]]; then
     echo -e "${CYAN}==> Abrindo Instalador Gráfico TundraDrive by TundraLab...${RESET}"
@@ -236,56 +248,50 @@ uninstall_cli() {
 }
 
 MODE="${1:---gui}"
+print_banner
 
 case "${MODE}" in
   --gui)
-    print_banner
     if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
       if launch_gui_installer; then
         exit 0
       fi
     fi
     ;;
+  --cli)
+    ;;
   --appimage)
-    print_banner
     install_appimage_cli
     exit 0
     ;;
   --rpm)
-    print_banner
     install_rpm_cli
     exit 0
     ;;
   --download-appimage)
-    print_banner
     resolve_or_fetch_appimage
     exit 0
     ;;
   --download-rpm)
-    print_banner
     resolve_or_fetch_rpm
     exit 0
     ;;
   --download-only)
-    print_banner
     resolve_or_fetch_appimage
     resolve_or_fetch_rpm
     exit 0
     ;;
   --uninstall)
-    print_banner
     uninstall_cli
     exit 0
     ;;
   --build-all)
-    print_banner
     "${SCRIPT_DIR}/build-appimage.sh"
     FORCE_PUBLISH=0 "${SCRIPT_DIR}/build-rpm.sh"
     exit 0
     ;;
 esac
 
-print_banner
 echo "Escolha o modo de instalação:"
 echo "  1) Baixar e instalar Pacote .AppImage Integrado (Usuário local, sem root)"
 echo "  2) Baixar e instalar Pacote Nativo .rpm (Sistema Fedora / RHEL / openSUSE)"
