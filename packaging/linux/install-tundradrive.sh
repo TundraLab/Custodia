@@ -65,7 +65,7 @@ find_rpm() {
 
 download_release_asset() {
   local asset_name="$1"
-  local dest_dir="${DOWNLOAD_DIR}"
+  local dest_dir="${2:-${DOWNLOAD_DIR}}"
   mkdir -p "${dest_dir}"
   local dest_path="${dest_dir}/${asset_name}"
   local url="${RELEASE_BASE_URL}/${asset_name}"
@@ -145,6 +145,8 @@ resolve_or_fetch_rpm() {
 launch_gui_installer() {
   local publish_bin="${REPO_ROOT}/packaging/linux/build/publish/TundraDrive"
   local debug_bin="${REPO_ROOT}/src/TundraDrive.Desktop/bin/Debug/net10.0/TundraDrive"
+  local gui_cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/tundradrive-installer"
+  local cached_appimage="${gui_cache_dir}/${APPIMAGE_ASSET}"
   local appimage_bin=""
 
   if [[ -x "${publish_bin}" ]]; then
@@ -157,9 +159,16 @@ launch_gui_installer() {
   fi
 
   appimage_bin="$(find_appimage || true)"
+  if [[ -z "${appimage_bin}" ]] && [[ -f "${cached_appimage}" ]]; then
+    appimage_bin="${cached_appimage}"
+  fi
+
   if [[ -z "${appimage_bin}" ]]; then
-    echo -e "${CYAN}==> Baixando interface do Instalador Gráfico TundraDrive by TundraLab...${RESET}"
-    appimage_bin="$(resolve_or_fetch_appimage || true)"
+    echo -e "${CYAN}==> Preparando interface gráfica do Instalador TundraDrive by TundraLab...${RESET}"
+    appimage_bin="$(download_release_asset "${APPIMAGE_ASSET}" "${gui_cache_dir}" || true)"
+    if [[ -z "${appimage_bin}" ]]; then
+      appimage_bin="$(resolve_or_fetch_appimage || true)"
+    fi
   fi
 
   if [[ -n "${appimage_bin}" ]]; then

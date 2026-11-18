@@ -258,17 +258,13 @@ public sealed partial class InstallerViewModel : ViewModelBase
             var optBinary = "/opt/tundradrive/TundraDrive";
 
             string launchTarget;
-            if (!IsRpmSelected && File.Exists(localAppImage))
+            if (IsRpmSelected)
             {
-                launchTarget = localAppImage;
-            }
-            else if (File.Exists(systemBinary))
-            {
-                launchTarget = systemBinary;
-            }
-            else if (File.Exists(optBinary))
-            {
-                launchTarget = optBinary;
+                launchTarget = File.Exists(systemBinary)
+                    ? systemBinary
+                    : File.Exists(optBinary)
+                        ? optBinary
+                        : throw new FileNotFoundException("Binário RPM não encontrado em /usr/bin/tundradrive.");
             }
             else if (File.Exists(localAppImage))
             {
@@ -277,6 +273,14 @@ public sealed partial class InstallerViewModel : ViewModelBase
             else if (File.Exists(localBinary))
             {
                 launchTarget = localBinary;
+            }
+            else if (File.Exists(systemBinary))
+            {
+                launchTarget = systemBinary;
+            }
+            else if (File.Exists(optBinary))
+            {
+                launchTarget = optBinary;
             }
             else
             {
@@ -289,6 +293,10 @@ public sealed partial class InstallerViewModel : ViewModelBase
                 CreateNoWindow = false
             };
             psi.Environment.Remove("TUNDRA_INSTALLER_MODE");
+            psi.Environment.Remove("APPIMAGE");
+            psi.Environment.Remove("APPDIR");
+            psi.Environment.Remove("ARGV0");
+            psi.Environment.Remove("OWD");
             Process.Start(psi);
 
             CloseWindowCallback?.Invoke();
@@ -398,7 +406,8 @@ public sealed partial class InstallerViewModel : ViewModelBase
                 privilegedCmd = "pkexec";
                 if (CommandExists("dnf"))
                 {
-                    args.AddRange(["dnf", "install", "-y", resolvedRpmPath]);
+                    var dnfSubcommand = IsRpmPackageInstalled() ? "reinstall" : "install";
+                    args.AddRange(["dnf", dnfSubcommand, "-y", resolvedRpmPath]);
                     if (InstallOptionalMediaPackages)
                     {
                         args.AddRange(["poppler-utils", "ghostscript", "ffmpeg", "libreoffice", "ImageMagick"]);
@@ -433,6 +442,14 @@ public sealed partial class InstallerViewModel : ViewModelBase
 
             ProgressValue = 75;
             AppendLog("Pacote .rpm instalado com sucesso em /opt/tundradrive e /usr/bin/tundradrive.");
+
+            // Clean up any stale AppImage user installation so desktop shortcuts always launch /usr/bin/tundradrive
+            var localOptDir = Path.Combine(UserHome, ".local", "opt", "tundradrive");
+            if (Directory.Exists(localOptDir))
+            {
+                Directory.Delete(localOptDir, recursive: true);
+            }
+            TryDeleteFile(Path.Combine(UserHome, ".local", "bin", "tundradrive"));
 
             InstallUserIconsAndShortcuts("/usr/bin/tundradrive");
             ProgressValue = 90;
@@ -508,7 +525,9 @@ public sealed partial class InstallerViewModel : ViewModelBase
         var searchDirs = new List<string>();
 
         var appImageEnv = Environment.GetEnvironmentVariable("APPIMAGE");
-        if (!string.IsNullOrWhiteSpace(appImageEnv) && File.Exists(appImageEnv))
+        var isTempBootstrapAppImage = !string.IsNullOrWhiteSpace(appImageEnv) &&
+                                      appImageEnv.Contains("/.cache/tundradrive-installer/", StringComparison.Ordinal);
+        if (!string.IsNullOrWhiteSpace(appImageEnv) && File.Exists(appImageEnv) && !isTempBootstrapAppImage)
         {
             AppImagePackagePath = appImageEnv;
             var envDir = Path.GetDirectoryName(appImageEnv);
@@ -516,6 +535,12 @@ public sealed partial class InstallerViewModel : ViewModelBase
             {
                 searchDirs.Add(envDir);
             }
+        }
+
+        var cacheInstallerDir = Path.Combine(UserHome, ".cache", "tundradrive-installer");
+        if (Directory.Exists(cacheInstallerDir))
+        {
+            searchDirs.Add(cacheInstallerDir);
         }
 
         var cwd = Directory.GetCurrentDirectory();
@@ -561,7 +586,8 @@ public sealed partial class InstallerViewModel : ViewModelBase
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(RpmPackagePath) && string.IsNullOrWhiteSpace(AppImagePackagePath))
+        if ((!string.IsNullOrWhiteSpace(RpmPackagePath) && string.IsNullOrWhiteSpace(AppImagePackagePath)) ||
+            (isTempBootstrapAppImage && (File.Exists("/etc/fedora-release") || CommandExists("dnf"))))
         {
             SelectedMode = "RPM";
         }
