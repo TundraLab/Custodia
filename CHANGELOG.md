@@ -10,7 +10,7 @@ Todas as mudanças principais do TundraDrive seguem versionamento semântico (`M
 - Envio de notificações nativas diretamente via D-Bus (`org.freedesktop.Notifications`) com botão `Abrir pasta` integrado ao gerenciador de arquivos via `org.freedesktop.FileManager1`.
 - Filtro nas notificações de conclusão de sincronização para evitar avisos repetitivos quando não houver alterações.
 - Compatibilidade aprimorada com **KDE Plasma 5/6** (portal XDG, atualização de cache `kbuildsycoca`, abertura no Dolphin e codificação de `.trashinfo` no padrão FreeDesktop) além de GNOME e COSMIC (Pop!_OS).
-- Script [build-appimage.sh](packaging/linux/build-appimage.sh) para gerar pacote AppImage `x86_64` independente com runtime `.NET 10` embutido.
+- Scripts [build-appimage.sh](packaging/linux/build-appimage.sh), [build-rpm.sh](packaging/linux/build-rpm.sh) e [install-tundradrive.sh](packaging/linux/install-tundradrive.sh), além do **Instalador Gráfico Proprietário TundraDrive by TundraLab** (`--installer`) para pacotes `.rpm` e `.AppImage` (`x86_64`).
 - Suíte de testes automatizados com xUnit em `tests/TundraDrive.Tests` cobrindo localização, logs, Lixeira, segurança de caminhos e ViewModels.
 - Fluxo isolado para adicionar novas contas Google (`+ Conta`): solicitação prévia do `credentials.json` específico da conta antes de abrir o login OAuth no navegador.
 - Prévia visual das telas (`docs/images/preview-*.png`) e passo a passo ilustrado do Google Cloud OAuth no `README.md`.

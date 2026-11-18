@@ -16,22 +16,26 @@ APPDIR="${BUILD_ROOT}/TundraDrive.AppDir"
 DIST_DIR="${REPO_ROOT}/dist"
 OUT_APPIMAGE="${DIST_DIR}/TundraDrive-${VERSION}-${ARCH}.AppImage"
 
-rm -rf "${BUILD_ROOT}"
+rm -rf "${APPDIR}"
 mkdir -p "${PUBLISH_DIR}" "${APPDIR}/usr/bin" \
          "${APPDIR}/usr/share/applications" \
          "${APPDIR}/usr/share/icons/hicolor/256x256/apps" \
          "${APPDIR}/usr/share/icons/hicolor/scalable/apps" \
          "${DIST_DIR}"
 
-echo "==> Publicando TundraDrive ${VERSION} (linux-x64 self-contained)..."
-dotnet publish "${PROJECT_PATH}" \
-  -c Release \
-  -r linux-x64 \
-  --self-contained true \
-  -p:PublishSingleFile=false \
-  -p:DebugType=None \
-  -p:DebugSymbols=false \
-  -o "${PUBLISH_DIR}"
+if [[ ! -x "${PUBLISH_DIR}/TundraDrive" ]] || [[ "${FORCE_PUBLISH:-1}" == "1" ]]; then
+  echo "==> [TundraDrive by TundraLab] Publicando TundraDrive ${VERSION} (linux-x64 self-contained)..."
+  rm -rf "${PUBLISH_DIR}"
+  mkdir -p "${PUBLISH_DIR}"
+  dotnet publish "${PROJECT_PATH}" \
+    -c Release \
+    -r linux-x64 \
+    --self-contained true \
+    -p:PublishSingleFile=false \
+    -p:DebugType=None \
+    -p:DebugSymbols=false \
+    -o "${PUBLISH_DIR}"
+fi
 
 cp -a "${PUBLISH_DIR}/." "${APPDIR}/usr/bin/"
 chmod +x "${APPDIR}/usr/bin/TundraDrive"
@@ -46,12 +50,14 @@ cat > "${APPDIR}/tundradrive.desktop" <<'EOF'
 Type=Application
 Version=1.0
 Name=TundraDrive
-Comment=Google Drive Local Synchronization Client
+GenericName=Google Drive Client
+Comment=TundraDrive by TundraLab - Cliente do Google Drive para Linux
 Exec=TundraDrive
 Icon=tundradrive
 Terminal=false
-Categories=Utility;
+Categories=Network;FileTransfer;Utility;
 StartupWMClass=TundraDrive
+X-TundraLab-Vendor=TundraLab
 EOF
 
 cp "${APPDIR}/tundradrive.desktop" "${APPDIR}/usr/share/applications/tundradrive.desktop"
@@ -64,6 +70,10 @@ cat > "${APPDIR}/AppRun" <<'EOF'
 #!/usr/bin/env bash
 HERE="$(dirname "$(readlink -f "${0}")")"
 export PATH="${HERE}/usr/bin:${PATH}"
+INVOKED_NAME="$(basename "${ARGV0:-$0}")"
+if [[ "${INVOKED_NAME}" == *Installer* ]] || [[ "${INVOKED_NAME}" == *installer* ]]; then
+  exec "${HERE}/usr/bin/TundraDrive" --installer "$@"
+fi
 exec "${HERE}/usr/bin/TundraDrive" "$@"
 EOF
 chmod -R a+rX "${APPDIR}"
@@ -85,7 +95,7 @@ else
   APPIMAGETOOL="${TOOL_BIN}"
 fi
 
-echo "==> Gerando ${OUT_APPIMAGE}..."
+echo "==> [TundraDrive by TundraLab] Gerando ${OUT_APPIMAGE}..."
 rm -f "${OUT_APPIMAGE}"
 if [[ "${APPIMAGETOOL}" == *.AppImage ]]; then
   ARCH="${ARCH}" "${APPIMAGETOOL}" --appimage-extract-and-run "${APPDIR}" "${OUT_APPIMAGE}"
