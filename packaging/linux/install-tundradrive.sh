@@ -394,7 +394,7 @@ verify_sha256_if_available() {
 
   local expected_hash=""
   local local_sums="${file_dir}/${SUMS_ASSET}"
-  if [[ -f "${local_sums}" ]]; then
+  if [[ "${TUNDRA_VERIFY_REMOTE:-0}" != "1" ]] && [[ -f "${local_sums}" ]]; then
     expected_hash="$(awk -v name="${file_name}" '$2 == name { print $1; exit }' "${local_sums}")"
   fi
 
@@ -434,52 +434,45 @@ verify_sha256_if_available() {
   return 0
 }
 
-resolve_or_fetch_appimage() {
-  local target_dir="${1:-${DOWNLOAD_DIR}}"
+resolve_or_fetch_asset() {
+  local find_fn="$1"
+  local asset_name="$2"
+  local build_script="$3"
+  local target_dir="${4:-${DOWNLOAD_DIR}}"
+
   local found
-  found="$(find_appimage || true)"
+  found="$("${find_fn}" || true)"
   if [[ -n "${found}" ]]; then
-    echo "${found}"
+    local found_dir
+    found_dir="$(dirname "${found}")"
+    if [[ "${found_dir}" == "${DIST_DIR}" ]] || TUNDRA_VERIFY_REMOTE=1 verify_sha256_if_available "${found}" >/dev/null 2>&1; then
+      echo "${found}"
+      return 0
+    fi
+    step_warn "Cópia local de ${asset_name} está desatualizada ou corrompida; baixando a versão oficial mais recente..." >&2
+  fi
+
+  if download_release_asset "${asset_name}" "${target_dir}"; then
     return 0
   fi
 
-  if download_release_asset "${APPIMAGE_ASSET}" "${target_dir}"; then
+  if [[ -x "${SCRIPT_DIR}/${build_script}" ]]; then
+    step_warn "Gerando ${asset_name} localmente pelo código-fonte..." >&2
+    "${SCRIPT_DIR}/${build_script}" >&2
+    "${find_fn}"
     return 0
   fi
 
-  if [[ -x "${SCRIPT_DIR}/build-appimage.sh" ]]; then
-    step_warn "Gerando ${APPIMAGE_ASSET} localmente pelo código-fonte..." >&2
-    "${SCRIPT_DIR}/build-appimage.sh" >&2
-    find_appimage
-    return 0
-  fi
-
-  step_err "Não foi possível baixar nem localizar ${APPIMAGE_ASSET}."
+  step_err "Não foi possível baixar nem localizar ${asset_name}."
   return 1
 }
 
+resolve_or_fetch_appimage() {
+  resolve_or_fetch_asset find_appimage "${APPIMAGE_ASSET}" "build-appimage.sh" "${1:-${DOWNLOAD_DIR}}"
+}
+
 resolve_or_fetch_rpm() {
-  local target_dir="${1:-${DOWNLOAD_DIR}}"
-  local found
-  found="$(find_rpm || true)"
-  if [[ -n "${found}" ]]; then
-    echo "${found}"
-    return 0
-  fi
-
-  if download_release_asset "${RPM_ASSET}" "${target_dir}"; then
-    return 0
-  fi
-
-  if [[ -x "${SCRIPT_DIR}/build-rpm.sh" ]]; then
-    step_warn "Gerando ${RPM_ASSET} localmente pelo código-fonte..." >&2
-    "${SCRIPT_DIR}/build-rpm.sh" >&2
-    find_rpm
-    return 0
-  fi
-
-  step_err "Não foi possível baixar nem localizar ${RPM_ASSET}."
-  return 1
+  resolve_or_fetch_asset find_rpm "${RPM_ASSET}" "build-rpm.sh" "${1:-${DOWNLOAD_DIR}}"
 }
 
 refresh_desktop_caches() {
