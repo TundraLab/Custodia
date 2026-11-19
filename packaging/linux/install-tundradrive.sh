@@ -144,6 +144,77 @@ step_err() {
   echo -e "${RED}[✗]${RESET} $1" >&2
 }
 
+ACTIVE_BG_PID=""
+cleanup_ui() {
+  if [[ -n "${ACTIVE_BG_PID:-}" ]]; then
+    kill "${ACTIVE_BG_PID}" >/dev/null 2>&1 || true
+  fi
+  if [[ -t 2 ]]; then
+    printf "\033[?25h" >&2 || true
+  fi
+}
+trap cleanup_ui EXIT INT TERM
+
+repeat_char() {
+  local count="$1" ch="$2" out="" i
+  for ((i = 0; i < count; i++)); do
+    out+="${ch}"
+  done
+  printf '%s' "${out}"
+}
+
+run_with_spinner() {
+  local label="$1"
+  shift
+
+  local tmp_log
+  tmp_log="$(mktemp /tmp/tundra-step.XXXXXX)"
+  "$@" >"${tmp_log}" 2>&1 &
+  local cmd_pid=$!
+  ACTIVE_BG_PID="${cmd_pid}"
+
+  local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+  local code_bars=('⣾' '⣽' '⣻' '⢿' '⡿' '⣟' '⣯' '⣷')
+  local start_ts
+  start_ts="$(date +%s)"
+  local idx=0
+
+  if [[ -t 2 ]]; then
+    printf "\033[?25l" >&2 || true
+    while kill -0 "${cmd_pid}" 2>/dev/null; do
+      local now_ts elapsed f c
+      now_ts="$(date +%s)"
+      elapsed=$(( now_ts - start_ts ))
+      f="${frames[$(( idx % ${#frames[@]} ))]}"
+      c="${code_bars[$(( idx % ${#code_bars[@]} ))]}"
+      printf "\r\033[K  ${CYAN}%s${RESET} ${DIM}%s${RESET}  %s ${DIM}(%02d:%02d)${RESET}" \
+        "${f}" "${c}" "${label}" $(( elapsed / 60 )) $(( elapsed % 60 )) >&2
+      idx=$(( idx + 1 ))
+      sleep 0.1
+    done
+    printf "\r\033[K" >&2
+    printf "\033[?25h" >&2 || true
+  else
+    echo -e "${CYAN}[▸]${RESET} ${label}..." >&2
+  fi
+
+  local rc=0
+  wait "${cmd_pid}" || rc=$?
+  ACTIVE_BG_PID=""
+  local total_elapsed=$(( $(date +%s) - start_ts ))
+
+  if (( rc != 0 )); then
+    step_err "${label} falhou (código ${rc})."
+    tail -n 15 "${tmp_log}" >&2 || true
+    rm -f "${tmp_log}"
+    return "${rc}"
+  fi
+
+  rm -f "${tmp_log}"
+  step_ok "${label} ${DIM}(${total_elapsed}s)${RESET}"
+  return 0
+}
+
 find_appimage() {
   for candidate in \
     "${DOWNLOAD_DIR}/${APPIMAGE_ASSET}" \
@@ -174,6 +245,87 @@ find_rpm() {
   return 1
 }
 
+download_with_curl_animated() {
+  local url="$1"
+  local tmp_file="$2"
+  local label="$3"
+
+  local hdr_file err_file
+  hdr_file="$(mktemp /tmp/tundra-hdr.XXXXXX)"
+  err_file="$(mktemp /tmp/tundra-curl.XXXXXX)"
+
+  curl -fsSL --dump-header "${hdr_file}" "${url}" -o "${tmp_file}" 2>"${err_file}" &
+  local dl_pid=$!
+  ACTIVE_BG_PID="${dl_pid}"
+
+  local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+  local code_bars=('⣾' '⣽' '⣻' '⢿' '⡿' '⣟' '⣯' '⣷')
+  local start_ts
+  start_ts="$(date +%s)"
+  local idx=0
+
+  if [[ -t 2 ]]; then
+    printf "\033[?25l" >&2 || true
+    while kill -0 "${dl_pid}" 2>/dev/null; do
+      local now_ts elapsed bytes total_bytes f c
+      now_ts="$(date +%s)"
+      elapsed=$(( now_ts - start_ts ))
+      (( elapsed < 1 )) && elapsed=1
+      bytes="$(stat -c%s "${tmp_file}" 2>/dev/null || wc -c < "${tmp_file}" 2>/dev/null || echo 0)"
+      total_bytes="$(awk 'tolower($1)=="content-length:" { v=$2 } END { gsub(/\r/, "", v); print v+0 }' "${hdr_file}" 2>/dev/null || echo 0)"
+      f="${frames[$(( idx % ${#frames[@]} ))]}"
+      c="${code_bars[$(( idx % ${#code_bars[@]} ))]}"
+
+      if (( bytes <= 0 )); then
+        printf "\r\033[K  ${CYAN}%s %s${RESET}  Conectando ao GitHub Releases... ${DIM}(%02d:%02d)${RESET}" \
+          "${f}" "${c}" $(( elapsed / 60 )) $(( elapsed % 60 )) >&2
+      elif (( total_bytes > 0 )); then
+        local pct fill empty bar_filled bar_empty stats
+        pct=$(( bytes * 100 / total_bytes ))
+        (( pct > 100 )) && pct=100
+        fill=$(( pct * 24 / 100 ))
+        empty=$(( 24 - fill ))
+        bar_filled="$(repeat_char "${fill}" "█")"
+        bar_empty="$(repeat_char "${empty}" "░")"
+        stats="$(awk -v b="${bytes}" -v t="${total_bytes}" -v e="${elapsed}" \
+          'BEGIN { printf "%.1f / %.1f MB  •  %.1f MB/s", b/1048576, t/1048576, (b/1048576)/e }')"
+        printf "\r\033[K  ${CYAN}%s %s${RESET}  [${GREEN}%s${DIM}%s${RESET}] ${BOLD}%3d%%${RESET}  %s" \
+          "${f}" "${c}" "${bar_filled}" "${bar_empty}" "${pct}" "${stats}" >&2
+      else
+        local mb_line
+        mb_line="$(awk -v b="${bytes}" -v e="${elapsed}" 'BEGIN { printf "%.1f MB  •  %.1f MB/s", b/1048576, (b/1048576)/e }')"
+        printf "\r\033[K  ${CYAN}%s %s${RESET}  Baixando ${BOLD}%s${RESET}  %s ${DIM}(%02d:%02d)${RESET}" \
+          "${f}" "${c}" "${label}" "${mb_line}" $(( elapsed / 60 )) $(( elapsed % 60 )) >&2
+      fi
+
+      idx=$(( idx + 1 ))
+      sleep 0.1
+    done
+    printf "\r\033[K" >&2
+    printf "\033[?25h" >&2 || true
+  else
+    echo -e "${CYAN}[▸]${RESET} Baixando ${BOLD}${label}${RESET}..." >&2
+  fi
+
+  local rc=0
+  wait "${dl_pid}" || rc=$?
+  ACTIVE_BG_PID=""
+  rm -f "${hdr_file}"
+  if (( rc != 0 )); then
+    cat "${err_file}" >&2 || true
+    rm -f "${err_file}"
+    return "${rc}"
+  fi
+  rm -f "${err_file}"
+
+  local final_bytes final_mb total_sec
+  final_bytes="$(stat -c%s "${tmp_file}" 2>/dev/null || wc -c < "${tmp_file}" 2>/dev/null || echo 0)"
+  final_mb="$(awk -v b="${final_bytes}" 'BEGIN { printf "%.1f MB", b/1048576 }')"
+  total_sec=$(( $(date +%s) - start_ts ))
+  step_ok "Download concluído: ${BOLD}${label}${RESET} ${DIM}(${final_mb} em ${total_sec}s)${RESET}" >&2
+  return 0
+}
+
 download_release_asset() {
   local asset_name="$1"
   local dest_dir="${2:-${DOWNLOAD_DIR}}"
@@ -181,8 +333,8 @@ download_release_asset() {
   local dest_path="${dest_dir}/${asset_name}"
   local url="${RELEASE_BASE_URL}/${asset_name}"
 
-  echo -e "${CYAN}[▸]${RESET} Baixando ${BOLD}${asset_name}${RESET} de ${DIM}${url}${RESET}" >&2
-  if command -v curl >/dev/null 2>&1 && curl -fL --progress-bar "${url}" -o "${dest_path}.tmp"; then
+  echo -e "${CYAN}[▸]${RESET} Origem: ${DIM}${url}${RESET}" >&2
+  if command -v curl >/dev/null 2>&1 && download_with_curl_animated "${url}" "${dest_path}.tmp" "${asset_name}"; then
     mv -f "${dest_path}.tmp" "${dest_path}"
     readlink -f "${dest_path}"
     return 0
@@ -198,7 +350,7 @@ download_release_asset() {
 
   if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
     echo -e "${YELLOW}[!]${RESET} Tentando download autenticado via GitHub CLI (gh)..." >&2
-    if gh release download "${RELEASE_TAG}" -R "${REPO_SLUG}" -p "${asset_name}" -D "${dest_dir}" --clobber >/dev/null; then
+    if run_with_spinner "Baixando ${asset_name} via gh" gh release download "${RELEASE_TAG}" -R "${REPO_SLUG}" -p "${asset_name}" -D "${dest_dir}" --clobber >&2; then
       readlink -f "${dest_path}"
       return 0
     fi
@@ -400,17 +552,18 @@ install_rpm_flow() {
   fi
 
   step_info "[3/4] Instalando pacote RPM no sistema (/opt/tundradrive)..."
+  sudo -v
   if command -v dnf >/dev/null 2>&1; then
     local dnf_action="install"
     if command -v rpm >/dev/null 2>&1 && rpm -q tundradrive >/dev/null 2>&1; then
       dnf_action="reinstall"
     fi
-    sudo dnf "${dnf_action}" -y "${rpm_path}"
+    run_with_spinner "Aplicando pacote ${RPM_ASSET} via DNF" sudo dnf "${dnf_action}" -y "${rpm_path}"
     if [[ "${install_media}" == "1" ]]; then
-      sudo dnf install -y poppler-utils ghostscript ffmpeg libreoffice ImageMagick || true
+      run_with_spinner "Instalando pacotes opcionais de mídia" sudo dnf install -y poppler-utils ghostscript ffmpeg libreoffice ImageMagick || true
     fi
   else
-    sudo rpm -Uvh --replacepkgs "${rpm_path}"
+    run_with_spinner "Aplicando pacote ${RPM_ASSET} via RPM" sudo rpm -Uvh --replacepkgs "${rpm_path}"
   fi
 
   # Remove eventual instalação local anterior em AppImage para evitar conflito de atalho
