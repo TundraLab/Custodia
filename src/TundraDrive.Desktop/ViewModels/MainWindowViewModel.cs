@@ -7,6 +7,7 @@ using TundraDrive.Api;
 using TundraDrive.Core.Configuration;
 using TundraDrive.Core.Models;
 using TundraDrive.Core.Sync;
+using TundraDrive.Core.Updates;
 using TundraDrive.Desktop.Converters;
 using TundraDrive.Desktop.Localization;
 using TundraDrive.Desktop.Services;
@@ -89,6 +90,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private string _updateBannerText = string.Empty;
 
     private bool _updateNotificationSent;
+    private CancellationTokenSource? _updateScheduleCts;
 
     public bool HasAccountAvatar => AccountAvatarBitmap is not null;
     public double UiScaleFactor => Math.Clamp(UiScalePercent, 100, 300) / 100.0;
@@ -312,18 +314,50 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             SettingsVm.LoadFromCurrent();
         });
 
-        if (settings.AutoCheckUpdates)
-        {
-            _ = CheckForUpdatesOnStartupAsync();
-        }
+        StartScheduledUpdateChecker();
     }
 
-    private async Task CheckForUpdatesOnStartupAsync()
+    private void StartScheduledUpdateChecker()
+    {
+        _updateScheduleCts?.Cancel();
+        _updateScheduleCts?.Dispose();
+        _updateScheduleCts = new CancellationTokenSource();
+        var token = _updateScheduleCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(3000, token);
+                if (UpdateSchedulePolicy.IsCheckDue(_settingsService.Current, DateTimeOffset.UtcNow))
+                {
+                    await RunScheduledUpdateCheckOnceAsync();
+                }
+
+                using var timer = new PeriodicTimer(TimeSpan.FromHours(6));
+                while (await timer.WaitForNextTickAsync(token))
+                {
+                    if (UpdateSchedulePolicy.IsCheckDue(_settingsService.Current, DateTimeOffset.UtcNow))
+                    {
+                        await RunScheduledUpdateCheckOnceAsync();
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch
+            {
+                // Scheduled update check should never interrupt sync operation.
+            }
+        }, CancellationToken.None);
+    }
+
+    private async Task RunScheduledUpdateCheckOnceAsync()
     {
         try
         {
-            await Task.Delay(3000);
-            var result = await AboutVm.CheckForUpdatesAsync();
+            var result = await AboutVm.CheckForUpdatesQuietlyAsync();
             if (result is { IsUpdateAvailable: true })
             {
                 Dispatcher.UIThread.Post(() =>
@@ -343,7 +377,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
         catch
         {
-            // Quiet startup update check should never interrupt sync startup.
         }
     }
 
@@ -724,6 +757,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _syncService.TransferUpdated -= OnTransferUpdated;
         _syncService.ActivityLogged -= OnActivityLogged;
         _syncService.ConnectivityChanged -= OnConnectivityChanged;
+        _updateScheduleCts?.Cancel();
+        _updateScheduleCts?.Dispose();
         FileHubVm.Dispose();
     }
 }

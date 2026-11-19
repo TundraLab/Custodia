@@ -49,6 +49,12 @@ public sealed class JsonAppSettingsService : IAppSettingsService
 
     public async Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
     {
+        await SaveSilentlyAsync(settings, cancellationToken);
+        SettingsChanged?.Invoke(this, settings);
+    }
+
+    public async Task SaveSilentlyAsync(AppSettings settings, CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(settings);
 
         await _gate.WaitAsync(cancellationToken);
@@ -62,8 +68,6 @@ public sealed class JsonAppSettingsService : IAppSettingsService
         {
             _gate.Release();
         }
-
-        SettingsChanged?.Invoke(this, settings);
     }
 
     private static async Task PersistInternalAsync(AppSettings settings, CancellationToken cancellationToken)

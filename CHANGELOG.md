@@ -2,6 +2,12 @@
 
 Todas as mudanças principais do TundraDrive seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [2.7.2] - 2026-11-19
+
+### Adicionado
+- **Animação de 5 segundos ao buscar atualizações:** barra de progresso animada com fases de consulta (`Conectando ao GitHub Releases...`, `Consultando versões e assinaturas SHA-256...` e `Comparando com a versão instalada`) e contagem regressiva ao clicar em **Verificar atualizações** na aba **Sobre**.
+- **Verificação automática mensal por padrão (configuração global):** novos campos `AutoCheckUpdates`, `UpdateCheckIntervalDays` (`30` dias por padrão) e `LastUpdateCheckUtc` em [AppSettings.cs](src/TundraDrive.Core/Models/AppSettings.cs) com agendamento contínuo em segundo plano (`UpdateSchedulePolicy`) e seletor de frequência nas **Configurações** (`1 vez por mês`, `A cada 15 dias`, `1 vez por semana`, `Sempre ao iniciar`).
+
 ## [2.7.1] - 2026-11-19
 
 ### Melhorado

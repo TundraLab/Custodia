@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -10,7 +11,10 @@ namespace TundraDrive.Desktop.ViewModels;
 public sealed partial class AboutViewModel : ViewModelBase
 {
     private readonly IAppUpdateService? _updateService;
+    private readonly IAppSettingsService? _settingsService;
     private AppUpdateCheckResult? _latestCheckResult;
+
+    public TimeSpan MinimumCheckAnimationDuration { get; set; } = TimeSpan.FromSeconds(5);
 
     public ILocalizationService Loc { get; }
     public string CompanyName => "TundraLab";
@@ -40,6 +44,12 @@ public sealed partial class AboutViewModel : ViewModelBase
     private double _updateDownloadProgress;
 
     [ObservableProperty]
+    private double _updateCheckProgress;
+
+    [ObservableProperty]
+    private string _lastCheckSummary = string.Empty;
+
+    [ObservableProperty]
     private string _updateStatusText = string.Empty;
 
     [ObservableProperty]
@@ -66,18 +76,33 @@ public sealed partial class AboutViewModel : ViewModelBase
     public string CheckUpdatesButtonText =>
         IsCheckingUpdates ? Loc.UpdateCheckingButton : Loc.UpdateCheckButton;
 
-    public AboutViewModel(ILocalizationService localization, IAppUpdateService? updateService = null)
+    public AboutViewModel(
+        ILocalizationService localization,
+        IAppUpdateService? updateService = null,
+        IAppSettingsService? settingsService = null)
     {
         Loc = localization;
         _updateService = updateService;
+        _settingsService = settingsService;
         RefreshInstalledModeSummary();
+        RefreshLastCheckSummary();
 
         Loc.LanguageChanged += (_, _) =>
         {
             RefreshInstalledModeSummary();
+            RefreshLastCheckSummary();
             OnPropertyChanged(nameof(CheckUpdatesButtonText));
             RefreshLocalizedStatusFromCache();
         };
+    }
+
+    public void RefreshLastCheckSummary()
+    {
+        var lastUtc = _settingsService?.Current.LastUpdateCheckUtc;
+        var relative = lastUtc.HasValue
+            ? Loc.FormatRelativeTimestamp(lastUtc)
+            : Loc.Text("UpdateLastCheckNever");
+        LastCheckSummary = Loc.Format("UpdateLastCheckFmt", relative);
     }
 
     public void RefreshInstalledModeSummary()
@@ -113,7 +138,13 @@ public sealed partial class AboutViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public async Task<AppUpdateCheckResult?> CheckForUpdatesAsync()
+    public Task<AppUpdateCheckResult?> CheckForUpdatesAsync() =>
+        CheckForUpdatesInternalAsync(useSearchAnimation: true);
+
+    public Task<AppUpdateCheckResult?> CheckForUpdatesQuietlyAsync() =>
+        CheckForUpdatesInternalAsync(useSearchAnimation: false);
+
+    private async Task<AppUpdateCheckResult?> CheckForUpdatesInternalAsync(bool useSearchAnimation)
     {
         if (_updateService is null || IsCheckingUpdates || IsDownloadingUpdate)
         {
@@ -122,11 +153,19 @@ public sealed partial class AboutViewModel : ViewModelBase
 
         IsCheckingUpdates = true;
         IsUpdateError = false;
-        UpdateStatusText = Loc.Text("UpdateCheckingStatus");
+        UpdateCheckProgress = 0;
 
         try
         {
-            var result = await _updateService.CheckForUpdatesAsync();
+            var checkTask = _updateService.CheckForUpdatesAsync();
+
+            if (useSearchAnimation && MinimumCheckAnimationDuration > TimeSpan.Zero)
+            {
+                await RunSearchAnimationAsync(checkTask, MinimumCheckAnimationDuration);
+            }
+
+            var result = await checkTask;
+            await RecordLastCheckTimestampAsync();
             ApplyCheckResult(result);
             return result;
         }
@@ -138,7 +177,54 @@ public sealed partial class AboutViewModel : ViewModelBase
         }
         finally
         {
+            UpdateCheckProgress = 0;
             IsCheckingUpdates = false;
+        }
+    }
+
+    private async Task RunSearchAnimationAsync(Task checkTask, TimeSpan duration)
+    {
+        var totalMs = Math.Max(100.0, duration.TotalMilliseconds);
+        var sw = Stopwatch.StartNew();
+
+        while (sw.Elapsed < duration || !checkTask.IsCompleted)
+        {
+            var elapsedMs = sw.Elapsed.TotalMilliseconds;
+            var pct = Math.Clamp((elapsedMs / totalMs) * 100.0, 2.0, 99.0);
+            var remainingSeconds = Math.Max(1, (int)Math.Ceiling((totalMs - elapsedMs) / 1000.0));
+
+            var phaseText = pct < 34.0
+                ? Loc.Format("UpdateSearchPhase1Fmt", remainingSeconds)
+                : pct < 68.0
+                    ? Loc.Format("UpdateSearchPhase2Fmt", remainingSeconds)
+                    : Loc.Format("UpdateSearchPhase3Fmt", AppVersionInfo.CurrentVersion, remainingSeconds);
+
+            UpdateCheckProgress = pct;
+            UpdateStatusText = phaseText;
+
+            var nextTickDelay = elapsedMs >= totalMs ? 80 : 100;
+            await Task.Delay(nextTickDelay);
+        }
+
+        UpdateCheckProgress = 100;
+    }
+
+    private async Task RecordLastCheckTimestampAsync()
+    {
+        if (_settingsService is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var current = _settingsService.Current;
+            current.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
+            await _settingsService.SaveSilentlyAsync(current);
+            RefreshLastCheckSummary();
+        }
+        catch
+        {
         }
     }
 

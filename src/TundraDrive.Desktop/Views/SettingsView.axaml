@@ -122,10 +122,17 @@
           <CheckBox IsChecked="{Binding MinimizeToTrayOnClose}"
                     Content="{Binding Loc.MinimizeToTrayCheckbox}" />
 
-          <StackPanel Spacing="4">
+          <StackPanel Spacing="8">
             <CheckBox IsChecked="{Binding AutoCheckUpdates}"
                       Content="{Binding Loc.AutoCheckUpdatesCheckbox}" />
             <TextBlock Classes="MutedMeta" Margin="28,0,0,0" Text="{Binding Loc.AutoCheckUpdatesHint}" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" Margin="28,2,0,0" IsEnabled="{Binding AutoCheckUpdates}">
+              <TextBlock Grid.Column="0" FontSize="12.5" VerticalAlignment="Center" Classes="MutedMeta" Text="{Binding Loc.UpdateFrequencyLabel}" />
+              <ComboBox Grid.Column="1"
+                        Width="235"
+                        ItemsSource="{Binding UpdateFrequencies}"
+                        SelectedIndex="{Binding SelectedUpdateFrequencyIndex}" />
+            </Grid>
           </StackPanel>
 
           <StackPanel Spacing="6">
