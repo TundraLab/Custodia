@@ -68,7 +68,7 @@ Cada pasta mapeada pode operar em **Espelho Bidirecional (`PC <-> Drive`)** ou *
 
 ### 1. Instalador Interativo no Terminal (`TundraDrive by TundraLab` - Recomendado)
 
-Abre instantaneamente no terminal (9 KB, sem baixar nada antes da escolha), detecta sua distribuição Linux, baixa apenas o formato selecionado (**`.rpm`** ou **`.AppImage`**), valida a assinatura **SHA-256**, instala ícones/atalhos e configura inicialização automática:
+Abre instantaneamente no terminal, detecta sua distribuição Linux, baixa apenas o formato selecionado (**`.rpm`** ou **`.AppImage`**), valida a assinatura **SHA-256**, instala ícones/atalhos e configura inicialização automática:
 
 ```bash
 curl -fsSL https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-Installer-2.6.0-x86_64.sh -o install-tundradrive.sh
