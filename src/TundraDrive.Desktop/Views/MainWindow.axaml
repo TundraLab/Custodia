@@ -428,7 +428,41 @@
     </Border>
 
       <!-- Área de conteúdo -->
-      <ContentControl Grid.Column="1" Content="{Binding CurrentViewModel}" />
+      <Grid Grid.Column="1" RowDefinitions="Auto,*">
+        <Border Grid.Row="0"
+                Background="#152338"
+                BorderBrush="#2563EB"
+                BorderThickness="0,0,0,1"
+                Padding="18,9"
+                IsVisible="{Binding IsUpdateBannerVisible}">
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <PathIcon Width="14" Height="14"
+                        Foreground="#60A5FA"
+                        Data="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+              <TextBlock FontSize="12.5"
+                         FontWeight="SemiBold"
+                         Foreground="#E2E8F0"
+                         VerticalAlignment="Center"
+                         Text="{Binding UpdateBannerText}" />
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Classes="PrimaryAction"
+                    Padding="10,5"
+                    FontSize="12"
+                    Content="{Binding Loc.UpdateBannerActionButton}"
+                    Command="{Binding OpenUpdatesFromBannerCommand}" />
+            <Button Grid.Column="2"
+                    Classes="SecondaryAction"
+                    Padding="8,5"
+                    FontSize="12"
+                    Content="✕"
+                    Command="{Binding DismissUpdateBannerCommand}" />
+          </Grid>
+        </Border>
+
+        <ContentControl Grid.Row="1" Content="{Binding CurrentViewModel}" />
+      </Grid>
     </Grid>
   </LayoutTransformControl>
 </Window>

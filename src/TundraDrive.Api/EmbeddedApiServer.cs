@@ -533,7 +533,7 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
             info = new
             {
                 title = "TundraDrive Local REST API",
-                version = "2.6.0",
+                version = TundraDrive.Core.Configuration.AppVersionInfo.CurrentVersion,
                 description = "API REST local (loopback 127.0.0.1) do TundraDrive para automacao, scripts e agentes de IA."
             },
             servers = new[] { new { url = serverUrl } },

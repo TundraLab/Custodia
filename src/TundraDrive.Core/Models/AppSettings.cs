@@ -15,6 +15,7 @@ public sealed class AppSettings
     public int EmbeddedApiPort { get; set; } = 5080;
     public bool AutoMemoryCleanupEnabled { get; set; } = true;
     public int MemoryCleanupIntervalMinutes { get; set; } = 5;
+    public bool AutoCheckUpdates { get; set; } = true;
     public ConflictResolutionPolicy ConflictPolicy { get; set; } = ConflictResolutionPolicy.KeepNewest;
     public List<string> IgnorePatterns { get; set; } =
     [

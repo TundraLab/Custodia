@@ -14,6 +14,8 @@ Todas as mudanças principais do TundraDrive seguem versionamento semântico (`M
 - Suíte de testes automatizados com xUnit em `tests/TundraDrive.Tests` cobrindo localização, logs, Lixeira, segurança de caminhos e ViewModels.
 - Fluxo isolado para adicionar novas contas Google (`+ Conta`): solicitação prévia do `credentials.json` específico da conta antes de abrir o login OAuth no navegador.
 - Prévia visual das telas (`docs/images/preview-*.png`) e passo a passo ilustrado do Google Cloud OAuth no `README.md`.
+- Proteção de **instância única** (`SingleInstanceGuard` por lock exclusivo e socket Unix local) que impede múltiplas instâncias e restaura automaticamente a janela aberta (inclusive oculta na bandeja) ao executar o aplicativo novamente.
+- Sistema de **atualizações futuras**: checagem automática e manual via GitHub Releases na aba **Sobre**, barra de progresso, validação `SHA-256`, auto-atualização integrada para `.AppImage` e `.rpm` (com `pkexec`), além de resolução dinâmica da última versão e opção `--update` no `install-tundradrive.sh`.
 
 ### Segurança
 - Proteção contra `Path Traversal` na extração/download de arquivos do Google Drive, na resolução de subpastas sincronizadas e na sanitização de nomes enviados (`Path.GetFileName` e validação estrita dentro do diretório raiz).

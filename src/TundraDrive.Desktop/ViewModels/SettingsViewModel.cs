@@ -106,6 +106,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
     private bool _minimizeToTrayOnClose = true;
 
     [ObservableProperty]
+    private bool _autoCheckUpdates = true;
+
+    [ObservableProperty]
     private string _downloadDirectory = AppPaths.DefaultDownloadDirectory;
 
     [ObservableProperty]
@@ -329,6 +332,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         StartOnBoot = current.StartOnBoot || _autostartManager.IsEnabled();
         NotificationsEnabled = current.NotificationsEnabled;
         MinimizeToTrayOnClose = current.MinimizeToTrayOnClose;
+        AutoCheckUpdates = current.AutoCheckUpdates;
         DownloadDirectory = string.IsNullOrWhiteSpace(current.DownloadDirectory)
             ? AppPaths.DefaultDownloadDirectory
             : current.DownloadDirectory;
@@ -607,6 +611,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
                 StartOnBoot = StartOnBoot,
                 NotificationsEnabled = NotificationsEnabled,
                 MinimizeToTrayOnClose = MinimizeToTrayOnClose,
+                AutoCheckUpdates = AutoCheckUpdates,
                 DownloadDirectory = string.IsNullOrWhiteSpace(DownloadDirectory)
                     ? AppPaths.DefaultDownloadDirectory
                     : Path.GetFullPath(DownloadDirectory.Trim()),

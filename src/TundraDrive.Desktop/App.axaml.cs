@@ -16,6 +16,7 @@ namespace TundraDrive.Desktop;
 public partial class App : Application
 {
     public IServiceProvider? Services { get; set; }
+    public SingleInstanceGuard? SingleInstance { get; set; }
 
     private TrayIcon? _trayIcon;
     private bool _isExplicitExit;
@@ -166,6 +167,14 @@ public partial class App : Application
             mainVm.SyncFoldersVm.RemoteBrowser.OpenExternalUriCallback = OpenExternalUriAsync;
             mainVm.SettingsVm.OpenExternalUriCallback = OpenExternalUriAsync;
             mainVm.AboutVm.OpenExternalUriCallback = OpenExternalUriAsync;
+            mainVm.AboutVm.RequestAppShutdownCallback = () =>
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    _isExplicitExit = true;
+                    desktop.Shutdown();
+                });
+            };
 
             async Task CopyTextAsync(string text)
             {
@@ -238,11 +247,17 @@ public partial class App : Application
 
             ConfigureTrayIcon(desktop, mainWindow, mainVm);
 
+            if (SingleInstance is not null)
+            {
+                SingleInstance.ActivationRequested += (_, _) => ShowOrRestoreWindow(mainWindow, mainVm);
+            }
+
             desktop.MainWindow = mainWindow;
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             desktop.Exit += async (_, _) =>
             {
                 _trayIcon?.Dispose();
+                SingleInstance?.Dispose();
                 memoryCleaner.Dispose();
                 Services.GetRequiredService<FilePreviewService>().Dispose();
                 var apiServer = Services.GetRequiredService<IEmbeddedApiServer>();
@@ -265,33 +280,39 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
+    private static void ShowOrRestoreWindow(
+        MainWindow mainWindow,
+        MainWindowViewModel mainVm,
+        int? navigateToTab = null)
+    {
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            if (navigateToTab.HasValue)
+            {
+                mainVm.SelectedNavigationIndex = navigateToTab.Value;
+            }
+
+            if (!mainWindow.IsVisible)
+            {
+                mainWindow.Show();
+            }
+
+            if (mainWindow.WindowState == WindowState.Minimized)
+            {
+                mainWindow.WindowState = WindowState.Normal;
+            }
+
+            mainWindow.Activate();
+        });
+    }
+
     private void ConfigureTrayIcon(
         IClassicDesktopStyleApplicationLifetime desktop,
         MainWindow mainWindow,
         MainWindowViewModel mainVm)
     {
-        void ShowOrRestoreWindow(int? navigateToTab = null)
-        {
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                if (navigateToTab.HasValue)
-                {
-                    mainVm.SelectedNavigationIndex = navigateToTab.Value;
-                }
-
-                if (!mainWindow.IsVisible)
-                {
-                    mainWindow.Show();
-                }
-
-                if (mainWindow.WindowState == WindowState.Minimized)
-                {
-                    mainWindow.WindowState = WindowState.Normal;
-                }
-
-                mainWindow.Activate();
-            });
-        }
+        void ShowWindow(int? navigateToTab = null) =>
+            ShowOrRestoreWindow(mainWindow, mainVm, navigateToTab);
 
         var accountInfoItem = new NativeMenuItem(mainVm.GetTrayAccountLine()) { IsEnabled = false };
         var statusInfoItem = new NativeMenuItem(mainVm.GetTrayStatusLine()) { IsEnabled = false };
@@ -299,10 +320,10 @@ public partial class App : Application
         var foldersTransfersItem = new NativeMenuItem(mainVm.GetTrayFoldersTransfersLine()) { IsEnabled = false };
 
         var openItem = new NativeMenuItem(mainVm.Loc.Text("TrayOpen"));
-        openItem.Click += (_, _) => ShowOrRestoreWindow();
+        openItem.Click += (_, _) => ShowWindow();
 
         var openHubItem = new NativeMenuItem(mainVm.Loc.Text("TrayOpenFileHub"));
-        openHubItem.Click += (_, _) => ShowOrRestoreWindow(0);
+        openHubItem.Click += (_, _) => ShowWindow(0);
 
         var syncItem = new NativeMenuItem(mainVm.Loc.Text("TraySyncNow"));
         syncItem.Click += async (_, _) => await mainVm.TriggerSyncFromTrayAsync();
@@ -324,7 +345,7 @@ public partial class App : Application
         };
 
         var settingsItem = new NativeMenuItem(mainVm.Loc.Text("TraySettings"));
-        settingsItem.Click += (_, _) => ShowOrRestoreWindow(4);
+        settingsItem.Click += (_, _) => ShowWindow(4);
 
         var exitItem = new NativeMenuItem(mainVm.Loc.Text("TrayExit"));
         exitItem.Click += (_, _) =>
@@ -369,7 +390,7 @@ public partial class App : Application
                 }
                 else
                 {
-                    ShowOrRestoreWindow();
+                    ShowWindow();
                 }
             });
         };
