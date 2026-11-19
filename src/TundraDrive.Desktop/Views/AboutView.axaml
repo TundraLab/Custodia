@@ -102,6 +102,16 @@
                      Foreground="{StaticResource TundraTextSecondary}"
                      Text="{Binding UpdateStatusText}" />
 
+          <Border Classes="FlatRow"
+                  Background="#13171F"
+                  Padding="12,10"
+                  IsVisible="{Binding HasReleaseNotes}">
+            <TextBlock FontSize="12"
+                       TextWrapping="Wrap"
+                       Foreground="{StaticResource TundraTextSecondary}"
+                       Text="{Binding LatestReleaseNotes}" />
+          </Border>
+
           <ProgressBar Height="6"
                        Minimum="0"
                        Maximum="100"

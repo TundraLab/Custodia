@@ -54,6 +54,11 @@ public sealed partial class AboutViewModel : ViewModelBase
     [ObservableProperty]
     private string _latestAvailableVersion = string.Empty;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasReleaseNotes))]
+    private string _latestReleaseNotes = string.Empty;
+
+    public bool HasReleaseNotes => IsUpdateAvailable && !string.IsNullOrWhiteSpace(LatestReleaseNotes);
     public bool HasUpdateCheckResult => !string.IsNullOrWhiteSpace(_latestCheckResult?.TagName);
     public bool CanCheckUpdates => _updateService is not null && !IsCheckingUpdates && !IsDownloadingUpdate;
     public bool CanInstallUpdate => _updateService is not null && IsUpdateAvailable && !IsCheckingUpdates && !IsDownloadingUpdate && _latestCheckResult?.PreferredAsset is not null;
@@ -200,8 +205,10 @@ public sealed partial class AboutViewModel : ViewModelBase
             ? RepositoryUrl + "/releases/latest"
             : result.ReleaseUrl;
         IsUpdateAvailable = result.IsUpdateAvailable;
+        LatestReleaseNotes = result.ReleaseNotes;
         IsUpdateError = false;
         RefreshLocalizedStatusFromCache();
+        OnPropertyChanged(nameof(HasReleaseNotes));
         OnPropertyChanged(nameof(HasUpdateCheckResult));
         OnPropertyChanged(nameof(CanInstallUpdate));
     }
