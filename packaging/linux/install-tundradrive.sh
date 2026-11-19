@@ -239,9 +239,7 @@ find_appimage() {
   for candidate in \
     "${DOWNLOAD_DIR}/${APPIMAGE_ASSET}" \
     "${DIST_DIR}/${APPIMAGE_ASSET}" \
-    "${SCRIPT_DIR}/${APPIMAGE_ASSET}" \
-    ./TundraDrive-*.AppImage \
-    "${DIST_DIR}"/TundraDrive-*.AppImage; do
+    "${SCRIPT_DIR}/${APPIMAGE_ASSET}"; do
     if [[ -f "${candidate}" ]]; then
       readlink -f "${candidate}"
       return 0
@@ -254,9 +252,7 @@ find_rpm() {
   for candidate in \
     "${DOWNLOAD_DIR}/${RPM_ASSET}" \
     "${DIST_DIR}/${RPM_ASSET}" \
-    "${SCRIPT_DIR}/${RPM_ASSET}" \
-    ./TundraDrive-*.rpm \
-    "${DIST_DIR}"/TundraDrive-*.rpm; do
+    "${SCRIPT_DIR}/${RPM_ASSET}"; do
     if [[ -f "${candidate}" ]]; then
       readlink -f "${candidate}"
       return 0
@@ -391,21 +387,26 @@ verify_sha256_if_available() {
     return 0
   fi
 
-  local sums_file="${file_dir}/${SUMS_ASSET}"
-  if [[ ! -f "${sums_file}" ]]; then
-    sums_file="$(mktemp /tmp/tundra-sha256.XXXXXX)"
-    if ! curl -fsSL "${RELEASE_BASE_URL}/${SUMS_ASSET}" -o "${sums_file}" 2>/dev/null; then
-      rm -f "${sums_file}"
+  local expected_hash=""
+  local local_sums="${file_dir}/${SUMS_ASSET}"
+  if [[ -f "${local_sums}" ]]; then
+    expected_hash="$(awk -v name="${file_name}" '$2 == name { print $1; exit }' "${local_sums}")"
+  fi
+
+  if [[ -z "${expected_hash}" ]]; then
+    local remote_sums
+    remote_sums="$(mktemp /tmp/tundra-sha256.XXXXXX)"
+    if curl -fsSL "${RELEASE_BASE_URL}/${SUMS_ASSET}" -o "${remote_sums}" 2>/dev/null; then
+      expected_hash="$(awk -v name="${file_name}" '$2 == name { print $1; exit }' "${remote_sums}")"
+      rm -f "${remote_sums}"
+    else
+      rm -f "${remote_sums}"
       step_warn "Não foi possível obter ${SUMS_ASSET}; seguindo sem verificação remota."
       return 0
     fi
   fi
 
-  local expected_hash actual_hash
-  expected_hash="$(awk -v name="${file_name}" '$2 == name { print $1; exit }' "${sums_file}")"
-  if [[ "${sums_file}" == /tmp/tundra-sha256.* ]]; then
-    rm -f "${sums_file}"
-  fi
+  local actual_hash
 
   if [[ -z "${expected_hash}" ]]; then
     step_warn "Hash de ${file_name} não encontrado em ${SUMS_ASSET}."
