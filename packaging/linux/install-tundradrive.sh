@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ==============================================================================
-# TundraDrive v2.7.2 - Instalador Oficial de Terminal by TundraLab
+# TundraDrive v2.7.3 - Instalador Oficial de Terminal by TundraLab
 # Autor e Desenvolvedor: Gustavo Henrique Novaes Gomes (@GustaHerin)
 # Licença: Proprietária / Todos os Direitos Reservados
 # ==============================================================================
@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." 2>/dev/null && pwd || pwd)"
 DIST_DIR="${REPO_ROOT}/dist"
 
-VERSION="${TUNDRA_VERSION:-2.7.2}"
+VERSION="${TUNDRA_VERSION:-2.7.3}"
 REPO_SLUG="TundraLab/TundraDrive"
 RELEASE_BASE_URL="https://github.com/${REPO_SLUG}/releases/latest/download"
 RAW_BASE_URL="https://raw.githubusercontent.com/${REPO_SLUG}/main"
@@ -547,16 +547,60 @@ prompt_yes_no() {
   [[ "${reply}" =~ ^[SsYy]$ ]]
 }
 
+find_running_tundra_pids() {
+  local uid self_pid
+  uid="$(id -u)"
+  self_pid="$$"
+  {
+    pgrep -u "${uid}" -x "TundraDrive" 2>/dev/null || true
+    pgrep -u "${uid}" -f '(/opt/tundradrive/TundraDrive|/usr/bin/tundradrive|TundraDrive.*\.AppImage|/tmp/\.mount_Tundra)' 2>/dev/null || true
+  } | awk -v self="${self_pid}" '$1 != self && $1 ~ /^[0-9]+$/ { print $1 }' | sort -u
+}
+
 stop_running_instance_if_any() {
-  if command -v pgrep >/dev/null 2>&1 && pgrep -u "${USER:-$(id -un)}" -x "TundraDrive" >/dev/null 2>&1; then
-    step_info "Encerrando instância em execução do TundraDrive antes de atualizar arquivos..."
-    pkill -TERM -u "${USER:-$(id -un)}" -x "TundraDrive" >/dev/null 2>&1 || true
-    for _ in $(seq 1 25); do
-      if ! pgrep -u "${USER:-$(id -un)}" -x "TundraDrive" >/dev/null 2>&1; then
-        break
-      fi
-      sleep 0.2
-    done
+  local uid sock_path pids
+  uid="$(id -u)"
+  sock_path="${XDG_RUNTIME_DIR:-/tmp}/tundradrive.sock"
+  [[ -S "${sock_path}" ]] || sock_path="/tmp/tundradrive-${uid}.sock"
+
+  if [[ -S "${sock_path}" ]] && command -v python3 >/dev/null 2>&1; then
+    python3 -c '
+import socket, sys
+try:
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(1.0)
+    s.connect(sys.argv[1])
+    s.sendall(b"QUIT\n")
+    s.recv(16)
+    s.close()
+except Exception:
+    pass
+' "${sock_path}" >/dev/null 2>&1 || true
+    sleep 0.5
+  fi
+
+  pids="$(find_running_tundra_pids)"
+  if [[ -z "${pids}" ]]; then
+    return 0
+  fi
+
+  step_info "Encerrando instância em execução do TundraDrive..."
+  # shellcheck disable=SC2086
+  kill -TERM ${pids} >/dev/null 2>&1 || true
+
+  for _ in $(seq 1 20); do
+    pids="$(find_running_tundra_pids)"
+    if [[ -z "${pids}" ]]; then
+      return 0
+    fi
+    sleep 0.2
+  done
+
+  pids="$(find_running_tundra_pids)"
+  if [[ -n "${pids}" ]]; then
+    # shellcheck disable=SC2086
+    kill -KILL ${pids} >/dev/null 2>&1 || true
+    sleep 0.3
   fi
 }
 

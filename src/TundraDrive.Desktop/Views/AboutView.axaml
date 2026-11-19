@@ -113,9 +113,11 @@
           <Border Classes="FlatRow"
                   Background="#13171F"
                   Padding="12,10"
+                  HorizontalAlignment="Stretch"
                   IsVisible="{Binding HasReleaseNotes}">
             <TextBlock FontSize="12"
                        TextWrapping="Wrap"
+                       LineHeight="19"
                        Foreground="{StaticResource TundraTextSecondary}"
                        Text="{Binding LatestReleaseNotes}" />
           </Border>

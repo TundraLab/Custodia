@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -165,16 +166,18 @@ public partial class App : Application
             mainVm.FileHubVm.OpenExternalUriCallback = OpenExternalUriAsync;
             mainVm.SyncFoldersVm.OpenExternalUriCallback = OpenExternalUriAsync;
             mainVm.SyncFoldersVm.RemoteBrowser.OpenExternalUriCallback = OpenExternalUriAsync;
-            mainVm.SettingsVm.OpenExternalUriCallback = OpenExternalUriAsync;
-            mainVm.AboutVm.OpenExternalUriCallback = OpenExternalUriAsync;
-            mainVm.AboutVm.RequestAppShutdownCallback = () =>
+            void RequestCleanShutdown()
             {
                 Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
                     _isExplicitExit = true;
                     desktop.Shutdown();
                 });
-            };
+            }
+
+            mainVm.SettingsVm.OpenExternalUriCallback = OpenExternalUriAsync;
+            mainVm.AboutVm.OpenExternalUriCallback = OpenExternalUriAsync;
+            mainVm.AboutVm.RequestAppShutdownCallback = RequestCleanShutdown;
 
             async Task CopyTextAsync(string text)
             {
@@ -247,15 +250,34 @@ public partial class App : Application
 
             ConfigureTrayIcon(desktop, mainWindow, mainVm);
 
+            IDisposable? sigTermRegistration = null;
+            IDisposable? sigIntRegistration = null;
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                sigTermRegistration = PosixSignalRegistration.Create(PosixSignal.SIGTERM, ctx =>
+                {
+                    ctx.Cancel = true;
+                    RequestCleanShutdown();
+                });
+                sigIntRegistration = PosixSignalRegistration.Create(PosixSignal.SIGINT, ctx =>
+                {
+                    ctx.Cancel = true;
+                    RequestCleanShutdown();
+                });
+            }
+
             if (SingleInstance is not null)
             {
                 SingleInstance.ActivationRequested += (_, _) => ShowOrRestoreWindow(mainWindow, mainVm);
+                SingleInstance.ShutdownRequested += (_, _) => RequestCleanShutdown();
             }
 
             desktop.MainWindow = mainWindow;
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             desktop.Exit += async (_, _) =>
             {
+                sigTermRegistration?.Dispose();
+                sigIntRegistration?.Dispose();
                 _trayIcon?.Dispose();
                 SingleInstance?.Dispose();
                 memoryCleaner.Dispose();

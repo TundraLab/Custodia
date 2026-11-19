@@ -29,13 +29,18 @@ public sealed class SingleInstanceAndUpdateTests
                 Assert.NotNull(first.Guard);
 
                 var activated = new ManualResetEventSlim(false);
+                var shutdown = new ManualResetEventSlim(false);
                 first.Guard!.ActivationRequested += (_, _) => activated.Set();
+                first.Guard!.ShutdownRequested += (_, _) => shutdown.Set();
 
                 var second = SingleInstanceGuard.TryAcquireOrActivate(lockPath, sockPath, TimeSpan.FromSeconds(2));
                 Assert.False(second.IsPrimary);
                 Assert.Null(second.Guard);
                 Assert.True(second.SignaledExistingInstance);
                 Assert.True(activated.Wait(TimeSpan.FromSeconds(2)));
+
+                Assert.True(SingleInstanceGuard.TryRequestShutdownExisting(sockPath, TimeSpan.FromSeconds(2)));
+                Assert.True(shutdown.Wait(TimeSpan.FromSeconds(2)));
 
                 first.Guard.Dispose();
             }
@@ -256,6 +261,12 @@ public sealed class SingleInstanceAndUpdateTests
 
         settings.AutoCheckUpdates = false;
         Assert.False(UpdateSchedulePolicy.IsCheckDue(settings, now));
+
+        var cleaned = AboutViewModel.FormatReleaseNotesForDisplay("## Novidades\n- **Instância única:** correção `limpa`.\n");
+        Assert.DoesNotContain("##", cleaned);
+        Assert.DoesNotContain("**", cleaned);
+        Assert.DoesNotContain("`", cleaned);
+        Assert.Contains("• Instância única: correção limpa.", cleaned);
     }
 
     private sealed class InMemorySettingsService : IAppSettingsService

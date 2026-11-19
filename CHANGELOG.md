@@ -2,30 +2,36 @@
 
 Todas as mudanças principais do TundraDrive seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [2.7.3] - 2026-11-19
+
+### Melhorado
+- **Encerramento limpo ao desinstalar ou atualizar:** ao remover ou atualizar o TundraDrive pelo terminal (inclusive no formato AppImage rodando na bandeja), qualquer instância aberta é encerrada automaticamente e o ícone da bandeja desaparece na hora.
+- **Desligamento gracioso por sinais do sistema:** o aplicativo agora responde corretamente a comandos de encerramento do sistema, fechando a bandeja, a sincronização e o servidor local com segurança.
+- **Notas de versão mais legíveis na aba Sobre:** o painel de atualizações formata títulos e marcadores com clareza e sem símbolos de código na tela.
+
 ## [2.7.2] - 2026-11-19
 
 ### Adicionado
-- **Animação de 5 segundos ao buscar atualizações:** barra de progresso animada com fases de consulta (`Conectando ao GitHub Releases...`, `Consultando versões e assinaturas SHA-256...` e `Comparando com a versão instalada`) e contagem regressiva ao clicar em **Verificar atualizações** na aba **Sobre**.
-- **Verificação automática mensal por padrão (configuração global):** novos campos `AutoCheckUpdates`, `UpdateCheckIntervalDays` (`30` dias por padrão) e `LastUpdateCheckUtc` em [AppSettings.cs](src/TundraDrive.Core/Models/AppSettings.cs) com agendamento contínuo em segundo plano (`UpdateSchedulePolicy`) e seletor de frequência nas **Configurações** (`1 vez por mês`, `A cada 15 dias`, `1 vez por semana`, `Sempre ao iniciar`).
+- **Animação de 5 segundos ao buscar atualizações:** ao clicar em **Verificar atualizações** na aba **Sobre**, o aplicativo exibe uma barra de progresso animada com etapas claras e contagem regressiva enquanto consulta as novidades.
+- **Verificação automática mensal por padrão:** por padrão global, o TundraDrive passa a procurar novas versões automaticamente uma vez por mês (a cada 30 dias), com opção nas **Configurações** para escolher entre mensal, quinzenal, semanal ou a cada inicialização.
 
 ## [2.7.1] - 2026-11-19
 
 ### Melhorado
-- Exibição das notas da release disponíveis diretamente no card de **Atualizações** da aba **Sobre** antes de baixar/instalar.
-- Versão instalada exibida também no tooltip do ícone da bandeja do sistema (`TundraDrive v2.7.1`).
-- Instalador de terminal [install-tundradrive.sh](packaging/linux/install-tundradrive.sh) agora baixa pacotes de instalação/atualização em pasta temporária `/tmp/tundra-stage.*` e remove automaticamente após concluir, mantendo a pasta atual limpa (sem alterar o comportamento de `--download-*`).
+- **Resumo das novidades antes de atualizar:** as notas da nova versão passam a aparecer diretamente na aba **Sobre** antes de iniciar o download.
+- **Identificação da versão na bandeja:** o número da versão instalada agora é exibido ao passar o cursor sobre o ícone da bandeja do sistema.
+- **Pasta limpa após instalar ou atualizar pelo terminal:** os instaladores `.rpm` e `.AppImage` baixados durante uma instalação ou atualização são armazenados temporariamente e removidos ao final do processo, preservando a opção de apenas baixar os pacotes quando desejado.
 
 ## [2.7.0] - 2026-11-18
 
 ### Adicionado
-- Proteção estrita de **instância única** (`SingleInstanceGuard` com trava exclusiva e socket Unix local) que impede abrir múltiplas instâncias e restaura/foca automaticamente a janela já em execução (inclusive quando oculta na bandeja).
-- Suporte completo a **atualizações futuras** dentro do aplicativo: checagem automática e manual via GitHub Releases na aba **Sobre**, banner discreto e notificação nativa quando há versão nova, barra de progresso, validação `SHA-256` e aplicação automática para `.AppImage` e `.rpm` (`pkexec dnf/zypper/rpm`).
-- Opção **Verificar atualizações automaticamente ao iniciar** (`AutoCheckUpdates`) nas **Configurações**.
-- Instalador de terminal [install-tundradrive.sh](packaging/linux/install-tundradrive.sh) com resolução dinâmica da release mais recente, comando `--update`, encerramento seguro de instância em execução e upgrade automático via `dnf upgrade` quando a versão muda, além do ativo perene `TundraDrive-Installer-x86_64.sh`.
+- **Janela única garantida:** tentar abrir o TundraDrive novamente enquanto ele já está ativo (inclusive minimizado na bandeja) traz a janela existente para frente em vez de abrir uma segunda cópia.
+- **Atualizador integrado no aplicativo:** checagem manual e automática de novas versões, aviso discreto no topo da janela, notificação no sistema, barra de progresso no download, conferência de autenticidade e instalação assistida para pacotes `.rpm` e `.AppImage`.
+- **Opções extras no instalador de terminal:** detecção automática da versão mais recente disponível e novo comando de atualização direta para instalações existentes.
 
 ### Alterado
-- Versão exibida na aba **Sobre** e no documento `OpenAPI` (`/openapi.json`) obtida dinamicamente do assembly (`AppVersionInfo`).
-- Removidas do [README.md](README.md) as referências ao formato `.deb` não distribuído.
+- Exibição automática da versão em uso em todo o aplicativo sem depender de texto fixo.
+- Remoção de menções antigas a pacote `.deb` na documentação do repositório.
 
 ## [2.6.0] - 2026-11-18
 

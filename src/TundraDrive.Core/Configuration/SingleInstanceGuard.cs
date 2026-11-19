@@ -7,6 +7,7 @@ namespace TundraDrive.Core.Configuration;
 public sealed class SingleInstanceGuard : IDisposable
 {
     public const string ActivateCommand = "ACTIVATE";
+    public const string QuitCommand = "QUIT";
 
     private readonly string _lockFilePath;
     private readonly string _socketPath;
@@ -16,7 +17,38 @@ public sealed class SingleInstanceGuard : IDisposable
     private Task? _acceptLoopTask;
     private int _disposed;
     private bool _pendingActivation;
+    private bool _pendingShutdown;
     private EventHandler? _activationRequested;
+    private EventHandler? _shutdownRequested;
+
+    public event EventHandler? ShutdownRequested
+    {
+        add
+        {
+            var invokeImmediately = false;
+            lock (_syncLock)
+            {
+                _shutdownRequested += value;
+                if (_pendingShutdown && value is not null)
+                {
+                    _pendingShutdown = false;
+                    invokeImmediately = true;
+                }
+            }
+
+            if (invokeImmediately)
+            {
+                value?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        remove
+        {
+            lock (_syncLock)
+            {
+                _shutdownRequested -= value;
+            }
+        }
+    }
 
     public event EventHandler? ActivationRequested
     {
@@ -166,7 +198,16 @@ public sealed class SingleInstanceGuard : IDisposable
         return new SingleInstanceAcquireResult(true, guard, false);
     }
 
-    private static bool TrySignalExistingInstance(string socketPath, TimeSpan timeout)
+    public static bool TryRequestShutdownExisting(string? socketPath = null, TimeSpan? timeout = null) =>
+        TrySignalExistingInstance(
+            string.IsNullOrWhiteSpace(socketPath) ? ResolveDefaultSocketPath() : socketPath,
+            timeout ?? TimeSpan.FromMilliseconds(800),
+            QuitCommand);
+
+    private static bool TrySignalExistingInstance(
+        string socketPath,
+        TimeSpan timeout,
+        string command = ActivateCommand)
     {
         var deadline = DateTime.UtcNow + timeout;
         do
@@ -178,7 +219,7 @@ public sealed class SingleInstanceGuard : IDisposable
                     using var client = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
                     client.Connect(new UnixDomainSocketEndPoint(socketPath));
 
-                    var payload = Encoding.UTF8.GetBytes(ActivateCommand + "\n");
+                    var payload = Encoding.UTF8.GetBytes(command + "\n");
                     client.Send(payload);
 
                     client.ReceiveTimeout = 800;
@@ -228,7 +269,11 @@ public sealed class SingleInstanceGuard : IDisposable
                 var ack = Encoding.UTF8.GetBytes("OK\n");
                 await client.SendAsync(ack, SocketFlags.None, cancellationToken);
 
-                if (string.IsNullOrEmpty(message) ||
+                if (message.StartsWith(QuitCommand, StringComparison.OrdinalIgnoreCase))
+                {
+                    RaiseShutdownRequested();
+                }
+                else if (string.IsNullOrEmpty(message) ||
                     message.StartsWith(ActivateCommand, StringComparison.OrdinalIgnoreCase))
                 {
                     RaiseActivationRequested();
@@ -261,6 +306,22 @@ public sealed class SingleInstanceGuard : IDisposable
             if (handler is null)
             {
                 _pendingActivation = true;
+                return;
+            }
+        }
+
+        handler.Invoke(this, EventArgs.Empty);
+    }
+
+    private void RaiseShutdownRequested()
+    {
+        EventHandler? handler;
+        lock (_syncLock)
+        {
+            handler = _shutdownRequested;
+            if (handler is null)
+            {
+                _pendingShutdown = true;
                 return;
             }
         }
