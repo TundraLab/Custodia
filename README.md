@@ -1,4 +1,4 @@
-# TundraDrive v2.6
+# TundraDrive v2.7.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-TundraLab%2FTundraDrive-181717?logo=github)](https://github.com/TundraLab/TundraDrive)
 [![Autor Único](https://img.shields.io/badge/Autor%20e%20Dev%20Único-%40GustaHerin-181717?logo=github)](https://github.com/GustaHerin)
