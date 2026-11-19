@@ -35,7 +35,7 @@ Repositório: https://github.com/TundraLab/TundraDrive
 ## Sistemas e formatos
 
 - Testado em **Fedora** e **Pop!_OS** (incluindo hardware mais modesto), com suporte aos ambientes GNOME, COSMIC e KDE Plasma 5/6.
-- **Formatos distribuídos:** instalador nativo **`.rpm`** (Fedora), pacote **`.deb`** (Pop!_OS / Ubuntu / Debian) e **AppImage (`x86_64`)** independente com o runtime `.NET 10` embutido (sem precisar instalar dependências do `.NET`).
+- **Formatos distribuídos:** pacote nativo **`.rpm`** (Fedora / RHEL / openSUSE) e **`.AppImage` (`x86_64`)** independente com o runtime `.NET 10` embutido (Pop!_OS, Ubuntu, Debian e demais distribuições Linux, sem precisar instalar dependências do `.NET`), ambos instalados e atualizados pelo instalador oficial no terminal.
 
 ## O que o aplicativo faz
 
@@ -91,7 +91,7 @@ chmod +x install-tundradrive.sh
   ```
 
 <details>
-<summary>Opções avançadas (flags do instalador, pacote .deb, mídia e ícone no GNOME)</summary>
+<summary>Opções avançadas (flags do instalador, extras de mídia e ícone no GNOME)</summary>
 
 - **Atalhos do `install-tundradrive.sh`:**
   - `./install-tundradrive.sh --update`: detecta sua instalação atual (`.rpm` ou `.AppImage`) e atualiza para a versão mais recente do GitHub Releases.
@@ -100,7 +100,6 @@ chmod +x install-tundradrive.sh
   - `./install-tundradrive.sh --download-only`: baixa `.rpm`, `.AppImage` e `SHA256SUMS.txt` na pasta atual.
   - `./install-tundradrive.sh --uninstall`: remove a instalação local ou `.rpm` mantendo suas configurações.
 - **AppImage sem FUSE:** `./TundraDrive-2.6.0-x86_64.AppImage --appimage-extract-and-run`
-- **Pop!_OS / Ubuntu / Debian (`.deb`):** `sudo apt install ./TundraDrive-*.deb`
 - **Pacotes opcionais para pré-visualização completa (PDF, Office, áudio e vídeo):**
   - Fedora: `sudo dnf install poppler-utils ghostscript ffmpeg libreoffice ImageMagick`
   - Pop!_OS / Ubuntu: `sudo apt install poppler-utils ghostscript ffmpeg libreoffice imagemagick`
