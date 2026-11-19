@@ -409,8 +409,12 @@ verify_sha256_if_available() {
   local actual_hash
 
   if [[ -z "${expected_hash}" ]]; then
-    step_warn "Hash de ${file_name} não encontrado em ${SUMS_ASSET}."
-    return 0
+    if [[ "${TUNDRA_SKIP_SHA256:-0}" == "1" ]]; then
+      step_warn "Hash de ${file_name} não encontrado em ${SUMS_ASSET} (ignorado por TUNDRA_SKIP_SHA256=1)."
+      return 0
+    fi
+    step_err "Hash de ${file_name} não encontrado em ${SUMS_ASSET}. Download recusado por segurança."
+    return 1
   fi
 
   actual_hash="$(sha256sum "${file_path}" | awk '{ print $1 }')"

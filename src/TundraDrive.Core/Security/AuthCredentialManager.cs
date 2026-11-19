@@ -61,7 +61,27 @@ public sealed class AuthCredentialManager : IAuthCredentialManager
 
         await using (var validationStream = File.OpenRead(sourceJsonPath))
         {
-            var secrets = await GoogleClientSecrets.FromStreamAsync(validationStream, cancellationToken);
+            using var jsonDoc = await System.Text.Json.JsonDocument.ParseAsync(validationStream, cancellationToken: cancellationToken);
+            var root = jsonDoc.RootElement;
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Object)
+            {
+                throw new InvalidDataException("Invalid Google OAuth2 client credentials JSON.");
+            }
+
+            if (root.TryGetProperty("web", out _) && !root.TryGetProperty("installed", out _))
+            {
+                throw new InvalidDataException("OAuth2 credentials of type 'web' are not supported. Create a Desktop ('installed') OAuth 2.0 Client ID in Google Cloud Console.");
+            }
+
+            if (!root.TryGetProperty("installed", out _))
+            {
+                throw new InvalidDataException("Google OAuth2 JSON must contain an 'installed' Desktop client configuration.");
+            }
+        }
+
+        await using (var secretsStream = File.OpenRead(sourceJsonPath))
+        {
+            var secrets = await GoogleClientSecrets.FromStreamAsync(secretsStream, cancellationToken);
             if (secrets?.Secrets is null || string.IsNullOrWhiteSpace(secrets.Secrets.ClientId))
             {
                 throw new InvalidDataException("Invalid Google OAuth2 client credentials JSON.");
@@ -128,7 +148,7 @@ public sealed class AuthCredentialManager : IAuthCredentialManager
     public async Task<bool> HasStoredTokenAsync(string userKey = "default")
     {
         var token = await _tokenStore.GetAsync<TokenResponse>(userKey);
-        return token is not null && (!string.IsNullOrWhiteSpace(token.RefreshToken) || !string.IsNullOrWhiteSpace(token.AccessToken));
+        return token is not null && !string.IsNullOrWhiteSpace(token.RefreshToken);
     }
 
     public async Task<UserCredential> AuthorizeInteractiveAsync(

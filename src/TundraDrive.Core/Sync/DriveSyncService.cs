@@ -928,7 +928,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         }
     }
 
-    internal static string SanitizeRemoteSegment(string name)
+    public static string SanitizeRemoteSegment(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -948,7 +948,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         return cleaned;
     }
 
-    internal static string ResolveSafeLocalPath(string rootDirectory, string relativePath)
+    public static string ResolveSafeLocalPath(string rootDirectory, string relativePath)
     {
         var fullRoot = Path.GetFullPath(rootDirectory);
         var rootWithSep = fullRoot.EndsWith(Path.DirectorySeparatorChar)
@@ -1014,14 +1014,21 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
     private async Task<int> SyncFolderInternalAsync(LocalSyncFolder folder, CancellationToken cancellationToken)
     {
         var changesCount = 0;
+        var trackedEntries = (await _repository.GetTrackedFilesByFolderAsync(folder.Id, cancellationToken))
+            .ToDictionary(e => e.RelativePath, StringComparer.Ordinal);
+
         if (!Directory.Exists(folder.LocalPath))
         {
+            if (trackedEntries.Count > 0)
+            {
+                throw new DirectoryNotFoundException(
+                    $"Pasta local '{folder.LocalPath}' não foi encontrada ou está desmontada. Sincronização abortada para proteger seus arquivos no Google Drive.");
+            }
+
             Directory.CreateDirectory(folder.LocalPath);
         }
 
         var ignorePatterns = _settingsService.Current.IgnorePatterns;
-        var trackedEntries = (await _repository.GetTrackedFilesByFolderAsync(folder.Id, cancellationToken))
-            .ToDictionary(e => e.RelativePath, StringComparer.Ordinal);
 
         var localFiles = ScanLocalFiles(folder.LocalPath, ignorePatterns);
         var remoteTree = await ScanRemoteTreeAsync(folder.RemoteFolderId, cancellationToken);
@@ -1057,7 +1064,10 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                 var localChangedSinceTrack = tracked is null ||
                     !string.Equals(tracked.Md5Hash, hashes.Md5Hex, StringComparison.OrdinalIgnoreCase);
                 var remoteChangedSinceTrack = tracked is null ||
-                    !string.Equals(tracked.Md5Hash, remoteFile.Md5Checksum, StringComparison.OrdinalIgnoreCase);
+                    (!string.IsNullOrWhiteSpace(remoteFile.Md5Checksum)
+                        ? !string.Equals(tracked.Md5Hash, remoteFile.Md5Checksum, StringComparison.OrdinalIgnoreCase)
+                        : remoteFile.SizeBytes != tracked.SizeBytes ||
+                          Math.Abs((remoteFile.ModifiedTimeUtc - tracked.RemoteModifiedAtUtc).TotalSeconds) >= 2);
 
                 if (localChangedSinceTrack && !remoteChangedSinceTrack)
                 {
