@@ -19,20 +19,6 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        var isInstallerMode =
-            args.Any(a => string.Equals(a, "--installer", StringComparison.OrdinalIgnoreCase) ||
-                          string.Equals(a, "--setup", StringComparison.OrdinalIgnoreCase)) ||
-            string.Equals(Environment.GetEnvironmentVariable("TUNDRA_INSTALLER_MODE"), "1", StringComparison.Ordinal) ||
-            (Environment.GetEnvironmentVariable("ARGV0")?.Contains("Installer", StringComparison.OrdinalIgnoreCase) ?? false);
-
-        if (isInstallerMode)
-        {
-            ConfigureLinuxProcessIdentity("TundraInstaller");
-            BuildAvaloniaApp(services: null, isInstallerMode: true)
-                .StartWithClassicDesktopLifetime(args);
-            return;
-        }
-
         ConfigureLinuxProcessIdentity("TundraDrive");
 
         var services = ConfigureServices();
@@ -46,8 +32,8 @@ internal static class Program
 
     public static AppBuilder BuildAvaloniaApp() => BuildAvaloniaApp(null);
 
-    public static AppBuilder BuildAvaloniaApp(IServiceProvider? services, bool isInstallerMode = false) =>
-        AppBuilder.Configure(() => new App { Services = services, IsInstallerMode = isInstallerMode })
+    public static AppBuilder BuildAvaloniaApp(IServiceProvider? services) =>
+        AppBuilder.Configure(() => new App { Services = services })
             .UsePlatformDetect()
             .With(new SkiaOptions
             {

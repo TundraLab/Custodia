@@ -16,7 +16,6 @@ namespace TundraDrive.Desktop;
 public partial class App : Application
 {
     public IServiceProvider? Services { get; set; }
-    public bool IsInstallerMode { get; set; }
 
     private TrayIcon? _trayIcon;
     private bool _isExplicitExit;
@@ -28,14 +27,6 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        if (IsInstallerMode && ApplicationLifetime is IClassicDesktopStyleApplicationLifetime installerDesktop)
-        {
-            installerDesktop.MainWindow = new InstallerWindow(new InstallerViewModel());
-            installerDesktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
-            base.OnFrameworkInitializationCompleted();
-            return;
-        }
-
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && Services is not null)
         {
             LinuxDesktopIntegrationHelper.InstallDesktopAssets();

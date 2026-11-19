@@ -16,20 +16,13 @@ Repositório: https://github.com/TundraLab/TundraDrive
 
 ## Prévia visual
 
-### Instalador Proprietário (`TundraDrive by TundraLab`)
-
-![Instalador Proprietário TundraDrive by TundraLab](docs/images/preview-instalador.png)
-
-### Telas do aplicativo
-
 ![Prévia das telas do TundraDrive](docs/images/preview-showcase.png)
 
 <details>
-<summary>Ver todas as telas individuais (Instalador e aplicativo)</summary>
+<summary>Ver todas as 6 telas individuais</summary>
 
 | Tela | Prévia |
 | :--- | :--- |
-| **Instalador Proprietário (`by TundraLab`)** | ![Instalador Proprietário TundraDrive by TundraLab](docs/images/preview-instalador.png) |
 | **Meu Driver** | ![Meu Driver](docs/images/preview-01-meu-driver.png) |
 | **Pastas de Sincronização** | ![Pastas de Sincronização](docs/images/preview-02-pastas.png) |
 | **Fila de Transferências** | ![Fila de Transferências](docs/images/preview-03-transferencias.png) |
@@ -73,9 +66,9 @@ Cada pasta mapeada pode operar em **Espelho Bidirecional (`PC <-> Drive`)** ou *
 
 ## Instalação
 
-### 1. Instalador Proprietário (`TundraDrive by TundraLab` - Recomendado)
+### 1. Instalador Interativo no Terminal (`TundraDrive by TundraLab` - Recomendado)
 
-Abra o terminal e execute os 3 comandos abaixo. Em desktop Linux (`x86_64`), ele abre automaticamente a **interface gráfica do instalador** para escolher entre **`.AppImage`** (usuário local) ou **`.rpm`** (Fedora/sistema), criar ícones e ativar a inicialização automática:
+Abre instantaneamente no terminal (9 KB, sem baixar nada antes da escolha), detecta sua distribuição Linux, baixa apenas o formato selecionado (**`.rpm`** ou **`.AppImage`**), valida a assinatura **SHA-256**, instala ícones/atalhos e configura inicialização automática:
 
 ```bash
 curl -fsSL https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-Installer-2.6.0-x86_64.sh -o install-tundradrive.sh
@@ -101,13 +94,11 @@ chmod +x install-tundradrive.sh
 <summary>Opções avançadas (flags do instalador, pacote .deb, mídia e ícone no GNOME)</summary>
 
 - **Atalhos do `install-tundradrive.sh`:**
-  - `./install-tundradrive.sh --appimage`: baixa e instala o `.AppImage` sem pedir confirmação.
-  - `./install-tundradrive.sh --rpm`: baixa e instala o `.rpm` pelo terminal.
-  - `./install-tundradrive.sh --cli`: abre o menu de texto no terminal.
-  - `./install-tundradrive.sh --uninstall`: remove a instalação local ou `.rpm`.
-- **AppImage sem FUSE ou abrir o instalador direto pelo AppImage:**
-  - `./TundraDrive-2.6.0-x86_64.AppImage --installer`
-  - `./TundraDrive-2.6.0-x86_64.AppImage --appimage-extract-and-run`
+  - `./install-tundradrive.sh --rpm`: baixa, valida `SHA-256` e instala o `.rpm`.
+  - `./install-tundradrive.sh --appimage`: baixa, valida `SHA-256` e instala o `.AppImage` integrado ao usuário.
+  - `./install-tundradrive.sh --download-only`: baixa `.rpm`, `.AppImage` e `SHA256SUMS.txt` na pasta atual.
+  - `./install-tundradrive.sh --uninstall`: remove a instalação local ou `.rpm` mantendo suas configurações.
+- **AppImage sem FUSE:** `./TundraDrive-2.6.0-x86_64.AppImage --appimage-extract-and-run`
 - **Pop!_OS / Ubuntu / Debian (`.deb`):** `sudo apt install ./TundraDrive-*.deb`
 - **Pacotes opcionais para pré-visualização completa (PDF, Office, áudio e vídeo):**
   - Fedora: `sudo dnf install poppler-utils ghostscript ffmpeg libreoffice ImageMagick`
