@@ -269,6 +269,7 @@ download_with_curl_animated() {
   local hdr_file err_file
   hdr_file="$(mktemp /tmp/tundra-hdr.XXXXXX)"
   err_file="$(mktemp /tmp/tundra-curl.XXXXXX)"
+  : > "${tmp_file}"
 
   curl -fsSL --dump-header "${hdr_file}" "${url}" -o "${tmp_file}" 2>"${err_file}" &
   local dl_pid=$!
@@ -287,7 +288,11 @@ download_with_curl_animated() {
       now_ts="$(date +%s)"
       elapsed=$(( now_ts - start_ts ))
       (( elapsed < 1 )) && elapsed=1
-      bytes="$(stat -c%s "${tmp_file}" 2>/dev/null || wc -c < "${tmp_file}" 2>/dev/null || echo 0)"
+      if [[ -f "${tmp_file}" ]]; then
+        bytes="$(stat -c%s "${tmp_file}" 2>/dev/null || echo 0)"
+      else
+        bytes=0
+      fi
       total_bytes="$(awk 'tolower($1)=="content-length:" { v=$2 } END { gsub(/\r/, "", v); print v+0 }' "${hdr_file}" 2>/dev/null || echo 0)"
       f="${frames[$(( idx % ${#frames[@]} ))]}"
       c="${code_bars[$(( idx % ${#code_bars[@]} ))]}"
@@ -335,7 +340,7 @@ download_with_curl_animated() {
   rm -f "${err_file}"
 
   local final_bytes final_mb total_sec
-  final_bytes="$(stat -c%s "${tmp_file}" 2>/dev/null || wc -c < "${tmp_file}" 2>/dev/null || echo 0)"
+  final_bytes="$(stat -c%s "${tmp_file}" 2>/dev/null || echo 0)"
   final_mb="$(awk -v b="${final_bytes}" 'BEGIN { printf "%.1f MB", b/1048576 }')"
   total_sec=$(( $(date +%s) - start_ts ))
   step_ok "Download concluído: ${BOLD}${label}${RESET} ${DIM}(${final_mb} em ${total_sec}s)${RESET}" >&2
