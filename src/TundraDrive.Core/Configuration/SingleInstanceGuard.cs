@@ -99,14 +99,14 @@ public sealed class SingleInstanceGuard : IDisposable
     }
 
     public static string DefaultLockFilePath =>
-        Path.Combine(AppPaths.DataDirectory, "tundradrive.lock");
+        Path.Combine(AppPaths.DataDirectory, "custodia.lock");
 
     public static string ResolveDefaultSocketPath()
     {
         var runtimeDir = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
         if (!string.IsNullOrWhiteSpace(runtimeDir) && Directory.Exists(runtimeDir))
         {
-            var candidate = Path.Combine(runtimeDir, "tundradrive.sock");
+            var candidate = Path.Combine(runtimeDir, "custodia.sock");
             if (Encoding.UTF8.GetByteCount(candidate) < 100)
             {
                 return candidate;
@@ -114,7 +114,7 @@ public sealed class SingleInstanceGuard : IDisposable
         }
 
         var uid = OperatingSystem.IsLinux() ? GetUidSafe() : (uint)(Environment.UserName.GetHashCode() & 0x7fffffff);
-        return Path.Combine(Path.GetTempPath(), $"tundradrive-{uid}.sock");
+        return Path.Combine(Path.GetTempPath(), $"custodia-{uid}.sock");
     }
 
     public static SingleInstanceAcquireResult TryAcquireOrActivate(

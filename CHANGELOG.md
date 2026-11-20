@@ -1,6 +1,12 @@
 # Histórico de Versões (Changelog)
 
-Todas as mudanças principais do TundraDrive seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
+Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
+
+## [2.8.0] - 2026-11-20
+
+### Alterado
+- **Novo nome e identidade visual oficial (`Custódia by TundraLab`):** o projeto agora se chama **Custódia** (*"Seus arquivos. Sempre seguros."*), com nova logomarca, novo ícone na bandeja do sistema, novos pacotes `Custodia` (`.rpm` e `.AppImage`) e migração automática das configurações e contas já salvas no computador.
+- **Layout da aba Sobre e painel de atualizações ajustado:** os cartões da aba **Sobre** agora aproveitam toda a largura da área principal da janela, o botão **Baixar e atualizar agora** fica posicionado logo acima das notas da versão para acesso imediato e o quadro de novidades conta com rolagem própria, permitindo atualizar o aplicativo confortavelmente sem precisar redimensionar a janela.
 
 ## [2.7.4] - 2026-11-20
 

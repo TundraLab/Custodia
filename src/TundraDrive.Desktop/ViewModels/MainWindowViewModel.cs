@@ -16,7 +16,7 @@ namespace TundraDrive.Desktop.ViewModels;
 
 public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
-    public const string RepositoryUrl = "https://github.com/TundraLab/TundraDrive";
+    public const string RepositoryUrl = "https://github.com/TundraLab/Custodia";
 
     private readonly IDriveSyncService _syncService;
     private readonly IEmbeddedApiServer _apiServer;

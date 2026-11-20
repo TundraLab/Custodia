@@ -540,11 +540,11 @@ public partial class App : Application
         menu.Items.Add(settingsItem);
         menu.Items.Add(exitItem);
 
-        using var iconStream = AssetLoader.Open(new Uri("avares://TundraDrive/Assets/tundradrive-tray.png"));
+        using var iconStream = AssetLoader.Open(new Uri("avares://Custodia/Assets/custodia-tray.png"));
         _trayIcon = new TrayIcon
         {
             Icon = new WindowIcon(iconStream),
-            ToolTipText = $"TundraDrive v{AppVersionInfo.CurrentVersion}",
+            ToolTipText = $"Custódia v{AppVersionInfo.CurrentVersion}",
             Menu = menu,
             IsVisible = true
         };

@@ -5,75 +5,80 @@
              x:DataType="vm:AboutViewModel">
 
   <!-- Aba sobre -->
-  <ScrollViewer Padding="24" HorizontalScrollBarVisibility="Disabled">
-    <StackPanel Spacing="18" MaxWidth="760">
-      <StackPanel Spacing="4">
+  <ScrollViewer Padding="24"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto"
+                AllowAutoHide="False">
+    <StackPanel Spacing="16" HorizontalAlignment="Stretch">
+      <StackPanel Spacing="2">
         <TextBlock Classes="PageTitle" Text="{Binding Loc.AboutSectionTitle}" />
         <TextBlock Classes="Subtitle" Text="{Binding Loc.AboutVersionLabel}" />
       </StackPanel>
 
-      <Border Classes="SurfaceCard" Padding="24">
-        <StackPanel Spacing="18">
-          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="20">
+      <Border Classes="SurfaceCard" Padding="18">
+        <StackPanel Spacing="14">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
             <Border Grid.Column="0"
-                    Background="#13171F"
+                    Background="#0B111E"
                     BorderBrush="{StaticResource TundraBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="12"
-                    Padding="12">
-              <Image Source="avares://TundraDrive/Assets/tundradrive-icon.png"
-                     Width="84"
-                     Height="84"
+                    CornerRadius="14"
+                    Padding="8">
+              <Image Source="avares://Custodia/Assets/custodia-icon.png"
+                     Width="64"
+                     Height="64"
                      Stretch="Uniform" />
             </Border>
 
-            <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
-              <TextBlock FontSize="22" FontWeight="SemiBold" Text="TundraDrive" />
+            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+              <TextBlock FontSize="21" FontWeight="SemiBold" Text="Custódia" />
               <TextBlock Classes="Subtitle"
                          TextWrapping="Wrap"
                          Text="{Binding Loc.AboutDescription}" />
             </StackPanel>
-          </Grid>
 
-          <Border Classes="FlatRow">
-            <Grid ColumnDefinitions="140,*" ColumnSpacing="12">
-              <TextBlock Grid.Column="0" Classes="MutedMeta" FontSize="12.5" VerticalAlignment="Center" Text="{Binding Loc.AboutCompanyLabel}" />
-              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <Image Source="avares://TundraDrive/Assets/brand-logo.png"
-                       Width="22"
-                       Height="22"
-                       Stretch="Uniform" />
-                <TextBlock FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" Text="{Binding CompanyName}" />
-              </StackPanel>
-            </Grid>
-          </Border>
-
-          <Border Classes="FlatRow">
-            <Grid ColumnDefinitions="140,*" ColumnSpacing="12">
-              <TextBlock Grid.Column="0" Classes="MutedMeta" FontSize="12.5" Text="{Binding Loc.AboutDeveloperLabel}" />
-              <TextBlock Grid.Column="1" FontSize="13.5" FontWeight="SemiBold" Text="{Binding DeveloperName}" TextWrapping="Wrap" />
-            </Grid>
-          </Border>
-
-          <WrapPanel Orientation="Horizontal">
-            <Button Classes="SecondaryAction"
+            <Button Grid.Column="2"
+                    Classes="SecondaryAction"
+                    VerticalAlignment="Top"
                     Command="{Binding OpenRepositoryCommand}">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <PathIcon Width="15" Height="15"
                           Foreground="{StaticResource TundraTextPrimary}"
                           Data="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-                <TextBlock Text="GitHub • TundraLab/TundraDrive" VerticalAlignment="Center" />
+                <TextBlock Text="GitHub • TundraLab/Custodia" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
-          </WrapPanel>
+          </Grid>
+
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+            <Border Grid.Column="0" Classes="FlatRow" Padding="12,8">
+              <Grid ColumnDefinitions="90,*" ColumnSpacing="10">
+                <TextBlock Grid.Column="0" Classes="MutedMeta" FontSize="12" VerticalAlignment="Center" Text="{Binding Loc.AboutCompanyLabel}" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                  <Image Source="avares://Custodia/Assets/brand-logo.png"
+                         Width="20"
+                         Height="20"
+                         Stretch="Uniform" />
+                  <TextBlock FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Text="{Binding CompanyName}" />
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Classes="FlatRow" Padding="12,8">
+              <Grid ColumnDefinitions="110,*" ColumnSpacing="10">
+                <TextBlock Grid.Column="0" Classes="MutedMeta" FontSize="12" VerticalAlignment="Center" Text="{Binding Loc.AboutDeveloperLabel}" />
+                <TextBlock Grid.Column="1" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Text="{Binding DeveloperName}" TextTrimming="CharacterEllipsis" />
+              </Grid>
+            </Border>
+          </Grid>
         </StackPanel>
       </Border>
 
       <!-- Atualizações -->
-      <Border Classes="SurfaceCard" Padding="24">
-        <StackPanel Spacing="14">
+      <Border Classes="SurfaceCard" Padding="18">
+        <StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-            <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+            <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
               <TextBlock Classes="SectionTitle" Text="{Binding Loc.UpdatesSectionTitle}" />
               <TextBlock Classes="MutedMeta" FontSize="12.5" Text="{Binding InstalledModeSummary}" />
               <TextBlock Classes="MutedMeta" FontSize="11.5" Text="{Binding LastCheckSummary}" />
@@ -98,9 +103,10 @@
           </Grid>
 
           <TextBlock FontSize="12.5"
+                     FontWeight="Medium"
                      TextWrapping="Wrap"
                      IsVisible="{Binding UpdateStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                     Foreground="{StaticResource TundraTextSecondary}"
+                     Foreground="{StaticResource TundraTextPrimary}"
                      Text="{Binding UpdateStatusText}" />
 
           <ProgressBar Height="5"
@@ -109,18 +115,6 @@
                        Value="{Binding UpdateCheckProgress}"
                        IsVisible="{Binding IsCheckingUpdates}"
                        Foreground="{StaticResource TundraAccent}" />
-
-          <Border Classes="FlatRow"
-                  Background="#13171F"
-                  Padding="12,10"
-                  HorizontalAlignment="Stretch"
-                  IsVisible="{Binding HasReleaseNotes}">
-            <TextBlock FontSize="12"
-                       TextWrapping="Wrap"
-                       LineHeight="19"
-                       Foreground="{StaticResource TundraTextSecondary}"
-                       Text="{Binding LatestReleaseNotes}" />
-          </Border>
 
           <ProgressBar Height="6"
                        Minimum="0"
@@ -141,6 +135,23 @@
                     Content="{Binding Loc.UpdateOpenReleaseButton}"
                     Command="{Binding OpenReleasePageCommand}" />
           </WrapPanel>
+
+          <Border Classes="FlatRow"
+                  Background="#13171F"
+                  Padding="12,10"
+                  HorizontalAlignment="Stretch"
+                  IsVisible="{Binding HasReleaseNotes}">
+            <ScrollViewer MaxHeight="200"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto"
+                          AllowAutoHide="False">
+              <TextBlock FontSize="12"
+                         TextWrapping="Wrap"
+                         LineHeight="19"
+                         Foreground="{StaticResource TundraTextSecondary}"
+                         Text="{Binding LatestReleaseNotes}" />
+            </ScrollViewer>
+          </Border>
         </StackPanel>
       </Border>
     </StackPanel>

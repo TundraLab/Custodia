@@ -28,10 +28,10 @@ public interface IAppUpdateService
 public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
 {
     private const string LatestReleaseApiUrl =
-        "https://api.github.com/repos/TundraLab/TundraDrive/releases/latest";
+        "https://api.github.com/repos/TundraLab/Custodia/releases/latest";
 
     private const string LatestReleaseWebUrl =
-        "https://github.com/TundraLab/TundraDrive/releases/latest";
+        "https://github.com/TundraLab/Custodia/releases/latest";
 
     private readonly ILogger<GitHubAppUpdateService> _logger;
     private readonly HttpClient _httpClient;
@@ -73,7 +73,7 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
         _httpClient.Timeout = TimeSpan.FromMinutes(10);
         _httpClient.DefaultRequestHeaders.UserAgent.Clear();
         _httpClient.DefaultRequestHeaders.UserAgent.Add(
-            new ProductInfoHeaderValue("TundraDrive", _currentVersion));
+            new ProductInfoHeaderValue("Custodia", _currentVersion));
         _httpClient.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
     }
@@ -82,6 +82,7 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
     {
         var appImagePath = Environment.GetEnvironmentVariable("APPIMAGE");
         if (!string.IsNullOrWhiteSpace(appImagePath) &&
+            !appImagePath.Contains("/.cache/custodia-installer/", StringComparison.Ordinal) &&
             !appImagePath.Contains("/.cache/tundradrive-installer/", StringComparison.Ordinal) &&
             File.Exists(appImagePath))
         {
@@ -91,20 +92,23 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
 
         var processPath = Environment.ProcessPath;
         if (!string.IsNullOrWhiteSpace(processPath) &&
-            processPath.StartsWith("/opt/tundradrive/", StringComparison.Ordinal))
+            (processPath.StartsWith("/opt/custodia/", StringComparison.Ordinal) ||
+             processPath.StartsWith("/opt/tundradrive/", StringComparison.Ordinal)))
         {
-            installedPackagePath = File.Exists("/usr/bin/tundradrive")
-                ? "/usr/bin/tundradrive"
-                : processPath;
+            installedPackagePath = File.Exists("/usr/bin/custodia")
+                ? "/usr/bin/custodia"
+                : File.Exists("/usr/bin/tundradrive")
+                    ? "/usr/bin/tundradrive"
+                    : processPath;
             return AppInstallKind.Rpm;
         }
 
-        var localAppImage = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".local",
-            "opt",
-            "tundradrive",
-            "TundraDrive.AppImage");
+        var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var localAppImage = Path.Combine(userProfile, ".local", "opt", "custodia", "Custodia.AppImage");
+        if (!File.Exists(localAppImage))
+        {
+            localAppImage = Path.Combine(userProfile, ".local", "opt", "tundradrive", "TundraDrive.AppImage");
+        }
         if (File.Exists(localAppImage) &&
             !string.IsNullOrWhiteSpace(processPath) &&
             !Path.GetFileNameWithoutExtension(processPath).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
@@ -223,7 +227,7 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
         }
 
         var latestVersion = tagName.TrimStart('v', 'V');
-        var dlBase = $"https://github.com/TundraLab/TundraDrive/releases/download/{tagName}";
+        var dlBase = $"https://github.com/TundraLab/Custodia/releases/download/{tagName}";
         return new AppUpdateCheckResult
         {
             CurrentVersion = _currentVersion,
@@ -231,9 +235,9 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
             TagName = tagName,
             IsUpdateAvailable = AppVersionInfo.IsNewerVersion(latestVersion, _currentVersion),
             ReleaseUrl = finalUri,
-            RpmAsset = new ReleaseAssetInfo($"TundraDrive-{latestVersion}-1.x86_64.rpm", $"{dlBase}/TundraDrive-{latestVersion}-1.x86_64.rpm", 0),
-            AppImageAsset = new ReleaseAssetInfo($"TundraDrive-{latestVersion}-x86_64.AppImage", $"{dlBase}/TundraDrive-{latestVersion}-x86_64.AppImage", 0),
-            InstallerScriptAsset = new ReleaseAssetInfo("TundraDrive-Installer-x86_64.sh", $"{dlBase}/TundraDrive-Installer-x86_64.sh", 0),
+            RpmAsset = new ReleaseAssetInfo($"Custodia-{latestVersion}-1.x86_64.rpm", $"{dlBase}/Custodia-{latestVersion}-1.x86_64.rpm", 0),
+            AppImageAsset = new ReleaseAssetInfo($"Custodia-{latestVersion}-x86_64.AppImage", $"{dlBase}/Custodia-{latestVersion}-x86_64.AppImage", 0),
+            InstallerScriptAsset = new ReleaseAssetInfo("Custodia-Installer-x86_64.sh", $"{dlBase}/Custodia-Installer-x86_64.sh", 0),
             ChecksumsAsset = new ReleaseAssetInfo("SHA256SUMS.txt", $"{dlBase}/SHA256SUMS.txt", 0),
             InstallKind = installKind,
             InstalledPackagePath = installedPackagePath
@@ -451,7 +455,9 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
                   pkexec rpm -Uvh --replacepkgs {escapedPackage} > {escapedLog} 2>&1
                 fi
                 rm -f {escapedPackage}
-                if [[ -x /usr/bin/tundradrive ]]; then
+                if [[ -x /usr/bin/custodia ]]; then
+                  nohup /usr/bin/custodia >/dev/null 2>&1 &
+                elif [[ -x /usr/bin/tundradrive ]]; then
                   nohup /usr/bin/tundradrive >/dev/null 2>&1 &
                 fi
                 """;

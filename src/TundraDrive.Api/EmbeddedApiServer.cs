@@ -150,7 +150,7 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
                 f.TrackedFileCount)).ToList();
 
             return Results.Ok(new ApiStatusResponse(
-                ServiceName: "TundraDrive",
+                ServiceName: "Custodia",
                 BoundEndpoint: BoundAddress,
                 IsAccountConnected: account.IsConnected,
                 AccountEmail: account.IsConnected ? account.EmailAddress : null,
@@ -551,9 +551,9 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
             openapi = "3.0.3",
             info = new
             {
-                title = "TundraDrive Local REST API",
+                title = "Custódia Local REST API",
                 version = TundraDrive.Core.Configuration.AppVersionInfo.CurrentVersion,
-                description = "API REST local (loopback 127.0.0.1) do TundraDrive para automacao, scripts e agentes de IA."
+                description = "API REST local (loopback 127.0.0.1) do Custódia para automacao, scripts e agentes de IA."
             },
             servers = new[] { new { url = serverUrl } },
             paths = new Dictionary<string, object>

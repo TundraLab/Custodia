@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ==============================================================================
-# TundraDrive v2.7.4 - Instalador Oficial de Terminal by TundraLab
+# Custódia v2.8.0 - Instalador Oficial de Terminal by TundraLab
 # Autor e Desenvolvedor: Gustavo Henrique Novaes Gomes (@GustaHerin)
 # Licença: Proprietária / Todos os Direitos Reservados
 # ==============================================================================
@@ -11,18 +11,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." 2>/dev/null && pwd || pwd)"
 DIST_DIR="${REPO_ROOT}/dist"
 
-VERSION="${TUNDRA_VERSION:-2.7.4}"
-REPO_SLUG="TundraLab/TundraDrive"
+VERSION="${CUSTODIA_VERSION:-${TUNDRA_VERSION:-2.8.0}}"
+REPO_SLUG="TundraLab/Custodia"
 RELEASE_BASE_URL="https://github.com/${REPO_SLUG}/releases/latest/download"
 RAW_BASE_URL="https://raw.githubusercontent.com/${REPO_SLUG}/main"
 DOWNLOAD_DIR="${TUNDRA_DOWNLOAD_DIR:-${PWD}}"
 
 resolve_latest_release_version() {
-  if [[ -n "${TUNDRA_VERSION:-}" ]] || [[ "${TUNDRA_OFFLINE:-0}" == "1" ]]; then
+  if [[ -n "${CUSTODIA_VERSION:-}" ]] || [[ -n "${TUNDRA_VERSION:-}" ]] || [[ "${TUNDRA_OFFLINE:-0}" == "1" ]]; then
     return 0
   fi
 
-  if [[ -d "${DIST_DIR}" ]] && compgen -G "${DIST_DIR}/TundraDrive-*.rpm" >/dev/null 2>&1; then
+  if [[ -d "${DIST_DIR}" ]] && compgen -G "${DIST_DIR}/Custodia-*.rpm" >/dev/null 2>&1; then
     return 0
   fi
 
@@ -38,8 +38,8 @@ resolve_latest_release_version() {
 
 resolve_latest_release_version
 RELEASE_TAG="v${VERSION}"
-APPIMAGE_ASSET="TundraDrive-${VERSION}-x86_64.AppImage"
-RPM_ASSET="TundraDrive-${VERSION}-1.x86_64.rpm"
+APPIMAGE_ASSET="Custodia-${VERSION}-x86_64.AppImage"
+RPM_ASSET="Custodia-${VERSION}-1.x86_64.rpm"
 SUMS_ASSET="SHA256SUMS.txt"
 
 if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; then
@@ -82,16 +82,20 @@ detect_desktop_env() {
 }
 
 get_rpm_status() {
-  if command -v rpm >/dev/null 2>&1 && rpm -q tundradrive >/dev/null 2>&1; then
-    rpm -q --qf "Instalado (v%{VERSION}-%{RELEASE})" tundradrive 2>/dev/null || echo "Instalado"
+  if command -v rpm >/dev/null 2>&1 && rpm -q custodia >/dev/null 2>&1; then
+    rpm -q --qf "Instalado (v%{VERSION}-%{RELEASE})" custodia 2>/dev/null || echo "Instalado"
+  elif command -v rpm >/dev/null 2>&1 && rpm -q tundradrive >/dev/null 2>&1; then
+    rpm -q --qf "Legado TundraDrive (v%{VERSION}-%{RELEASE})" tundradrive 2>/dev/null || echo "Legado"
   else
     echo "Não instalado"
   fi
 }
 
 get_appimage_status() {
-  if [[ -x "${HOME}/.local/opt/tundradrive/TundraDrive.AppImage" ]]; then
-    echo "Instalado (~/.local/opt/tundradrive)"
+  if [[ -x "${HOME}/.local/opt/custodia/Custodia.AppImage" ]]; then
+    echo "Instalado (~/.local/opt/custodia)"
+  elif [[ -x "${HOME}/.local/opt/tundradrive/TundraDrive.AppImage" ]]; then
+    echo "Legado (~/.local/opt/tundradrive)"
   else
     echo "Não instalado"
   fi
@@ -128,8 +132,8 @@ print_header() {
   rpm_st="$(get_rpm_status)"
   app_st="$(get_appimage_status)"
 
-  local title_plain="TundraDrive v${VERSION}  •  Instalador Oficial by TundraLab"
-  local title_styled="${BOLD}${WHITE}TundraDrive v${VERSION}${RESET}  ${CYAN}•  Instalador Oficial by TundraLab${RESET}"
+  local title_plain="Custódia v${VERSION}  •  Instalador Oficial by TundraLab"
+  local title_styled="${BOLD}${WHITE}Custódia v${VERSION}${RESET}  ${CYAN}•  Instalador Oficial by TundraLab${RESET}"
   local dev_plain="Desenvolvedor: Gustavo Henrique Novaes Gomes (@GustaHerin)"
   local repo_plain="Repositório:   https://github.com/${REPO_SLUG}"
   local sys_plain="Sistema:   ${os_name} (${arch_name})  •  ${de_name}"
@@ -499,44 +503,46 @@ write_user_desktop_files() {
 
   mkdir -p "${apps_dir}" "${icon_png_dir}" "${icon_svg_dir}"
 
-  if [[ -f "${REPO_ROOT}/src/TundraDrive.Desktop/Assets/tundradrive-icon.png" ]]; then
-    cp -f "${REPO_ROOT}/src/TundraDrive.Desktop/Assets/tundradrive-icon.png" "${icon_png_dir}/tundradrive.png"
-    cp -f "${REPO_ROOT}/src/TundraDrive.Desktop/Assets/tundradrive-icon.svg" "${icon_svg_dir}/tundradrive.svg"
+  if [[ -f "${REPO_ROOT}/src/TundraDrive.Desktop/Assets/custodia-icon.png" ]]; then
+    cp -f "${REPO_ROOT}/src/TundraDrive.Desktop/Assets/custodia-icon.png" "${icon_png_dir}/custodia.png"
+    cp -f "${REPO_ROOT}/src/TundraDrive.Desktop/Assets/custodia-icon.svg" "${icon_svg_dir}/custodia.svg"
   elif command -v curl >/dev/null 2>&1; then
-    curl -fsSL "${RAW_BASE_URL}/src/TundraDrive.Desktop/Assets/tundradrive-icon.png" -o "${icon_png_dir}/tundradrive.png" 2>/dev/null || true
-    curl -fsSL "${RAW_BASE_URL}/src/TundraDrive.Desktop/Assets/tundradrive-icon.svg" -o "${icon_svg_dir}/tundradrive.svg" 2>/dev/null || true
+    curl -fsSL "${RAW_BASE_URL}/src/TundraDrive.Desktop/Assets/custodia-icon.png" -o "${icon_png_dir}/custodia.png" 2>/dev/null || true
+    curl -fsSL "${RAW_BASE_URL}/src/TundraDrive.Desktop/Assets/custodia-icon.svg" -o "${icon_svg_dir}/custodia.svg" 2>/dev/null || true
   fi
 
-  local icon_ref="tundradrive"
-  if [[ -f "${icon_png_dir}/tundradrive.png" ]]; then
-    icon_ref="${icon_png_dir}/tundradrive.png"
+  local icon_ref="custodia"
+  if [[ -f "${icon_png_dir}/custodia.png" ]]; then
+    icon_ref="${icon_png_dir}/custodia.png"
   fi
 
   local desktop_entry
   desktop_entry="[Desktop Entry]
 Type=Application
 Version=1.0
-Name=TundraDrive
+Name=Custódia
 GenericName=Google Drive Client
-Comment=TundraDrive by TundraLab - Cliente do Google Drive para Linux
+Comment=Custódia by TundraLab - Seus arquivos. Sempre seguros.
 Icon=${icon_ref}
 Exec=${exec_cmd}
 Terminal=false
-Categories=Network;FileTransfer;Utility;
-StartupWMClass=TundraDrive
+Categories=Network;Utility;
+StartupWMClass=Custodia
 X-TundraLab-Vendor=TundraLab"
 
-  if [[ "${exec_cmd}" == "\"/usr/bin/tundradrive\"" && -f "/usr/share/applications/tundradrive.desktop" ]]; then
-    rm -f "${apps_dir}/tundradrive.desktop"
+  rm -f "${apps_dir}/tundradrive.desktop" "${autostart_dir}/tundradrive.desktop"
+
+  if [[ "${exec_cmd}" == "\"/usr/bin/custodia\"" && -f "/usr/share/applications/custodia.desktop" ]]; then
+    rm -f "${apps_dir}/custodia.desktop"
   else
-    printf '%s\n' "${desktop_entry}" > "${apps_dir}/tundradrive.desktop"
-    chmod 755 "${apps_dir}/tundradrive.desktop"
+    printf '%s\n' "${desktop_entry}" > "${apps_dir}/custodia.desktop"
+    chmod 755 "${apps_dir}/custodia.desktop"
   fi
 
   if [[ "${with_autostart}" == "1" ]]; then
     mkdir -p "${autostart_dir}"
-    printf '%s\nX-GNOME-Autostart-enabled=true\nX-GNOME-Autostart-Delay=4\nX-KDE-autostart-after=panel\nStartupNotify=false\n' "${desktop_entry}" > "${autostart_dir}/tundradrive.desktop"
-    step_ok "Inicialização automática configurada em ${autostart_dir}/tundradrive.desktop"
+    printf '%s\nX-GNOME-Autostart-enabled=true\nX-GNOME-Autostart-Delay=4\nX-KDE-autostart-after=panel\nStartupNotify=false\n' "${desktop_entry}" > "${autostart_dir}/custodia.desktop"
+    step_ok "Inicialização automática configurada em ${autostart_dir}/custodia.desktop"
   fi
 
   refresh_desktop_caches
@@ -556,19 +562,18 @@ find_running_tundra_pids() {
   uid="$(id -u)"
   self_pid="$$"
   {
+    pgrep -u "${uid}" -x "Custodia" 2>/dev/null || true
     pgrep -u "${uid}" -x "TundraDrive" 2>/dev/null || true
-    pgrep -u "${uid}" -f '(/opt/tundradrive/TundraDrive|/usr/bin/tundradrive|TundraDrive.*\.AppImage|/tmp/\.mount_Tundra)' 2>/dev/null || true
+    pgrep -u "${uid}" -f '(/opt/custodia/Custodia|/usr/bin/custodia|Custodia.*\.AppImage|/tmp/\.mount_Custod|/opt/tundradrive/TundraDrive|/usr/bin/tundradrive|TundraDrive.*\.AppImage|/tmp/\.mount_Tundra)' 2>/dev/null || true
   } | awk -v self="${self_pid}" '$1 != self && $1 ~ /^[0-9]+$/ { print $1 }' | sort -u
 }
 
 stop_running_instance_if_any() {
-  local uid sock_path pids
+  local uid pids
   uid="$(id -u)"
-  sock_path="${XDG_RUNTIME_DIR:-/tmp}/tundradrive.sock"
-  [[ -S "${sock_path}" ]] || sock_path="/tmp/tundradrive-${uid}.sock"
-
-  if [[ -S "${sock_path}" ]] && command -v python3 >/dev/null 2>&1; then
-    python3 -c '
+  for candidate_sock in "${XDG_RUNTIME_DIR:-/tmp}/custodia.sock" "/tmp/custodia-${uid}.sock" "${XDG_RUNTIME_DIR:-/tmp}/tundradrive.sock" "/tmp/tundradrive-${uid}.sock"; do
+    if [[ -S "${candidate_sock}" ]] && command -v python3 >/dev/null 2>&1; then
+      python3 -c '
 import socket, sys
 try:
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -579,16 +584,17 @@ try:
     s.close()
 except Exception:
     pass
-' "${sock_path}" >/dev/null 2>&1 || true
-    sleep 0.5
-  fi
+' "${candidate_sock}" >/dev/null 2>&1 || true
+      sleep 0.4
+    fi
+  done
 
   pids="$(find_running_tundra_pids)"
   if [[ -z "${pids}" ]]; then
     return 0
   fi
 
-  step_info "Encerrando instância em execução do TundraDrive..."
+  step_info "Encerrando instância em execução do Custódia..."
   # shellcheck disable=SC2086
   kill -TERM ${pids} >/dev/null 2>&1 || true
 
@@ -614,9 +620,9 @@ offer_launch_app() {
     return 0
   fi
 
-  if [[ -t 0 ]] && prompt_yes_no "Deseja abrir o TundraDrive agora? [S/n]:" "S"; then
+  if [[ -t 0 ]] && prompt_yes_no "Deseja abrir o Custódia agora? [S/n]:" "S"; then
     nohup bash -c "exec ${launch_cmd}" >/dev/null 2>&1 &
-    step_ok "TundraDrive iniciado em segundo plano."
+    step_ok "Custódia iniciado em segundo plano."
   fi
 }
 
@@ -643,15 +649,18 @@ install_rpm_flow() {
     fi
   fi
 
-  step_info "[3/4] Instalando pacote RPM no sistema (/opt/tundradrive)..."
+  step_info "[3/4] Instalando pacote RPM no sistema (/opt/custodia)..."
   stop_running_instance_if_any
   sudo -v
+  if command -v rpm >/dev/null 2>&1 && rpm -q tundradrive >/dev/null 2>&1; then
+    sudo rpm -e tundradrive >/dev/null 2>&1 || true
+  fi
   if command -v dnf >/dev/null 2>&1; then
     local dnf_action="install"
     local installed_evr=""
     local target_evr=""
-    if command -v rpm >/dev/null 2>&1 && rpm -q tundradrive >/dev/null 2>&1; then
-      installed_evr="$(rpm -q --qf '%{VERSION}-%{RELEASE}' tundradrive 2>/dev/null || true)"
+    if command -v rpm >/dev/null 2>&1 && rpm -q custodia >/dev/null 2>&1; then
+      installed_evr="$(rpm -q --qf '%{VERSION}-%{RELEASE}' custodia 2>/dev/null || true)"
       target_evr="$(rpm -qp --qf '%{VERSION}-%{RELEASE}' "${rpm_path}" 2>/dev/null || echo "${VERSION}-1")"
       if [[ "${installed_evr}" == "${target_evr}" ]]; then
         dnf_action="reinstall"
@@ -667,12 +676,11 @@ install_rpm_flow() {
     run_with_spinner "Aplicando pacote ${RPM_ASSET} via RPM" sudo rpm -Uvh --replacepkgs "${rpm_path}"
   fi
 
-  # Remove eventual instalação local anterior em AppImage para evitar conflito de atalho
-  rm -rf "${HOME}/.local/opt/tundradrive"
-  rm -f "${HOME}/.local/bin/tundradrive"
+  rm -rf "${HOME}/.local/opt/custodia" "${HOME}/.local/opt/tundradrive"
+  rm -f "${HOME}/.local/bin/custodia" "${HOME}/.local/bin/tundradrive"
 
   step_info "[4/4] Atualizando menu de aplicativos e ícones..."
-  write_user_desktop_files "\"/usr/bin/tundradrive\"" "${enable_autostart}"
+  write_user_desktop_files "\"/usr/bin/custodia\"" "${enable_autostart}"
 
   if [[ -n "${stage_dir:-}" && -d "${stage_dir}" ]]; then
     rm -rf "${stage_dir}"
@@ -680,10 +688,10 @@ install_rpm_flow() {
   fi
 
   echo ""
-  step_ok "${BOLD}TundraDrive v${VERSION} (.rpm) instalado com sucesso!${RESET}"
-  echo -e "  ${DIM}Executável: /usr/bin/tundradrive  |  Menu: TundraDrive${RESET}"
+  step_ok "${BOLD}Custódia v${VERSION} (.rpm) instalado com sucesso!${RESET}"
+  echo -e "  ${DIM}Executável: /usr/bin/custodia  |  Menu: Custódia${RESET}"
   if [[ "${interactive}" == "1" ]]; then
-    offer_launch_app "\"/usr/bin/tundradrive\""
+    offer_launch_app "\"/usr/bin/custodia\""
   fi
 }
 
@@ -706,10 +714,12 @@ install_appimage_flow() {
     prompt_yes_no "Ativar inicialização automática ao ligar o PC? [S/n]:" "S" || enable_autostart=0
   fi
 
-  step_info "[3/4] Instalando AppImage integrado em ~/.local/opt/tundradrive..."
+  step_info "[3/4] Instalando AppImage integrado em ~/.local/opt/custodia..."
   stop_running_instance_if_any
-  local target_dir="${HOME}/.local/opt/tundradrive"
-  local target_bin="${target_dir}/TundraDrive.AppImage"
+  rm -rf "${HOME}/.local/opt/tundradrive"
+  rm -f "${HOME}/.local/bin/tundradrive"
+  local target_dir="${HOME}/.local/opt/custodia"
+  local target_bin="${target_dir}/Custodia.AppImage"
   local local_bin_dir="${HOME}/.local/bin"
 
   mkdir -p "${target_dir}" "${local_bin_dir}"
@@ -718,11 +728,11 @@ install_appimage_flow() {
   fi
   chmod 755 "${target_bin}"
 
-  cat > "${local_bin_dir}/tundradrive" <<EOF
+  cat > "${local_bin_dir}/custodia" <<EOF
 #!/usr/bin/env bash
 exec "${target_bin}" "\$@"
 EOF
-  chmod 755 "${local_bin_dir}/tundradrive"
+  chmod 755 "${local_bin_dir}/custodia"
 
   step_info "[4/4] Registrando atalhos, ícones e menu (GNOME / COSMIC / KDE Plasma)..."
   write_user_desktop_files "\"${target_bin}\"" "${enable_autostart}"
@@ -733,8 +743,8 @@ EOF
   fi
 
   echo ""
-  step_ok "${BOLD}TundraDrive v${VERSION} (.AppImage) instalado com sucesso!${RESET}"
-  echo -e "  ${DIM}Arquivo: ${target_bin}  |  Comando: ~/.local/bin/tundradrive${RESET}"
+  step_ok "${BOLD}Custódia v${VERSION} (.AppImage) instalado com sucesso!${RESET}"
+  echo -e "  ${DIM}Arquivo: ${target_bin}  |  Comando: ~/.local/bin/custodia${RESET}"
   if [[ "${interactive}" == "1" ]]; then
     offer_launch_app "\"${target_bin}\""
   fi
@@ -750,16 +760,16 @@ configure_extras_menu() {
   read -rp "Escolha [0]: " sub || true
   case "${sub:-0}" in
     1)
-      if command -v rpm >/dev/null 2>&1 && rpm -q tundradrive >/dev/null 2>&1; then
-        write_user_desktop_files "\"/usr/bin/tundradrive\"" 1
-      elif [[ -x "${HOME}/.local/opt/tundradrive/TundraDrive.AppImage" ]]; then
-        write_user_desktop_files "\"${HOME}/.local/opt/tundradrive/TundraDrive.AppImage\"" 1
+      if command -v rpm >/dev/null 2>&1 && rpm -q custodia >/dev/null 2>&1; then
+        write_user_desktop_files "\"/usr/bin/custodia\"" 1
+      elif [[ -x "${HOME}/.local/opt/custodia/Custodia.AppImage" ]]; then
+        write_user_desktop_files "\"${HOME}/.local/opt/custodia/Custodia.AppImage\"" 1
       else
         step_warn "Instale primeiro o .rpm ou o .AppImage antes de configurar o autostart."
       fi
       ;;
     2)
-      rm -f "${HOME}/.config/autostart/tundradrive.desktop"
+      rm -f "${HOME}/.config/autostart/custodia.desktop" "${HOME}/.config/autostart/tundradrive.desktop"
       step_ok "Inicialização automática removida."
       ;;
     3)
@@ -778,17 +788,21 @@ configure_extras_menu() {
 uninstall_flow() {
   echo ""
   stop_running_instance_if_any
-  step_info "Removendo instalação do TundraDrive (dados em ~/.config/tundradrive serão preservados)..."
-  rm -rf "${HOME}/.local/opt/tundradrive"
-  rm -f "${HOME}/.local/bin/tundradrive" \
-        "${HOME}/.local/share/applications/tundradrive.desktop" \
-        "${HOME}/.config/autostart/tundradrive.desktop"
+  step_info "Removendo instalação do Custódia (dados em ~/.config/custodia serão preservados)..."
+  rm -rf "${HOME}/.local/opt/custodia" "${HOME}/.local/opt/tundradrive"
+  rm -f "${HOME}/.local/bin/custodia" "${HOME}/.local/bin/tundradrive" \
+        "${HOME}/.local/share/applications/custodia.desktop" "${HOME}/.local/share/applications/tundradrive.desktop" \
+        "${HOME}/.config/autostart/custodia.desktop" "${HOME}/.config/autostart/tundradrive.desktop"
+  if command -v rpm >/dev/null 2>&1 && rpm -q custodia >/dev/null 2>&1; then
+    sudo rpm -e custodia
+    step_ok "Pacote RPM custodia removido do sistema."
+  fi
   if command -v rpm >/dev/null 2>&1 && rpm -q tundradrive >/dev/null 2>&1; then
     sudo rpm -e tundradrive
-    step_ok "Pacote RPM tundradrive removido do sistema."
+    step_ok "Pacote RPM legado tundradrive removido do sistema."
   fi
   refresh_desktop_caches
-  step_ok "TundraDrive desinstalado com sucesso."
+  step_ok "Custódia desinstalado com sucesso."
 }
 
 download_menu() {
@@ -822,9 +836,9 @@ update_flow() {
   local interactive="${1:-0}"
   echo ""
   step_info "Verificando instalação atual para atualizar para v${VERSION}..."
-  if command -v rpm >/dev/null 2>&1 && rpm -q tundradrive >/dev/null 2>&1; then
+  if command -v rpm >/dev/null 2>&1 && { rpm -q custodia >/dev/null 2>&1 || rpm -q tundradrive >/dev/null 2>&1; }; then
     install_rpm_flow "${interactive}"
-  elif [[ -x "${HOME}/.local/opt/tundradrive/TundraDrive.AppImage" ]]; then
+  elif [[ -x "${HOME}/.local/opt/custodia/Custodia.AppImage" || -x "${HOME}/.local/opt/tundradrive/TundraDrive.AppImage" ]]; then
     install_appimage_flow "${interactive}"
   elif is_fedora_like; then
     step_warn "Nenhuma instalação anterior detectada; instalando pacote .rpm v${VERSION}..."
@@ -837,7 +851,7 @@ update_flow() {
 
 show_help() {
   print_header 0
-  echo "Uso: ./install-tundradrive.sh [OPÇÃO]"
+  echo "Uso: ./install-custodia.sh [OPÇÃO]"
   echo ""
   echo "Opções:"
   echo "  (sem argumentos)    Abre o menu interativo do instalador"
@@ -932,7 +946,7 @@ while true; do
   echo -e "  ${CYAN}3)${RESET} Atualizar instalação atual automaticamente para ${BOLD}v${VERSION}${RESET}"
   echo -e "  ${CYAN}4)${RESET} Apenas baixar pacotes (${DIM}.rpm${RESET} / ${DIM}.AppImage${RESET}) nesta pasta"
   echo -e "  ${CYAN}5)${RESET} Configurar autostart e extras de mídia"
-  echo -e "  ${CYAN}6)${RESET} Desinstalar TundraDrive"
+  echo -e "  ${CYAN}6)${RESET} Desinstalar Custódia"
   echo -e "  ${CYAN}0)${RESET} Sair"
   echo ""
   read -rp "Opção [${default_choice}]: " CHOICE || break

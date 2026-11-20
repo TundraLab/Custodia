@@ -11,3 +11,4 @@ tokens/
 .DS_Store
 dist/
 packaging/linux/build/
+site/

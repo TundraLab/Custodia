@@ -9,14 +9,14 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <RootNamespace>TundraDrive.Desktop</RootNamespace>
-    <AssemblyName>TundraDrive</AssemblyName>
-    <Product>TundraDrive</Product>
+    <AssemblyName>Custodia</AssemblyName>
+    <Product>Custódia</Product>
     <Company>TundraLab</Company>
     <Authors>TundraLab</Authors>
-    <Version>2.7.4</Version>
+    <Version>2.8.0</Version>
     <Copyright>© TundraLab</Copyright>
-    <AssemblyTitle>TundraDrive</AssemblyTitle>
-    <ApplicationTitle>TundraDrive</ApplicationTitle>
+    <AssemblyTitle>Custódia</AssemblyTitle>
+    <ApplicationTitle>Custódia</ApplicationTitle>
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
@@ -28,7 +28,7 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
-    <None Include="..\..\TundraDrive-API.pdf" Link="TundraDrive-API.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Custodia-API.pdf" Link="Custodia-API.pdf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

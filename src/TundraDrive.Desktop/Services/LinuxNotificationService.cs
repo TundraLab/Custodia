@@ -66,7 +66,7 @@ public sealed class LinuxNotificationService : IDesktopNotificationService, IDis
         }
 
         var iconPath = LinuxDesktopIntegrationHelper.InstalledPngIconPath;
-        var iconArg = File.Exists(iconPath) ? iconPath : "tundradrive";
+        var iconArg = File.Exists(iconPath) ? iconPath : "custodia";
         var hasTarget = !string.IsNullOrWhiteSpace(targetPath) &&
                         (File.Exists(targetPath) || Directory.Exists(targetPath));
 
@@ -230,7 +230,7 @@ public sealed class LinuxNotificationService : IDesktopNotificationService, IDis
                 @interface: NotificationsInterface,
                 member: "Notify",
                 signature: "susssasa{sv}i");
-            writer.WriteString("TundraDrive");
+            writer.WriteString("Custódia");
             writer.WriteUInt32(0);
             writer.WriteString(iconArg);
             writer.WriteString(title);
@@ -239,7 +239,7 @@ public sealed class LinuxNotificationService : IDesktopNotificationService, IDis
             writer.WriteDictionary(new Dictionary<string, VariantValue>
             {
                 ["urgency"] = VariantValue.Byte(urgencyByte),
-                ["desktop-entry"] = VariantValue.String("tundradrive")
+                ["desktop-entry"] = VariantValue.String("custodia")
             });
             writer.WriteInt32(-1);
             return writer.CreateMessage();
@@ -330,7 +330,7 @@ public sealed class LinuxNotificationService : IDesktopNotificationService, IDis
             CreateNoWindow = true
         };
 
-        psi.ArgumentList.Add("--app-name=TundraDrive");
+        psi.ArgumentList.Add("--app-name=Custódia");
         psi.ArgumentList.Add($"--icon={iconArg}");
         psi.ArgumentList.Add($"--urgency={urgencyArg}");
         if (!string.IsNullOrWhiteSpace(actionLabel))

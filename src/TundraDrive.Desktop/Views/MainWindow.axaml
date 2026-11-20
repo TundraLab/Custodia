@@ -4,19 +4,24 @@
         x:Class="TundraDrive.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding Loc.WindowTitle}"
-        Icon="avares://TundraDrive/Assets/tundradrive-icon.png"
+        Icon="avares://Custodia/Assets/custodia-icon.png"
         Width="1120"
         Height="740"
         MinWidth="680"
         MinHeight="480"
+        WindowStartupLocation="CenterScreen"
         Background="{StaticResource TundraWindowBg}">
 
-  <LayoutTransformControl>
+  <LayoutTransformControl x:Name="RootLayoutTransform"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch">
     <LayoutTransformControl.LayoutTransform>
       <ScaleTransform ScaleX="{Binding UiScaleFactor}" ScaleY="{Binding UiScaleFactor}" />
     </LayoutTransformControl.LayoutTransform>
 
-    <Grid ColumnDefinitions="Auto,*">
+    <Grid ColumnDefinitions="Auto,*"
+          HorizontalAlignment="Stretch"
+          VerticalAlignment="Stretch">
     <!-- Barra lateral -->
     <Border Grid.Column="0"
             Width="{Binding SidebarWidth}"
@@ -27,8 +32,8 @@
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="6,0,4,16">
           <StackPanel Grid.Column="0" Spacing="3" IsVisible="{Binding !IsSidebarCompact}">
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <Image Source="avares://TundraDrive/Assets/tundradrive-icon.png" Width="20" Height="20" />
-              <TextBlock FontSize="17" FontWeight="SemiBold" Text="TundraDrive" VerticalAlignment="Center" />
+              <Image Source="avares://Custodia/Assets/custodia-icon.png" Width="22" Height="22" />
+              <TextBlock FontSize="17" FontWeight="SemiBold" Text="Custódia" VerticalAlignment="Center" />
             </StackPanel>
             <TextBlock Classes="MutedMeta" Text="{Binding Loc.BrandSubtitle}" TextTrimming="CharacterEllipsis" />
           </StackPanel>
@@ -409,7 +414,7 @@
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"
                     Cursor="Hand"
-                    ToolTip.Tip="https://github.com/TundraLab/TundraDrive">
+                    ToolTip.Tip="https://github.com/TundraLab/Custodia">
               <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <PathIcon Width="16" Height="16"
                           Foreground="#CBD5E1"
@@ -418,7 +423,7 @@
                            FontWeight="Medium"
                            Foreground="#CBD5E1"
                            VerticalAlignment="Center"
-                           Text="TundraLab/TundraDrive"
+                           Text="TundraLab/Custodia"
                            IsVisible="{Binding !IsSidebarCompact}" />
               </StackPanel>
             </Button>
@@ -428,7 +433,10 @@
     </Border>
 
       <!-- Área de conteúdo -->
-      <Grid Grid.Column="1" RowDefinitions="Auto,*">
+      <Grid Grid.Column="1"
+            RowDefinitions="Auto,*"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
         <Border Grid.Row="0"
                 Background="#152338"
                 BorderBrush="#2563EB"
@@ -461,7 +469,12 @@
           </Grid>
         </Border>
 
-        <ContentControl Grid.Row="1" Content="{Binding CurrentViewModel}" />
+        <ContentControl Grid.Row="1"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch"
+                        Content="{Binding CurrentViewModel}" />
       </Grid>
     </Grid>
   </LayoutTransformControl>

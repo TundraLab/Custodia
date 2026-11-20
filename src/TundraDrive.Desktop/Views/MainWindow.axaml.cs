@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Threading;
 using TundraDrive.Desktop.ViewModels;
 
 namespace TundraDrive.Desktop.Views;
@@ -11,6 +13,46 @@ public partial class MainWindow : Window
         InitializeComponent();
         SizeChanged += OnWindowSizeChanged;
         KeyDown += OnWindowKeyDown;
+        Opened += OnWindowOpened;
+        DataContextChanged += OnMainWindowDataContextChanged;
+    }
+
+    private void OnWindowOpened(object? sender, EventArgs e)
+    {
+        RefreshRootLayout();
+    }
+
+    private void OnMainWindowDataContextChanged(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            vm.PropertyChanged += OnViewModelPropertyChanged;
+            vm.AboutVm.PropertyChanged += OnViewModelPropertyChanged;
+        }
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(MainWindowViewModel.CurrentViewModel)
+            or nameof(MainWindowViewModel.IsUpdateBannerVisible)
+            or nameof(MainWindowViewModel.UiScaleFactor)
+            or nameof(AboutViewModel.HasReleaseNotes)
+            or nameof(AboutViewModel.IsUpdateAvailable)
+            or nameof(AboutViewModel.LatestReleaseNotes))
+        {
+            RefreshRootLayout();
+        }
+    }
+
+    private void RefreshRootLayout()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            RootLayoutTransform?.InvalidateMeasure();
+            RootLayoutTransform?.InvalidateArrange();
+            InvalidateMeasure();
+            InvalidateArrange();
+        }, DispatcherPriority.Loaded);
     }
 
     private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)

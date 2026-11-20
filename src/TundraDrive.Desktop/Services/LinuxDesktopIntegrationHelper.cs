@@ -19,12 +19,15 @@ public static class LinuxDesktopIntegrationHelper
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
     public static string InstalledPngIconPath =>
-        Path.Combine(UserHome, ".local", "share", "icons", "hicolor", "256x256", "apps", "tundradrive.png");
+        Path.Combine(UserHome, ".local", "share", "icons", "hicolor", "256x256", "apps", "custodia.png");
 
     public static string InstalledSvgIconPath =>
-        Path.Combine(UserHome, ".local", "share", "icons", "hicolor", "scalable", "apps", "tundradrive.svg");
+        Path.Combine(UserHome, ".local", "share", "icons", "hicolor", "scalable", "apps", "custodia.svg");
 
     public static string DesktopEntryPath =>
+        Path.Combine(UserHome, ".local", "share", "applications", "custodia.desktop");
+
+    private static string LegacyDesktopEntryPath =>
         Path.Combine(UserHome, ".local", "share", "applications", "tundradrive.desktop");
 
     public static void InstallDesktopAssets()
@@ -37,13 +40,27 @@ public static class LinuxDesktopIntegrationHelper
         try
         {
             var iconsChanged = false;
-            iconsChanged |= CopyAssetToFileIfMissing("avares://TundraDrive/Assets/tundradrive-icon.png", InstalledPngIconPath);
-            iconsChanged |= CopyAssetToFileIfMissing("avares://TundraDrive/Assets/tundradrive-icon.svg", InstalledSvgIconPath);
+            iconsChanged |= CopyAssetToFileIfMissing("avares://Custodia/Assets/custodia-icon.png", InstalledPngIconPath);
+            iconsChanged |= CopyAssetToFileIfMissing("avares://Custodia/Assets/custodia-icon.svg", InstalledSvgIconPath);
 
             var appsDir = Path.GetDirectoryName(DesktopEntryPath);
+            if (File.Exists(LegacyDesktopEntryPath))
+            {
+                try
+                {
+                    File.Delete(LegacyDesktopEntryPath);
+                    iconsChanged = true;
+                }
+                catch
+                {
+                }
+            }
+
             var processPath = Environment.ProcessPath ?? string.Empty;
-            var isSystemRpmInstall = processPath.StartsWith("/opt/tundradrive/", StringComparison.Ordinal) &&
-                                     File.Exists("/usr/share/applications/tundradrive.desktop");
+            var isSystemRpmInstall = (processPath.StartsWith("/opt/custodia/", StringComparison.Ordinal) &&
+                                      File.Exists("/usr/share/applications/custodia.desktop")) ||
+                                     (processPath.StartsWith("/opt/tundradrive/", StringComparison.Ordinal) &&
+                                      File.Exists("/usr/share/applications/tundradrive.desktop"));
 
             if (isSystemRpmInstall)
             {
@@ -54,7 +71,7 @@ public static class LinuxDesktopIntegrationHelper
                 }
                 else if (iconsChanged)
                 {
-                    RefreshDesktopCachesInBackground(null);
+                    RefreshDesktopCachesInBackground(appsDir);
                 }
                 return;
             }
@@ -69,13 +86,13 @@ public static class LinuxDesktopIntegrationHelper
                 [Desktop Entry]
                 Type=Application
                 Version=1.0
-                Name=TundraDrive
-                Comment=Google Drive Local Synchronization Client
+                Name=Custódia
+                Comment=Custódia by TundraLab - Seus arquivos. Sempre seguros.
                 Icon={InstalledPngIconPath}
                 Exec={execCommand}
                 Terminal=false
                 Categories=Network;Utility;
-                StartupWMClass=TundraDrive
+                StartupWMClass=Custodia
                 """;
 
             var existingContent = File.Exists(DesktopEntryPath)
@@ -322,15 +339,25 @@ public static class LinuxDesktopIntegrationHelper
     {
         var processPath = Environment.ProcessPath;
         if (!string.IsNullOrWhiteSpace(processPath) &&
-            processPath.StartsWith("/opt/tundradrive/", StringComparison.Ordinal))
+            (processPath.StartsWith("/opt/custodia/", StringComparison.Ordinal) ||
+             processPath.StartsWith("/opt/tundradrive/", StringComparison.Ordinal)))
         {
-            return File.Exists("/usr/bin/tundradrive")
-                ? "\"/usr/bin/tundradrive\""
-                : $"\"{processPath}\"";
+            if (File.Exists("/usr/bin/custodia"))
+            {
+                return "\"/usr/bin/custodia\"";
+            }
+
+            if (File.Exists("/usr/bin/tundradrive"))
+            {
+                return "\"/usr/bin/tundradrive\"";
+            }
+
+            return $"\"{processPath}\"";
         }
 
         var appImagePath = Environment.GetEnvironmentVariable("APPIMAGE");
         if (!string.IsNullOrWhiteSpace(appImagePath) &&
+            !appImagePath.Contains("/.cache/custodia-installer/", StringComparison.Ordinal) &&
             !appImagePath.Contains("/.cache/tundradrive-installer/", StringComparison.Ordinal))
         {
             return $"\"{appImagePath}\"";
@@ -345,6 +372,6 @@ public static class LinuxDesktopIntegrationHelper
             return $"\"{processPath}\" \"{entryAssemblyPath}\"";
         }
 
-        return !string.IsNullOrWhiteSpace(processPath) ? $"\"{processPath}\"" : "tundradrive";
+        return !string.IsNullOrWhiteSpace(processPath) ? $"\"{processPath}\"" : "custodia";
     }
 }
