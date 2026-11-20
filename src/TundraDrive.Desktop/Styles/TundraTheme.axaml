@@ -305,6 +305,9 @@
   </Style>
 
   <Style Selector="PathIcon.Spinning">
+    <Setter Property="RenderTransform">
+      <RotateTransform />
+    </Setter>
     <Style.Animations>
       <Animation Duration="0:0:1.2" IterationCount="Infinite">
         <KeyFrame Cue="0%">
@@ -318,6 +321,9 @@
   </Style>
 
   <Style Selector="PathIcon.UploadPulse">
+    <Setter Property="RenderTransform">
+      <TranslateTransform />
+    </Setter>
     <Style.Animations>
       <Animation Duration="0:0:0.85" IterationCount="Infinite">
         <KeyFrame Cue="0%">
@@ -337,6 +343,9 @@
   </Style>
 
   <Style Selector="PathIcon.DownloadPulse">
+    <Setter Property="RenderTransform">
+      <TranslateTransform />
+    </Setter>
     <Style.Animations>
       <Animation Duration="0:0:0.85" IterationCount="Infinite">
         <KeyFrame Cue="0%">
@@ -356,6 +365,9 @@
   </Style>
 
   <Style Selector="PathIcon.DeletePulse">
+    <Setter Property="RenderTransform">
+      <TranslateTransform />
+    </Setter>
     <Style.Animations>
       <Animation Duration="0:0:0.55" IterationCount="Infinite">
         <KeyFrame Cue="0%">

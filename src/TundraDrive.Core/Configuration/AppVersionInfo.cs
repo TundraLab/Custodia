@@ -4,7 +4,7 @@ namespace TundraDrive.Core.Configuration;
 
 public static class AppVersionInfo
 {
-    public const string FallbackVersion = "2.7.3";
+    public const string FallbackVersion = "2.7.4";
     public const string RepositoryOwner = "TundraLab";
     public const string RepositoryName = "TundraDrive";
 

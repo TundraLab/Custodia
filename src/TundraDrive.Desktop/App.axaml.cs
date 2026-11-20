@@ -20,7 +20,11 @@ public partial class App : Application
     public SingleInstanceGuard? SingleInstance { get; set; }
 
     private TrayIcon? _trayIcon;
+    private EventHandler<string>? _trayLanguageChangedHandler;
+    private EventHandler? _traySummaryChangedHandler;
     private bool _isExplicitExit;
+    private int _trayRecoveryInProgress;
+    private readonly CancellationTokenSource _appLifetimeCts = new();
 
     public override void Initialize()
     {
@@ -248,7 +252,19 @@ public partial class App : Application
                 }
             };
 
-            ConfigureTrayIcon(desktop, mainWindow, mainVm);
+            void OnUiThreadUnhandledException(object sender, Avalonia.Threading.DispatcherUnhandledExceptionEventArgs e)
+            {
+                if (!IsRecoverableTrayDbusException(e.Exception))
+                {
+                    return;
+                }
+
+                e.Handled = true;
+                ScheduleTrayIconRecovery(desktop, mainWindow, mainVm);
+            }
+
+            Avalonia.Threading.Dispatcher.UIThread.UnhandledException += OnUiThreadUnhandledException;
+            _ = InitializeTrayIconWhenReadyAsync(desktop, mainWindow, mainVm);
 
             IDisposable? sigTermRegistration = null;
             IDisposable? sigIntRegistration = null;
@@ -276,9 +292,11 @@ public partial class App : Application
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             desktop.Exit += async (_, _) =>
             {
+                _appLifetimeCts.Cancel();
+                Avalonia.Threading.Dispatcher.UIThread.UnhandledException -= OnUiThreadUnhandledException;
                 sigTermRegistration?.Dispose();
                 sigIntRegistration?.Dispose();
-                _trayIcon?.Dispose();
+                DisposeCurrentTrayIcon(mainVm);
                 SingleInstance?.Dispose();
                 memoryCleaner.Dispose();
                 Services.GetRequiredService<FilePreviewService>().Dispose();
@@ -293,6 +311,7 @@ public partial class App : Application
                 {
                     disposableNotifications.Dispose();
                 }
+                _appLifetimeCts.Dispose();
             };
 
             memoryCleaner.Start();
@@ -300,6 +319,134 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    internal static bool IsRecoverableTrayDbusException(Exception? ex)
+    {
+        if (ex is null)
+        {
+            return false;
+        }
+
+        if (ex is Tmds.DBus.Protocol.DBusException)
+        {
+            return true;
+        }
+
+        var text = ex.ToString();
+        return text.Contains("DBusTrayIconImpl", StringComparison.Ordinal) ||
+               text.Contains("StatusNotifier", StringComparison.Ordinal);
+    }
+
+    private async Task InitializeTrayIconWhenReadyAsync(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        MainWindow mainWindow,
+        MainWindowViewModel mainVm)
+    {
+        try
+        {
+            await LinuxDesktopIntegrationHelper.WaitForStatusNotifierWatcherReadyAsync(_appLifetimeCts.Token);
+            if (_isExplicitExit || _appLifetimeCts.IsCancellationRequested)
+            {
+                return;
+            }
+
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (_isExplicitExit || _appLifetimeCts.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                ConfigureTrayIcon(desktop, mainWindow, mainVm);
+            });
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            ScheduleTrayIconRecovery(desktop, mainWindow, mainVm);
+        }
+    }
+
+    private void ScheduleTrayIconRecovery(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        MainWindow mainWindow,
+        MainWindowViewModel mainVm)
+    {
+        if (_isExplicitExit || Interlocked.CompareExchange(ref _trayRecoveryInProgress, 1, 0) != 0)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => DisposeCurrentTrayIcon(mainVm));
+                await Task.Delay(4000, _appLifetimeCts.Token);
+                await LinuxDesktopIntegrationHelper.WaitForStatusNotifierWatcherReadyAsync(_appLifetimeCts.Token);
+
+                if (_isExplicitExit || _appLifetimeCts.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (_isExplicitExit || _appLifetimeCts.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    ConfigureTrayIcon(desktop, mainWindow, mainVm);
+                });
+            }
+            catch
+            {
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _trayRecoveryInProgress, 0);
+            }
+        });
+    }
+
+    private void DisposeCurrentTrayIcon(MainWindowViewModel mainVm)
+    {
+        if (_trayLanguageChangedHandler is not null)
+        {
+            mainVm.Loc.LanguageChanged -= _trayLanguageChangedHandler;
+            _trayLanguageChangedHandler = null;
+        }
+
+        if (_traySummaryChangedHandler is not null)
+        {
+            mainVm.TraySummaryChanged -= _traySummaryChangedHandler;
+            _traySummaryChangedHandler = null;
+        }
+
+        if (_trayIcon is not null)
+        {
+            try
+            {
+                TrayIcon.SetIcons(this, []);
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                _trayIcon.Dispose();
+            }
+            catch
+            {
+            }
+
+            _trayIcon = null;
+        }
     }
 
     private static void ShowOrRestoreWindow(
@@ -333,6 +480,8 @@ public partial class App : Application
         MainWindow mainWindow,
         MainWindowViewModel mainVm)
     {
+        DisposeCurrentTrayIcon(mainVm);
+
         void ShowWindow(int? navigateToTab = null) =>
             ShowOrRestoreWindow(mainWindow, mainVm, navigateToTab);
 
@@ -445,8 +594,8 @@ public partial class App : Application
         // Sync tray menu items on demand, language change, or debounced state transitions (never mutating ToolTipText so top bar never blinks).
         var lastMenuSyncUtc = DateTimeOffset.MinValue;
         menu.NeedsUpdate += (_, _) => RefreshTrayMenuTexts();
-        mainVm.Loc.LanguageChanged += (_, _) => RefreshTrayMenuTexts();
-        mainVm.TraySummaryChanged += (_, _) =>
+        _trayLanguageChangedHandler = (_, _) => RefreshTrayMenuTexts();
+        _traySummaryChangedHandler = (_, _) =>
         {
             var now = DateTimeOffset.UtcNow;
             if ((now - lastMenuSyncUtc).TotalMilliseconds >= 800)
@@ -455,6 +604,8 @@ public partial class App : Application
                 RefreshTrayMenuTexts();
             }
         };
+        mainVm.Loc.LanguageChanged += _trayLanguageChangedHandler;
+        mainVm.TraySummaryChanged += _traySummaryChangedHandler;
 
         RefreshTrayMenuTexts();
         TrayIcon.SetIcons(this, [_trayIcon]);

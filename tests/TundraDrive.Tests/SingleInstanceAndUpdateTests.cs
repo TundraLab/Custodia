@@ -269,6 +269,21 @@ public sealed class SingleInstanceAndUpdateTests
         Assert.Contains("• Instância única: correção limpa.", cleaned);
     }
 
+    [Fact]
+    public void TrayDbusExceptionFilter_AndProcessAgeInspection_WorkAsExpected()
+    {
+        var dbusEx = new Tmds.DBus.Protocol.DBusException("org.gnome.gjs.JSError.ValueError", "Invalid element in string array");
+        Assert.True(TundraDrive.Desktop.App.IsRecoverableTrayDbusException(dbusEx));
+        Assert.False(TundraDrive.Desktop.App.IsRecoverableTrayDbusException(new InvalidOperationException("Unrelated error")));
+
+        if (OperatingSystem.IsLinux())
+        {
+            var selfPid = (uint)Environment.ProcessId;
+            Assert.True(TundraDrive.Desktop.Services.LinuxDesktopIntegrationHelper.TryGetProcessAgeSeconds(selfPid, out var ageSeconds));
+            Assert.True(ageSeconds >= 0.0);
+        }
+    }
+
     private sealed class InMemorySettingsService : IAppSettingsService
     {
         public AppSettings Current { get; private set; } = new();

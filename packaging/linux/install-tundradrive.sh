@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ==============================================================================
-# TundraDrive v2.7.3 - Instalador Oficial de Terminal by TundraLab
+# TundraDrive v2.7.4 - Instalador Oficial de Terminal by TundraLab
 # Autor e Desenvolvedor: Gustavo Henrique Novaes Gomes (@GustaHerin)
 # Licença: Proprietária / Todos os Direitos Reservados
 # ==============================================================================
@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." 2>/dev/null && pwd || pwd)"
 DIST_DIR="${REPO_ROOT}/dist"
 
-VERSION="${TUNDRA_VERSION:-2.7.3}"
+VERSION="${TUNDRA_VERSION:-2.7.4}"
 REPO_SLUG="TundraLab/TundraDrive"
 RELEASE_BASE_URL="https://github.com/${REPO_SLUG}/releases/latest/download"
 RAW_BASE_URL="https://raw.githubusercontent.com/${REPO_SLUG}/main"
@@ -526,12 +526,16 @@ Categories=Network;FileTransfer;Utility;
 StartupWMClass=TundraDrive
 X-TundraLab-Vendor=TundraLab"
 
-  printf '%s\n' "${desktop_entry}" > "${apps_dir}/tundradrive.desktop"
-  chmod 755 "${apps_dir}/tundradrive.desktop"
+  if [[ "${exec_cmd}" == "\"/usr/bin/tundradrive\"" && -f "/usr/share/applications/tundradrive.desktop" ]]; then
+    rm -f "${apps_dir}/tundradrive.desktop"
+  else
+    printf '%s\n' "${desktop_entry}" > "${apps_dir}/tundradrive.desktop"
+    chmod 755 "${apps_dir}/tundradrive.desktop"
+  fi
 
   if [[ "${with_autostart}" == "1" ]]; then
     mkdir -p "${autostart_dir}"
-    printf '%s\n' "${desktop_entry}" > "${autostart_dir}/tundradrive.desktop"
+    printf '%s\nX-GNOME-Autostart-enabled=true\nX-GNOME-Autostart-Delay=4\nX-KDE-autostart-after=panel\nStartupNotify=false\n' "${desktop_entry}" > "${autostart_dir}/tundradrive.desktop"
     step_ok "Inicialização automática configurada em ${autostart_dir}/tundradrive.desktop"
   fi
 
