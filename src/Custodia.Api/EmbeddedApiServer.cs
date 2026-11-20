@@ -167,7 +167,7 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
             {
                 return Results.Problem(
                     title: "Google Drive account not connected",
-                    detail: "Connect a Google account in TundraDrive before triggering synchronization.",
+                    detail: "Connect a Google account in Custódia before triggering synchronization.",
                     statusCode: StatusCodes.Status503ServiceUnavailable);
             }
 
@@ -274,7 +274,7 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
             {
                 return Results.Problem(
                     title: "Google Drive account not connected",
-                    detail: "Connect a Google account in TundraDrive before uploading files.",
+                    detail: "Connect a Google account in Custódia before uploading files.",
                     statusCode: StatusCodes.Status503ServiceUnavailable);
             }
 
@@ -682,7 +682,7 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
     private static IResult NotConnectedProblem() =>
         Results.Problem(
             title: "Google Drive account not connected",
-            detail: "Connect a Google account in TundraDrive before calling this endpoint.",
+            detail: "Connect a Google account in Custódia before calling this endpoint.",
             statusCode: StatusCodes.Status503ServiceUnavailable);
 
     private static DriveNodeDto MapNodeDto(RemoteDriveNode node) => new(

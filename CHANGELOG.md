@@ -12,13 +12,13 @@ Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJ
 
 ### Corrigido
 - **Inicialização com o sistema sem duplicidade nem fechamento:** ao ligar o computador e entrar na sessão do Linux, o aplicativo aguarda a barra superior do sistema terminar de carregar antes de registrar o ícone na bandeja, evitando o surgimento de dois ícones e o fechamento inesperado logo após o login.
-- **Recuperação automática do ícone da bandeja:** caso o painel superior do sistema seja reiniciado ou apresente falha temporária durante o registro do ícone, o TundraDrive permanece aberto e recria o ícone automaticamente.
+- **Recuperação automática do ícone da bandeja:** caso o painel superior do sistema seja reiniciado ou apresente falha temporária durante o registro do ícone, o Custódia permanece aberto e recria o ícone automaticamente.
 - **Limpeza de atalhos duplicados no menu:** instalações via pacote `.rpm` não geram mais um segundo atalho redundante na pasta do usuário.
 
 ## [2.7.3] - 2026-11-19
 
 ### Melhorado
-- **Encerramento limpo ao desinstalar ou atualizar:** ao remover ou atualizar o TundraDrive pelo terminal (inclusive no formato AppImage rodando na bandeja), qualquer instância aberta é encerrada automaticamente e o ícone da bandeja desaparece na hora.
+- **Encerramento limpo ao desinstalar ou atualizar:** ao remover ou atualizar o Custódia pelo terminal (inclusive no formato AppImage rodando na bandeja), qualquer instância aberta é encerrada automaticamente e o ícone da bandeja desaparece na hora.
 - **Desligamento gracioso por sinais do sistema:** o aplicativo agora responde corretamente a comandos de encerramento do sistema, fechando a bandeja, a sincronização e o servidor local com segurança.
 - **Notas de versão mais legíveis na aba Sobre:** o painel de atualizações formata títulos e marcadores com clareza e sem símbolos de código na tela.
 
@@ -26,7 +26,7 @@ Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJ
 
 ### Adicionado
 - **Animação de 5 segundos ao buscar atualizações:** ao clicar em **Verificar atualizações** na aba **Sobre**, o aplicativo exibe uma barra de progresso animada com etapas claras e contagem regressiva enquanto consulta as novidades.
-- **Verificação automática mensal por padrão:** por padrão global, o TundraDrive passa a procurar novas versões automaticamente uma vez por mês (a cada 30 dias), com opção nas **Configurações** para escolher entre mensal, quinzenal, semanal ou a cada inicialização.
+- **Verificação automática mensal por padrão:** por padrão global, o Custódia passa a procurar novas versões automaticamente uma vez por mês (a cada 30 dias), com opção nas **Configurações** para escolher entre mensal, quinzenal, semanal ou a cada inicialização.
 
 ## [2.7.1] - 2026-11-19
 
@@ -38,7 +38,7 @@ Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJ
 ## [2.7.0] - 2026-11-18
 
 ### Adicionado
-- **Janela única garantida:** tentar abrir o TundraDrive novamente enquanto ele já está ativo (inclusive minimizado na bandeja) traz a janela existente para frente em vez de abrir uma segunda cópia.
+- **Janela única garantida:** tentar abrir o Custódia novamente enquanto ele já está ativo (inclusive minimizado na bandeja) traz a janela existente para frente em vez de abrir uma segunda cópia.
 - **Atualizador integrado no aplicativo:** checagem manual e automática de novas versões, aviso discreto no topo da janela, notificação no sistema, barra de progresso no download, conferência de autenticidade e instalação assistida para pacotes `.rpm` e `.AppImage`.
 - **Opções extras no instalador de terminal:** detecção automática da versão mais recente disponível e novo comando de atualização direta para instalações existentes.
 
@@ -126,6 +126,6 @@ Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJ
 ## [1.0.0] - 2026-08-01
 
 ### Adicionado
-- **Lançamento inicial do TundraDrive para Linux:** primeiro aplicativo desktop para sincronizar pastas locais com o Google Drive.
+- **Lançamento inicial do Custódia para Linux:** primeiro aplicativo desktop para sincronizar pastas locais com o Google Drive.
 - **Autenticação segura com credenciais próprias:** conexão direta com a conta Google do usuário e armazenamento protegido das chaves de acesso no computador.
 - **Mapeamento inicial de pastas:** vinculação de diretórios locais do Linux a pastas do Google Drive.

@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>Custodia.Tests</AssemblyName>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
@@ -19,9 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\TundraDrive.Core\TundraDrive.Core.csproj" />
-    <ProjectReference Include="..\..\src\TundraDrive.Api\TundraDrive.Api.csproj" />
-    <ProjectReference Include="..\..\src\TundraDrive.Desktop\TundraDrive.Desktop.csproj" />
+    <ProjectReference Include="..\..\src\Custodia.Core\Custodia.Core.csproj" />
+    <ProjectReference Include="..\..\src\Custodia.Api\Custodia.Api.csproj" />
+    <ProjectReference Include="..\..\src\Custodia.Desktop\Custodia.Desktop.csproj" />
   </ItemGroup>
 
 </Project>

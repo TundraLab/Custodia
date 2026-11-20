@@ -222,7 +222,7 @@ curl -s "http://127.0.0.1:5080/api/v1/logs?q=Upload&limit=20"
 
 ## 4. Capacidade de Integração com Agentes de IA
 
-Qualquer agente capaz de executar requisições HTTP locais ou chamar scripts Python/shell consegue usar o TundraDrive para operar arquivos locais e em nuvem:
+Qualquer agente capaz de executar requisições HTTP locais ou chamar scripts Python/shell consegue usar o Custódia para operar arquivos locais e em nuvem:
 
 - **Ferramentas compatíveis:** agentes com OpenAI/Gemini/Claude Function Calling, LangChain, CrewAI, servidores MCP locais, Ollama/vLLM com tool-use, n8n local e scripts automatizados.
 - **Fluxo recomendado para um agente:**
@@ -236,12 +236,12 @@ Qualquer agente capaz de executar requisições HTTP locais ou chamar scripts Py
 ```json
 [
   {
-    "name": "tundradrive_status",
+    "name": "custodia_status",
     "description": "Verifica se a conta Google esta conectada, espaco usado e pastas configuradas.",
     "parameters": { "type": "object", "properties": {} }
   },
   {
-    "name": "tundradrive_search_files",
+    "name": "custodia_search_files",
     "description": "Busca arquivos sincronizados localmente e no Google Drive remoto por nome ou caminho.",
     "parameters": {
       "type": "object",
@@ -254,7 +254,7 @@ Qualquer agente capaz de executar requisições HTTP locais ou chamar scripts Py
     }
   },
   {
-    "name": "tundradrive_list_folder",
+    "name": "custodia_list_folder",
     "description": "Lista arquivos e pastas dentro de uma pasta do Google Drive.",
     "parameters": {
       "type": "object",
@@ -265,7 +265,7 @@ Qualquer agente capaz de executar requisições HTTP locais ou chamar scripts Py
     }
   },
   {
-    "name": "tundradrive_create_folder",
+    "name": "custodia_create_folder",
     "description": "Cria uma pasta no Google Drive.",
     "parameters": {
       "type": "object",
@@ -277,7 +277,7 @@ Qualquer agente capaz de executar requisições HTTP locais ou chamar scripts Py
     }
   },
   {
-    "name": "tundradrive_upload_file",
+    "name": "custodia_upload_file",
     "description": "Envia um arquivo do PC para uma pasta do Google Drive.",
     "parameters": {
       "type": "object",
@@ -289,7 +289,7 @@ Qualquer agente capaz de executar requisições HTTP locais ou chamar scripts Py
     }
   },
   {
-    "name": "tundradrive_download_file",
+    "name": "custodia_download_file",
     "description": "Baixa um arquivo do Google Drive para o PC.",
     "parameters": {
       "type": "object",
@@ -301,7 +301,7 @@ Qualquer agente capaz de executar requisições HTTP locais ou chamar scripts Py
     }
   },
   {
-    "name": "tundradrive_move_file",
+    "name": "custodia_move_file",
     "description": "Move um arquivo ou pasta para outro diretorio no Drive e/ou renomeia.",
     "parameters": {
       "type": "object",
@@ -314,7 +314,7 @@ Qualquer agente capaz de executar requisições HTTP locais ou chamar scripts Py
     }
   },
   {
-    "name": "tundradrive_trash_file",
+    "name": "custodia_trash_file",
     "description": "Move um arquivo ou pasta para a Lixeira do Google Drive (reversivel).",
     "parameters": {
       "type": "object",
@@ -323,7 +323,7 @@ Qualquer agente capaz de executar requisições HTTP locais ou chamar scripts Py
     }
   },
   {
-    "name": "tundradrive_restore_file",
+    "name": "custodia_restore_file",
     "description": "Restaura um item da Lixeira do Google Drive.",
     "parameters": {
       "type": "object",

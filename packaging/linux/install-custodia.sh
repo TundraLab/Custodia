@@ -503,12 +503,12 @@ write_user_desktop_files() {
 
   mkdir -p "${apps_dir}" "${icon_png_dir}" "${icon_svg_dir}"
 
-  if [[ -f "${REPO_ROOT}/src/TundraDrive.Desktop/Assets/custodia-icon.png" ]]; then
-    cp -f "${REPO_ROOT}/src/TundraDrive.Desktop/Assets/custodia-icon.png" "${icon_png_dir}/custodia.png"
-    cp -f "${REPO_ROOT}/src/TundraDrive.Desktop/Assets/custodia-icon.svg" "${icon_svg_dir}/custodia.svg"
+  if [[ -f "${REPO_ROOT}/src/Custodia.Desktop/Assets/custodia-icon.png" ]]; then
+    cp -f "${REPO_ROOT}/src/Custodia.Desktop/Assets/custodia-icon.png" "${icon_png_dir}/custodia.png"
+    cp -f "${REPO_ROOT}/src/Custodia.Desktop/Assets/custodia-icon.svg" "${icon_svg_dir}/custodia.svg"
   elif command -v curl >/dev/null 2>&1; then
-    curl -fsSL "${RAW_BASE_URL}/src/TundraDrive.Desktop/Assets/custodia-icon.png" -o "${icon_png_dir}/custodia.png" 2>/dev/null || true
-    curl -fsSL "${RAW_BASE_URL}/src/TundraDrive.Desktop/Assets/custodia-icon.svg" -o "${icon_svg_dir}/custodia.svg" 2>/dev/null || true
+    curl -fsSL "${RAW_BASE_URL}/src/Custodia.Desktop/Assets/custodia-icon.png" -o "${icon_png_dir}/custodia.png" 2>/dev/null || true
+    curl -fsSL "${RAW_BASE_URL}/src/Custodia.Desktop/Assets/custodia-icon.svg" -o "${icon_svg_dir}/custodia.svg" 2>/dev/null || true
   fi
 
   local icon_ref="custodia"

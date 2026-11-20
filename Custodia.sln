@@ -3,15 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TundraDrive.Core", "src\TundraDrive.Core\TundraDrive.Core.csproj", "{A1B2C3D4-1111-4A2B-8C3D-000000000001}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Custodia.Core", "src\Custodia.Core\Custodia.Core.csproj", "{A1B2C3D4-1111-4A2B-8C3D-000000000001}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TundraDrive.Api", "src\TundraDrive.Api\TundraDrive.Api.csproj", "{A1B2C3D4-2222-4A2B-8C3D-000000000002}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Custodia.Api", "src\Custodia.Api\Custodia.Api.csproj", "{A1B2C3D4-2222-4A2B-8C3D-000000000002}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TundraDrive.Desktop", "src\TundraDrive.Desktop\TundraDrive.Desktop.csproj", "{A1B2C3D4-3333-4A2B-8C3D-000000000003}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Custodia.Desktop", "src\Custodia.Desktop\Custodia.Desktop.csproj", "{A1B2C3D4-3333-4A2B-8C3D-000000000003}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TundraDrive.Tests", "tests\TundraDrive.Tests\TundraDrive.Tests.csproj", "{AED2260E-4284-48E9-BBB3-EAED681AF6A9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Custodia.Tests", "tests\Custodia.Tests\Custodia.Tests.csproj", "{AED2260E-4284-48E9-BBB3-EAED681AF6A9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

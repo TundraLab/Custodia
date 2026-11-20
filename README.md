@@ -226,10 +226,10 @@ Guia completo com exemplos, schemas de Function Calling e cliente Python: **[Cus
 Instale o SDK `.NET 10.0` (`sudo dnf install dotnet-sdk-10.0` no Fedora ou `sudo apt install dotnet-sdk-10.0` no Pop!_OS/Ubuntu) e execute:
 
 ```bash
-dotnet restore TundraDrive.sln
-dotnet build TundraDrive.sln
-dotnet test TundraDrive.sln
-dotnet run --project src/TundraDrive.Desktop/TundraDrive.Desktop.csproj
+dotnet restore Custodia.sln
+dotnet build Custodia.sln
+dotnet test Custodia.sln
+dotnet run --project src/Custodia.Desktop/Custodia.Desktop.csproj
 ```
 
 Para gerar os pacotes `.AppImage` e `.rpm` (`x86_64`) localmente em `dist/`:
@@ -241,10 +241,10 @@ Para gerar os pacotes `.AppImage` e `.rpm` (`x86_64`) localmente em `dist/`:
 
 ### Estrutura do código
 
-- `src/TundraDrive.Core`: modelos, SQLite com Dapper (`~/.local/share/custodia/custodia.db`), cliente Google Drive v3 (`Google.Apis.Drive.v3`), fluxo OAuth2 com permissões `0600`, watcher local (`FileSystemWatcher`) e hash MD5/SHA256.
-- `src/TundraDrive.Api`: servidor ASP.NET Core Minimal API em `127.0.0.1:5080` para scripts locais e agentes de IA.
-- `src/TundraDrive.Desktop`: interface Avalonia UI 11.3.8 (MVVM com `CommunityToolkit.Mvvm`), bandeja do sistema e notificações.
-- `tests/TundraDrive.Tests`: suíte de testes unitários xUnit.
+- `src/Custodia.Core`: modelos, SQLite com Dapper (`~/.local/share/custodia/custodia.db`), cliente Google Drive v3 (`Google.Apis.Drive.v3`), fluxo OAuth2 com permissões `0600`, watcher local (`FileSystemWatcher`) e hash MD5/SHA256.
+- `src/Custodia.Api`: servidor ASP.NET Core Minimal API em `127.0.0.1:5080` para scripts locais e agentes de IA.
+- `src/Custodia.Desktop`: interface Avalonia UI 11.3.8 (MVVM com `CommunityToolkit.Mvvm`), bandeja do sistema e notificações.
+- `tests/Custodia.Tests`: suíte de testes unitários xUnit.
 
 </details>
 
