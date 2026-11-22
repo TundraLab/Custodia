@@ -83,25 +83,25 @@ public sealed class SingleInstanceAndUpdateTests
 
         try
         {
-            var payload = Encoding.UTF8.GetBytes("fake-tundradrive-appimage-binary-content");
+            var payload = Encoding.UTF8.GetBytes("fake-custodia-appimage-binary-content");
             var shaHex = Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
-            var sumsText = $"{shaHex}  TundraDrive-2.7.0-x86_64.AppImage\n";
+            var sumsText = $"{shaHex}  Custodia-2.8.0-x86_64.AppImage\n";
 
             var releaseJson = """
                 {
-                  "tag_name": "v2.7.0",
-                  "html_url": "https://github.com/TundraLab/TundraDrive/releases/tag/v2.7.0",
+                  "tag_name": "v2.8.0",
+                  "html_url": "https://github.com/TundraLab/Custodia/releases/tag/v2.8.0",
                   "body": "Melhorias de desempenho e correções.",
                   "published_at": "2026-12-01T12:00:00Z",
                   "assets": [
                     {
-                      "name": "TundraDrive-2.7.0-x86_64.AppImage",
-                      "browser_download_url": "https://downloads.example/TundraDrive-2.7.0-x86_64.AppImage",
+                      "name": "Custodia-2.8.0-x86_64.AppImage",
+                      "browser_download_url": "https://downloads.example/Custodia-2.8.0-x86_64.AppImage",
                       "size": 40
                     },
                     {
-                      "name": "TundraDrive-2.7.0-1.x86_64.rpm",
-                      "browser_download_url": "https://downloads.example/TundraDrive-2.7.0-1.x86_64.rpm",
+                      "name": "Custodia-2.8.0-1.x86_64.rpm",
+                      "browser_download_url": "https://downloads.example/Custodia-2.8.0-1.x86_64.rpm",
                       "size": 42
                     },
                     {
@@ -146,7 +146,7 @@ public sealed class SingleInstanceAndUpdateTests
 
             var check = await svc.CheckForUpdatesAsync();
             Assert.True(check.IsUpdateAvailable);
-            Assert.Equal("2.7.0", check.LatestVersion);
+            Assert.Equal("2.8.0", check.LatestVersion);
             Assert.NotNull(check.AppImageAsset);
             Assert.NotNull(check.RpmAsset);
 
@@ -167,7 +167,7 @@ public sealed class SingleInstanceAndUpdateTests
 
             Assert.True(sw.Elapsed >= TimeSpan.FromMilliseconds(180));
             Assert.True(aboutVm.IsUpdateAvailable);
-            Assert.Contains("2.7.0", aboutVm.UpdateStatusText);
+            Assert.Contains("2.8.0", aboutVm.UpdateStatusText);
             Assert.True(aboutVm.HasReleaseNotes);
             Assert.Contains("Melhorias", aboutVm.LatestReleaseNotes);
             Assert.NotNull(settingsSvc.Current.LastUpdateCheckUtc);
@@ -191,7 +191,7 @@ public sealed class SingleInstanceAndUpdateTests
         try
         {
             var payload = Encoding.UTF8.GetBytes("tampered-binary");
-            var badSums = "0000000000000000000000000000000000000000000000000000000000000000  TundraDrive-2.7.0-x86_64.AppImage\n";
+            var badSums = "0000000000000000000000000000000000000000000000000000000000000000  Custodia-2.8.0-x86_64.AppImage\n";
 
             using var handler = new StubHttpMessageHandler(req =>
             {
@@ -218,17 +218,17 @@ public sealed class SingleInstanceAndUpdateTests
             var fakeCheck = new AppUpdateCheckResult
             {
                 CurrentVersion = "2.6.0",
-                LatestVersion = "2.7.0",
-                TagName = "v2.7.0",
+                LatestVersion = "2.8.0",
+                TagName = "v2.8.0",
                 IsUpdateAvailable = true,
-                ReleaseUrl = "https://github.com/TundraLab/TundraDrive/releases/tag/v2.7.0",
-                AppImageAsset = new ReleaseAssetInfo("TundraDrive-2.7.0-x86_64.AppImage", "https://downloads.example/TundraDrive-2.7.0-x86_64.AppImage", payload.Length),
+                ReleaseUrl = "https://github.com/TundraLab/Custodia/releases/tag/v2.8.0",
+                AppImageAsset = new ReleaseAssetInfo("Custodia-2.8.0-x86_64.AppImage", "https://downloads.example/Custodia-2.8.0-x86_64.AppImage", payload.Length),
                 ChecksumsAsset = new ReleaseAssetInfo("SHA256SUMS.txt", "https://downloads.example/SHA256SUMS.txt", badSums.Length),
                 InstallKind = AppInstallKind.AppImage
             };
 
             await Assert.ThrowsAsync<InvalidDataException>(() => svc.DownloadUpdatePackageAsync(fakeCheck));
-            Assert.False(File.Exists(Path.Combine(tempDir, "TundraDrive-2.7.0-x86_64.AppImage")));
+            Assert.False(File.Exists(Path.Combine(tempDir, "Custodia-2.8.0-x86_64.AppImage")));
         }
         finally
         {

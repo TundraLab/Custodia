@@ -20,7 +20,7 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        ConfigureLinuxProcessIdentity("TundraDrive");
+        ConfigureLinuxProcessIdentity("Custodia");
 
         var singleInstanceResult = SingleInstanceGuard.TryAcquireOrActivate();
         if (!singleInstanceResult.IsPrimary)
@@ -56,7 +56,7 @@ internal static class Program
             })
             .With(new X11PlatformOptions
             {
-                WmClass = "TundraDrive",
+                WmClass = "Custodia",
                 UseDBusMenu = true,
                 UseDBusFilePicker = true
             })

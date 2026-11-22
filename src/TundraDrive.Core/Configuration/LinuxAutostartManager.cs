@@ -6,25 +6,38 @@ namespace TundraDrive.Core.Configuration;
 public sealed class LinuxAutostartManager : IAutostartManager
 {
     private readonly ILogger<LinuxAutostartManager> _logger;
+    private readonly string _legacyDesktopEntryPath;
 
     public LinuxAutostartManager(ILogger<LinuxAutostartManager> logger)
     {
         _logger = logger;
         var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var autostartDir = Path.Combine(userHome, ".config", "autostart");
-        DesktopEntryPath = Path.Combine(autostartDir, "tundradrive.desktop");
+        DesktopEntryPath = Path.Combine(autostartDir, "custodia.desktop");
+        _legacyDesktopEntryPath = Path.Combine(autostartDir, "tundradrive.desktop");
     }
 
     public string DesktopEntryPath { get; }
     public bool IsSupported => OperatingSystem.IsLinux();
 
-    public bool IsEnabled() => IsSupported && File.Exists(DesktopEntryPath);
+    public bool IsEnabled() => IsSupported && (File.Exists(DesktopEntryPath) || File.Exists(_legacyDesktopEntryPath));
 
     public void SetEnabled(bool enabled)
     {
         if (!IsSupported)
         {
             return;
+        }
+
+        if (File.Exists(_legacyDesktopEntryPath))
+        {
+            try
+            {
+                File.Delete(_legacyDesktopEntryPath);
+            }
+            catch
+            {
+            }
         }
 
         if (!enabled)
@@ -44,20 +57,20 @@ public sealed class LinuxAutostartManager : IAutostartManager
         }
 
         var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var installedPngIcon = Path.Combine(userHome, ".local", "share", "icons", "hicolor", "256x256", "apps", "tundradrive.png");
-        var iconEntry = File.Exists(installedPngIcon) ? installedPngIcon : "tundradrive";
+        var installedPngIcon = Path.Combine(userHome, ".local", "share", "icons", "hicolor", "256x256", "apps", "custodia.png");
+        var iconEntry = File.Exists(installedPngIcon) ? installedPngIcon : "custodia";
         var execCommand = ResolveExecCommand();
         var content = $"""
             [Desktop Entry]
             Type=Application
             Version=1.0
-            Name=TundraDrive
-            Comment=Google Drive Local Synchronization Client
+            Name=Custódia
+            Comment=Custódia by TundraLab - Seus arquivos. Sempre seguros.
             Icon={iconEntry}
             Exec={execCommand}
             Terminal=false
             Categories=Utility;
-            StartupWMClass=TundraDrive
+            StartupWMClass=Custodia
             X-GNOME-Autostart-enabled=true
             X-GNOME-Autostart-Delay=4
             X-KDE-autostart-after=panel
@@ -80,15 +93,25 @@ public sealed class LinuxAutostartManager : IAutostartManager
     {
         var processPath = Environment.ProcessPath;
         if (!string.IsNullOrWhiteSpace(processPath) &&
-            processPath.StartsWith("/opt/tundradrive/", StringComparison.Ordinal))
+            (processPath.StartsWith("/opt/custodia/", StringComparison.Ordinal) ||
+             processPath.StartsWith("/opt/tundradrive/", StringComparison.Ordinal)))
         {
-            return File.Exists("/usr/bin/tundradrive")
-                ? "\"/usr/bin/tundradrive\""
-                : $"\"{processPath}\"";
+            if (File.Exists("/usr/bin/custodia"))
+            {
+                return "\"/usr/bin/custodia\"";
+            }
+
+            if (File.Exists("/usr/bin/tundradrive"))
+            {
+                return "\"/usr/bin/tundradrive\"";
+            }
+
+            return $"\"{processPath}\"";
         }
 
         var appImagePath = Environment.GetEnvironmentVariable("APPIMAGE");
         if (!string.IsNullOrWhiteSpace(appImagePath) &&
+            !appImagePath.Contains("/.cache/custodia-installer/", StringComparison.Ordinal) &&
             !appImagePath.Contains("/.cache/tundradrive-installer/", StringComparison.Ordinal))
         {
             return $"\"{appImagePath}\"";
@@ -108,6 +131,6 @@ public sealed class LinuxAutostartManager : IAutostartManager
             return $"\"{processPath}\"";
         }
 
-        return "tundradrive";
+        return "custodia";
     }
 }

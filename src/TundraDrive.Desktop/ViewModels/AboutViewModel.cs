@@ -18,7 +18,7 @@ public sealed partial class AboutViewModel : ViewModelBase
 
     public ILocalizationService Loc { get; }
     public string CompanyName => "TundraLab";
-    public string ProductName => "TundraDrive";
+    public string ProductName => "Custódia";
     public string DeveloperName => "Gustavo Henrique Novaes Gomes";
     public string RepositoryUrl => MainWindowViewModel.RepositoryUrl;
     public Func<Uri, Task>? OpenExternalUriCallback { get; set; }
@@ -240,7 +240,7 @@ public sealed partial class AboutViewModel : ViewModelBase
         IsUpdateError = false;
         UpdateDownloadProgress = 0;
 
-        var assetName = _latestCheckResult.PreferredAsset?.Name ?? "TundraDrive";
+        var assetName = _latestCheckResult.PreferredAsset?.Name ?? "Custodia";
         UpdateStatusText = Loc.Format("UpdateDownloadingFmt", assetName, 0.0, 0.0, 0.0, 0.0);
 
         try

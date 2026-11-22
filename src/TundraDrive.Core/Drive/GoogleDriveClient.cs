@@ -597,7 +597,7 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
             _driveService = new DriveService(new BaseClientService.Initializer
             {
                 HttpClientInitializer = credential,
-                ApplicationName = "TundraDrive"
+                ApplicationName = "Custodia"
             });
         }
         finally

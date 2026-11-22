@@ -766,7 +766,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
             return;
         }
 
-        var pdfPath = ResolveLocalDocsPath("TundraDrive-API.pdf");
+        var pdfPath = ResolveLocalDocsPath("Custodia-API.pdf") ?? ResolveLocalDocsPath("TundraDrive-API.pdf");
         if (pdfPath is not null)
         {
             await OpenExternalUriCallback.Invoke(new Uri(pdfPath));
@@ -776,7 +776,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         var localDocsPath = ResolveLocalDocsPath("docs", "API.md");
         var target = localDocsPath is not null
             ? new Uri(localDocsPath)
-            : new Uri($"{RepositoryUrl}/blob/main/TundraDrive-API.pdf");
+            : new Uri($"{RepositoryUrl}/blob/main/Custodia-API.pdf");
         await OpenExternalUriCallback.Invoke(target);
     }
 

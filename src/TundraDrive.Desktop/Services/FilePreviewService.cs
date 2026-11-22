@@ -70,7 +70,7 @@ public sealed class FilePreviewService : IDisposable
     {
         _driveClient = driveClient;
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var rootCacheDir = Path.Combine(home, ".cache", "tundradrive");
+        var rootCacheDir = Path.Combine(home, ".cache", "custodia");
         _cacheDirectory = Path.Combine(rootCacheDir, "preview");
         PosixPermissionHelper.EnsurePrivateDirectory(rootCacheDir);
         PosixPermissionHelper.EnsurePrivateDirectory(_cacheDirectory);
@@ -381,7 +381,7 @@ public sealed class FilePreviewService : IDisposable
             };
             psi.ArgumentList.Add("-autoexit");
             psi.ArgumentList.Add("-window_title");
-            psi.ArgumentList.Add($"TundraDrive — {title}");
+            psi.ArgumentList.Add($"Custódia — {title}");
             psi.ArgumentList.Add(localFilePath);
             using var proc = Process.Start(psi);
         }

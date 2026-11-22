@@ -3,12 +3,12 @@
              xmlns:vm="using:TundraDrive.Desktop.ViewModels"
              xmlns:views="using:TundraDrive.Desktop.Views"
              x:Class="TundraDrive.Desktop.App"
-             Name="TundraDrive"
+             Name="Custódia"
              RequestedThemeVariant="Dark">
 
   <Application.Styles>
     <FluentTheme />
-    <StyleInclude Source="avares://TundraDrive/Styles/TundraTheme.axaml" />
+    <StyleInclude Source="avares://Custodia/Styles/TundraTheme.axaml" />
   </Application.Styles>
 
   <Application.DataTemplates>

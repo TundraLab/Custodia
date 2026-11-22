@@ -1,20 +1,20 @@
-# TundraDrive: Documentação da API REST Local e Integração com Agentes de IA
+# Custódia: Documentação da API REST Local e Integração com Agentes de IA
 
-- Versão da API: `v1` (`2.6.0`)
+- Versão da API: `v1` (`2.8.0`)
 - Endereço padrão: `http://127.0.0.1:5080` (somente loopback local)
 - Especificação OpenAPI: `GET http://127.0.0.1:5080/api/v1/openapi.json`
-- Cópia em PDF: `TundraDrive-API.pdf` (na raiz do projeto e acoplada em Configurações)
+- Cópia em PDF: `Custodia-API.pdf` (na raiz do projeto e acoplada em Configurações)
 
 ---
 
 ## 1. Visão Geral e Segurança
 
-O TundraDrive roda um servidor **ASP.NET Core Minimal API** dentro do aplicativo desktop, vinculado exclusivamente ao endereço `127.0.0.1` (nunca em `0.0.0.0`).
+O Custódia roda um servidor **ASP.NET Core Minimal API** dentro do aplicativo desktop, vinculado exclusivamente ao endereço `127.0.0.1` (nunca em `0.0.0.0`).
 
 Com isso, scripts locais, agentes de IA e automações (n8n, cron, CLI, wrappers MCP) conseguem operar o Google Drive e as pastas sincronizadas sem lidar diretamente com OAuth2, refresh de tokens ou banco SQLite. O próprio aplicativo gerencia as credenciais (`0600`), registra as transferências na fila visual e grava tudo nos Logs de Atividade.
 
 ### Como habilitar
-1. Abra o TundraDrive e vá em **Configurações > API REST Local (Loopback)**.
+1. Abra o Custódia e vá em **Configurações > API REST Local (Loopback)**.
 2. Deixe marcada a opção **Habilitar servidor REST local em 127.0.0.1**.
 3. Ajuste a porta se precisar (padrão `5080`, intervalo `1024` a `65535`; exige reiniciar o app caso mude a porta).
 
@@ -59,7 +59,7 @@ curl -s http://127.0.0.1:5080/api/v1/status
 Exemplo de resposta (`200 OK`):
 ```json
 {
-  "serviceName": "TundraDrive",
+  "serviceName": "Custodia",
   "boundEndpoint": "http://127.0.0.1:5080",
   "isAccountConnected": true,
   "accountEmail": "usuario@gmail.com",
@@ -339,7 +339,7 @@ Qualquer agente capaz de executar requisições HTTP locais ou chamar scripts Py
 ```python
 import requests
 
-class TundraDriveClient:
+class CustodiaClient:
     def __init__(self, base_url: str = "http://127.0.0.1:5080/api/v1"):
         self.base_url = base_url.rstrip("/")
 

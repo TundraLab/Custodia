@@ -1,6 +1,8 @@
-# TundraDrive v2.7.4
+# Custódia v2.8.0
 
-[![GitHub](https://img.shields.io/badge/GitHub-TundraLab%2FTundraDrive-181717?logo=github)](https://github.com/TundraLab/TundraDrive)
+![Custódia by TundraLab - Seus arquivos. Sempre seguros.](docs/images/custodia-promo.jpg)
+
+[![GitHub](https://img.shields.io/badge/GitHub-TundraLab%2FCustodia-181717?logo=github)](https://github.com/TundraLab/Custodia)
 [![Autor Único](https://img.shields.io/badge/Autor%20e%20Dev%20Único-%40GustaHerin-181717?logo=github)](https://github.com/GustaHerin)
 [![Fedora](https://img.shields.io/badge/Fedora-Workstation%20%2F%20KDE-51A2DA?logo=fedora&logoColor=white)](#sistemas-e-formatos)
 [![Pop!_OS](https://img.shields.io/badge/Pop!__OS-GNOME%20%2F%20COSMIC-48B9C7?logo=popos&logoColor=white)](#sistemas-e-formatos)
@@ -10,13 +12,13 @@
 [![Avalonia UI](https://img.shields.io/badge/Avalonia%20UI-11.3.8-8B44AC)](https://avaloniaui.net/)
 [![Licença](https://img.shields.io/badge/License-All%20Rights%20Reserved-red)](LICENSE)
 
-Cliente do Google Drive para Linux para sincronizar pastas, fazer backups e gerenciar seus arquivos direto do computador. Feito em C# (.NET 10.0), Avalonia UI 11.3.8 e ASP.NET Core Minimal API em loopback (`127.0.0.1:5080`).
+**Seus arquivos. Sempre seguros.** Cliente do Google Drive para Linux para sincronizar pastas, fazer backups e gerenciar seus arquivos direto do computador. Feito em C# (.NET 10.0), Avalonia UI 11.3.8 e ASP.NET Core Minimal API em loopback (`127.0.0.1:5080`).
 
-Repositório: https://github.com/TundraLab/TundraDrive
+Repositório: https://github.com/TundraLab/Custodia
 
 ## Prévia visual
 
-![Prévia das telas do TundraDrive](docs/images/preview-showcase.png)
+![Prévia das telas do Custódia](docs/images/preview-showcase.png)
 
 <details>
 <summary>Ver todas as 6 telas individuais</summary>
@@ -48,7 +50,7 @@ Repositório: https://github.com/TundraLab/TundraDrive
 - Suporte a várias contas Google na barra lateral com alternância rápida, gráfico de cota por categoria (Drive, Gmail/Fotos e Lixeira) e revogação individual do `credentials.json` ou de cada conta.
 - Limpador periódico de RAM (configurável em minutos ou acionado manualmente em Configurações).
 - Tradução em Português (Brasil) e English (US), zoom da interface de 100% a 300% (`Ctrl++`, `Ctrl+-`, `Ctrl+0`), notificações nativas via D-Bus (`org.freedesktop.Notifications`, filtradas para evitar avisos sem alterações) e ícone na bandeja do sistema.
-- Credenciais OAuth2 e tokens salvos localmente em `~/.config/tundradrive/` e `~/.local/share/tundradrive/tokens` com permissão `0600`.
+- Credenciais OAuth2 e tokens salvos localmente em `~/.config/custodia/` e `~/.local/share/custodia/tokens` com permissão `0600`.
 
 ## Modos de sincronização
 
@@ -66,40 +68,40 @@ Cada pasta mapeada pode operar em **Espelho Bidirecional (`PC <-> Drive`)** ou *
 
 ## Instalação
 
-### 1. Instalador Interativo no Terminal (`TundraDrive by TundraLab` - Recomendado)
+### 1. Instalador Interativo no Terminal (`Custódia by TundraLab` - Recomendado)
 
 Abre instantaneamente no terminal, detecta sua distribuição Linux, baixa apenas o formato selecionado (**`.rpm`** ou **`.AppImage`**), valida a assinatura **SHA-256**, instala ícones/atalhos e configura inicialização automática:
 
 ```bash
-curl -fsSL https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-Installer-x86_64.sh -o install-tundradrive.sh
-chmod +x install-tundradrive.sh
-./install-tundradrive.sh
+curl -fsSL https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-Installer-x86_64.sh -o install-custodia.sh
+chmod +x install-custodia.sh
+./install-custodia.sh
 ```
 
 ### 2. Baixar pacote direto pelo terminal (opcional)
 
 - **AppImage (`x86_64`, roda direto sem instalar):**
   ```bash
-  curl -fLO https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-2.7.4-x86_64.AppImage
-  chmod +x TundraDrive-2.7.4-x86_64.AppImage
-  ./TundraDrive-2.7.4-x86_64.AppImage
+  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-2.8.0-x86_64.AppImage
+  chmod +x Custodia-2.8.0-x86_64.AppImage
+  ./Custodia-2.8.0-x86_64.AppImage
   ```
 - **Fedora / RHEL / openSUSE (`.rpm`):**
   ```bash
-  curl -fLO https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-2.7.4-1.x86_64.rpm
-  sudo dnf install -y ./TundraDrive-2.7.4-1.x86_64.rpm
+  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-2.8.0-1.x86_64.rpm
+  sudo dnf install -y ./Custodia-2.8.0-1.x86_64.rpm
   ```
 
 <details>
 <summary>Opções avançadas (flags do instalador, extras de mídia e ícone no GNOME)</summary>
 
-- **Atalhos do `install-tundradrive.sh`:**
-  - `./install-tundradrive.sh --update`: detecta sua instalação atual (`.rpm` ou `.AppImage`) e atualiza para a versão mais recente do GitHub Releases.
-  - `./install-tundradrive.sh --rpm`: baixa, valida `SHA-256` e instala o `.rpm`.
-  - `./install-tundradrive.sh --appimage`: baixa, valida `SHA-256` e instala o `.AppImage` integrado ao usuário.
-  - `./install-tundradrive.sh --download-only`: baixa `.rpm`, `.AppImage` e `SHA256SUMS.txt` na pasta atual.
-  - `./install-tundradrive.sh --uninstall`: remove a instalação local ou `.rpm` mantendo suas configurações.
-- **AppImage sem FUSE:** `./TundraDrive-2.7.4-x86_64.AppImage --appimage-extract-and-run`
+- **Atalhos do `install-custodia.sh`:**
+  - `./install-custodia.sh --update`: detecta sua instalação atual (`.rpm` ou `.AppImage`) e atualiza para a versão mais recente do GitHub Releases.
+  - `./install-custodia.sh --rpm`: baixa, valida `SHA-256` e instala o `.rpm`.
+  - `./install-custodia.sh --appimage`: baixa, valida `SHA-256` e instala o `.AppImage` integrado ao usuário.
+  - `./install-custodia.sh --download-only`: baixa `.rpm`, `.AppImage` e `SHA256SUMS.txt` na pasta atual.
+  - `./install-custodia.sh --uninstall`: remove a instalação local ou `.rpm` mantendo suas configurações.
+- **AppImage sem FUSE:** `./Custodia-2.8.0-x86_64.AppImage --appimage-extract-and-run`
 - **Pacotes opcionais para pré-visualização completa (PDF, Office, áudio e vídeo):**
   - Fedora: `sudo dnf install poppler-utils ghostscript ffmpeg libreoffice ImageMagick`
   - Pop!_OS / Ubuntu: `sudo apt install poppler-utils ghostscript ffmpeg libreoffice imagemagick`
@@ -143,7 +145,7 @@ Se escolher **Ajude-me a escolher**, marque **Google Drive API** e **Dados do us
 
 ### Passo 3: Configurar a Tela de permissão OAuth (primeira vez do projeto)
 Se for a primeira credencial do projeto, o Google pede a configuração da tela de consentimento (**Google Auth Platform**):
-1. Em **Informações do app**, coloque o nome (por exemplo, `TundraDrive`) e seu e-mail de suporte. Clique em **Avançar**.
+1. Em **Informações do app**, coloque o nome (por exemplo, `Custódia`) e seu e-mail de suporte. Clique em **Avançar**.
 2. Em **Público**, escolha **Externo** (*External*) e clique em **Avançar**.
 3. Em **Dados de contato**, informe seu e-mail novamente e clique em **Avançar**.
 4. Aceite os termos e clique em **Criar**.
@@ -157,7 +159,7 @@ Enquanto o aplicativo estiver em modo **Testando** (*Testing*), o Google bloquei
 
 ![Público-alvo e botão Add users](docs/images/05-publico-alvo-add-users.png)
 
-3. Informe o endereço Gmail que você vai usar no TundraDrive e clique em **Salvar**:
+3. Informe o endereço Gmail que você vai usar no Custódia e clique em **Salvar**:
 
 ![Adicionar usuários de teste](docs/images/06-adicionar-usuarios-modal.png)
 
@@ -170,13 +172,13 @@ Enquanto o aplicativo estiver em modo **Testando** (*Testing*), o Google bloquei
 
 ![Criar ID do cliente do OAuth](docs/images/07-criar-cliente-oauth.png)
 
-3. Coloque `TundraDrive` no campo **Nome** e clique em **Criar**.
+3. Coloque `Custódia` no campo **Nome** e clique em **Criar**.
 4. Na janela **Cliente OAuth criado**, clique em **Baixar o JSON** (o arquivo baixado terá um nome como `client_secret_...json`):
 
 ![Janela Cliente OAuth criado com botão Baixar o JSON](docs/images/07b-cliente-oauth-criado-json.png)
 
-### Passo 6: Importar no TundraDrive e conectar
-1. Abra o TundraDrive e olhe o cartão de conta no rodapé da barra lateral esquerda.
+### Passo 6: Importar no Custódia e conectar
+1. Abra o Custódia e olhe o cartão de conta no rodapé da barra lateral esquerda.
 2. Clique em **Importar JSON** para selecionar o arquivo baixado (ele é validado e copiado internamente com permissão `0600`) e depois clique em **Conectar**:
 
 ![Importar JSON e Conectar no cartão da barra lateral](docs/images/08-conectar-conta-barra-lateral.png)
@@ -184,23 +186,23 @@ Enquanto o aplicativo estiver em modo **Testando** (*Testing*), o Google bloquei
 3. No navegador que abrir:
    - Escolha a conta Google cadastrada no **Passo 4**:
 
-![Escolha uma conta Google para prosseguir para o TundraDrive](docs/images/09-google-escolher-conta.png)
+![Escolha uma conta Google para prosseguir para o Custódia](docs/images/09-google-escolher-conta.png)
 
    - Na tela *"O Google não verificou este app"*, clique em **Continuar**:
 
 ![Aviso O Google não verificou este app, clique em Continuar](docs/images/10-google-nao-verificou-app.png)
 
-   - Na tela de permissões (*"O app TundraDrive quer acessar sua Conta do Google"*), clique em **Continuar**:
+   - Na tela de permissões (*"O app Custódia quer acessar sua Conta do Google"*), clique em **Continuar**:
 
-![Confirmar permissões do TundraDrive no Google Drive](docs/images/11-google-confirmar-permissoes.png)
+![Confirmar permissões do Custódia no Google Drive](docs/images/11-google-confirmar-permissoes.png)
 
 4. Depois de autorizar, use **Meu Driver** para navegar pelos arquivos e **Pastas de Sincronização** para vincular pastas do PC ao Drive.
 
-Em **Configurações**, você pode trocar o idioma (PT-BR / EN-US), ajustar o zoom (100% a 300%), ligar inicialização com o sistema (`~/.config/autostart/tundradrive.desktop`), ativar bandeja/notificações, configurar o limpador de RAM, gerenciar o arquivo `credentials.json` e contas, ajustar intervalo de sincronização, conflitos, padrões ignorados e porta da API local.
+Em **Configurações**, você pode trocar o idioma (PT-BR / EN-US), ajustar o zoom (100% a 300%), ligar inicialização com o sistema (`~/.config/autostart/custodia.desktop`), ativar bandeja/notificações, configurar o limpador de RAM, gerenciar o arquivo `credentials.json` e contas, ajustar intervalo de sincronização, conflitos, padrões ignorados e porta da API local.
 
 ## API REST Local (`127.0.0.1:5080`) e Agentes de IA
 
-Guia completo com exemplos, schemas de Function Calling e cliente Python: **[TundraDrive-API.pdf](TundraDrive-API.pdf)** e **[docs/API.md](docs/API.md)**
+Guia completo com exemplos, schemas de Function Calling e cliente Python: **[Custodia-API.pdf](Custodia-API.pdf)** e **[docs/API.md](docs/API.md)**
 
 - `GET /api/v1/status`: conta ativa, uso de cota, transferências e pastas sincronizadas.
 - `GET /api/v1/openapi.json`: especificação OpenAPI 3.0.3 para autodescoberta por agentes de IA.
@@ -241,7 +243,7 @@ Para gerar os pacotes `.AppImage` e `.rpm` (`x86_64`) localmente em `dist/`:
 
 ### Estrutura do código
 
-- `src/TundraDrive.Core`: modelos, SQLite com Dapper (`~/.local/share/tundradrive/tundradrive.db`), cliente Google Drive v3 (`Google.Apis.Drive.v3`), fluxo OAuth2 com permissões `0600`, watcher local (`FileSystemWatcher`) e hash MD5/SHA256.
+- `src/TundraDrive.Core`: modelos, SQLite com Dapper (`~/.local/share/custodia/custodia.db`), cliente Google Drive v3 (`Google.Apis.Drive.v3`), fluxo OAuth2 com permissões `0600`, watcher local (`FileSystemWatcher`) e hash MD5/SHA256.
 - `src/TundraDrive.Api`: servidor ASP.NET Core Minimal API em `127.0.0.1:5080` para scripts locais e agentes de IA.
 - `src/TundraDrive.Desktop`: interface Avalonia UI 11.3.8 (MVVM com `CommunityToolkit.Mvvm`), bandeja do sistema e notificações.
 - `tests/TundraDrive.Tests`: suíte de testes unitários xUnit.
