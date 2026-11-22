@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>TundraDrive.Core</RootNamespace>
-    <AssemblyName>TundraDrive.Core</AssemblyName>
+    <AssemblyName>Custodia.Core</AssemblyName>
     <Company>TundraLab</Company>
     <Authors>TundraLab</Authors>
     <Product>Custódia</Product>
@@ -14,7 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="TundraDrive.Tests" />
+    <InternalsVisibleTo Include="Custodia.Tests" />
   </ItemGroup>
 
   <ItemGroup>

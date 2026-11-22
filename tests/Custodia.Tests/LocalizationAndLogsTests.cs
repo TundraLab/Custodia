@@ -11,7 +11,11 @@ public sealed class LocalizationAndLogsTests
     public void LocalizationDictionaries_HaveExactKeyParityBetweenPtBrAndEnUs()
     {
         var repoRoot = FindRepoRoot();
-        var locFile = Path.Combine(repoRoot, "src", "TundraDrive.Desktop", "Localization", "LocalizationService.cs");
+        var locFile = Path.Combine(repoRoot, "src", "Custodia.Desktop", "Localization", "LocalizationService.cs");
+        if (!File.Exists(locFile))
+        {
+            locFile = Path.Combine(repoRoot, "src", "TundraDrive.Desktop", "Localization", "LocalizationService.cs");
+        }
         var src = File.ReadAllText(locFile);
 
         var ptBlock = src.Split("PtBr")[1].Split("EnUs")[0];
@@ -47,10 +51,12 @@ public sealed class LocalizationAndLogsTests
     private static string FindRepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "TundraDrive.sln")))
+        while (dir is not null &&
+               !File.Exists(Path.Combine(dir.FullName, "Custodia.sln")) &&
+               !File.Exists(Path.Combine(dir.FullName, "TundraDrive.sln")))
         {
             dir = dir.Parent;
         }
-        return dir?.FullName ?? throw new DirectoryNotFoundException("TundraDrive.sln not found.");
+        return dir?.FullName ?? throw new DirectoryNotFoundException("Custodia.sln not found.");
     }
 }
