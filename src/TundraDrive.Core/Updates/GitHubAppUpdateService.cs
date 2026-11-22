@@ -250,7 +250,13 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
 
         PosixPermissionHelper.EnsurePrivateDirectory(_updatesDirectory);
 
-        var targetPath = Path.Combine(_updatesDirectory, asset.Name);
+        var safeAssetName = Path.GetFileName(asset.Name);
+        if (string.IsNullOrWhiteSpace(safeAssetName) || safeAssetName is "." or "..")
+        {
+            throw new InvalidDataException($"Invalid release asset file name '{asset.Name}'.");
+        }
+
+        var targetPath = Path.Combine(_updatesDirectory, safeAssetName);
         var tempPath = targetPath + ".part";
         if (File.Exists(tempPath))
         {
@@ -297,7 +303,12 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
             var sha256Verified = false;
             if (checkResult.ChecksumsAsset is not null)
             {
-                sha256Verified = await VerifyChecksumAsync(targetPath, asset.Name, checkResult.ChecksumsAsset.DownloadUrl, cancellationToken);
+                sha256Verified = await VerifyChecksumAsync(targetPath, safeAssetName, checkResult.ChecksumsAsset.DownloadUrl, cancellationToken);
+                if (!sha256Verified)
+                {
+                    try { File.Delete(targetPath); } catch { }
+                    throw new InvalidDataException($"Could not verify SHA-256 signature for '{safeAssetName}' in SHA256SUMS.txt.");
+                }
             }
 
             return new DownloadedUpdatePackage(checkResult, asset, targetPath, sha256Verified);
@@ -365,6 +376,11 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        if (package.CheckResult.ChecksumsAsset is not null && !package.Sha256Verified)
+        {
+            throw new InvalidDataException("Refusing to execute update package without verified SHA-256 checksum.");
+        }
 
         if (!OperatingSystem.IsLinux())
         {

@@ -9,6 +9,7 @@ public static class AvatarLoader
         Timeout = TimeSpan.FromSeconds(5)
     };
 
+    private static readonly SemaphoreSlim Gate = new(1, 1);
     private static string? _cachedUrl;
     private static Bitmap? _cachedBitmap;
 
@@ -19,13 +20,14 @@ public static class AvatarLoader
             return null;
         }
 
-        if (string.Equals(_cachedUrl, photoUrl, StringComparison.Ordinal) && _cachedBitmap is not null)
-        {
-            return _cachedBitmap;
-        }
-
+        await Gate.WaitAsync();
         try
         {
+            if (string.Equals(_cachedUrl, photoUrl, StringComparison.Ordinal) && _cachedBitmap is not null)
+            {
+                return _cachedBitmap;
+            }
+
             var requestUrl = photoUrl
                 .Replace("=s96-c", "=s128-c", StringComparison.Ordinal)
                 .Replace("=s64-c", "=s128-c", StringComparison.Ordinal);
@@ -40,6 +42,10 @@ public static class AvatarLoader
         catch
         {
             return null;
+        }
+        finally
+        {
+            Gate.Release();
         }
     }
 }

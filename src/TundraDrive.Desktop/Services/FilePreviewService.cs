@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Avalonia.Media.Imaging;
 using TundraDrive.Core.Drive;
+using TundraDrive.Core.Security;
+using TundraDrive.Core.Sync;
 
 namespace TundraDrive.Desktop.Services;
 
@@ -68,8 +70,10 @@ public sealed class FilePreviewService : IDisposable
     {
         _driveClient = driveClient;
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        _cacheDirectory = Path.Combine(home, ".cache", "tundradrive", "preview");
-        Directory.CreateDirectory(_cacheDirectory);
+        var rootCacheDir = Path.Combine(home, ".cache", "tundradrive");
+        _cacheDirectory = Path.Combine(rootCacheDir, "preview");
+        PosixPermissionHelper.EnsurePrivateDirectory(rootCacheDir);
+        PosixPermissionHelper.EnsurePrivateDirectory(_cacheDirectory);
     }
 
     public async Task<FilePreviewResult> BuildPreviewAsync(
@@ -91,7 +95,8 @@ public sealed class FilePreviewService : IDisposable
                 return new FilePreviewResult(PreviewKind.Unsupported, string.Empty);
             }
 
-            var safeCacheName = $"{remoteFileId}{(string.IsNullOrWhiteSpace(ext) ? ".bin" : ext)}";
+            var safeRemoteId = DriveSyncService.SanitizeRemoteSegment(remoteFileId);
+            var safeCacheName = $"{safeRemoteId}{(string.IsNullOrWhiteSpace(ext) ? ".bin" : ext)}";
             resolvedPath = Path.Combine(_cacheDirectory, safeCacheName);
 
             if (!File.Exists(resolvedPath) || new FileInfo(resolvedPath).Length == 0)
@@ -107,7 +112,9 @@ public sealed class FilePreviewService : IDisposable
             }
         }
 
-        var cacheKey = !string.IsNullOrWhiteSpace(remoteFileId) ? remoteFileId : ComputeFileKey(resolvedPath);
+        var cacheKey = !string.IsNullOrWhiteSpace(remoteFileId)
+            ? DriveSyncService.SanitizeRemoteSegment(remoteFileId)
+            : ComputeFileKey(resolvedPath);
 
         if (ImageExtensions.Contains(ext))
         {
@@ -196,9 +203,10 @@ public sealed class FilePreviewService : IDisposable
             return null;
         }
 
-        var thumbKey = string.IsNullOrWhiteSpace(remoteFileId)
+        var safeThumbId = string.IsNullOrWhiteSpace(remoteFileId) ? string.Empty : DriveSyncService.SanitizeRemoteSegment(remoteFileId);
+        var thumbKey = string.IsNullOrWhiteSpace(safeThumbId)
             ? Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(localFullPath ?? fileName))).ToLowerInvariant()[..16]
-            : remoteFileId;
+            : safeThumbId;
 
         var cachedThumb = Path.Combine(_cacheDirectory, $"{thumbKey}_grid.png");
         if (File.Exists(cachedThumb))
@@ -223,7 +231,7 @@ public sealed class FilePreviewService : IDisposable
                 return null;
             }
 
-            var cachedSource = Path.Combine(_cacheDirectory, $"{remoteFileId}{ext}");
+            var cachedSource = Path.Combine(_cacheDirectory, $"{safeThumbId}{ext}");
             if (!File.Exists(cachedSource))
             {
                 await _driveClient.DownloadFileAsync(remoteFileId, cachedSource, null, cancellationToken);

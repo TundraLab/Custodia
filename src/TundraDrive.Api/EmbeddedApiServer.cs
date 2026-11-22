@@ -76,7 +76,9 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
             {
                 var hostHeader = context.Request.Headers.Host.FirstOrDefault();
                 var originHeader = context.Request.Headers.Origin.FirstOrDefault();
-                if (!IsAllowedLoopbackRequest(hostHeader, originHeader))
+                var refererHeader = context.Request.Headers.Referer.FirstOrDefault();
+                var secFetchSite = context.Request.Headers["Sec-Fetch-Site"].FirstOrDefault();
+                if (!IsAllowedLoopbackRequest(hostHeader, originHeader, refererHeader, secFetchSite))
                 {
                     context.Response.StatusCode = StatusCodes.Status403Forbidden;
                     await context.Response.WriteAsJsonAsync(new
@@ -281,11 +283,17 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
                 return Results.NotFound(new { error = $"File not found: '{request.LocalPath}'." });
             }
 
+            var fullUploadPath = Path.GetFullPath(request.LocalPath.Trim());
+            if (!IsSafeLocalApiFilePath(fullUploadPath, out var uploadBlockReason))
+            {
+                return Results.BadRequest(new { error = uploadBlockReason });
+            }
+
             var remoteParentId = string.IsNullOrWhiteSpace(request.RemoteFolderId)
                 ? "root"
                 : request.RemoteFolderId;
 
-            var uploaded = await _syncService.UploadSingleFileAsync(request.LocalPath, remoteParentId, ct);
+            var uploaded = await _syncService.UploadSingleFileAsync(fullUploadPath, remoteParentId, ct);
             return Results.Ok(new UploadFileResponse(
                 Success: true,
                 RemoteFileId: uploaded.Id,
@@ -373,6 +381,17 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
             if (!string.IsNullOrWhiteSpace(request.DestinationPath))
             {
                 savedPath = Path.GetFullPath(request.DestinationPath.Trim());
+                if (Directory.Exists(savedPath))
+                {
+                    var safeName = DriveSyncService.SanitizeRemoteSegment(meta.Name);
+                    savedPath = DriveSyncService.ResolveSafeLocalPath(savedPath, safeName);
+                }
+
+                if (!IsSafeLocalApiFilePath(savedPath, out var downloadBlockReason))
+                {
+                    return Results.BadRequest(new { error = downloadBlockReason });
+                }
+
                 if (meta.IsGoogleWorkspaceDoc)
                 {
                     await _driveClient.ExportFileAsync(meta.Id, "application/pdf", savedPath, null, ct);
@@ -560,8 +579,18 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
         return System.Text.Json.JsonSerializer.Serialize(doc, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
     }
 
-    internal static bool IsAllowedLoopbackRequest(string? hostHeader, string? originHeader)
+    internal static bool IsAllowedLoopbackRequest(
+        string? hostHeader,
+        string? originHeader,
+        string? refererHeader = null,
+        string? secFetchSiteHeader = null)
     {
+        if (!string.IsNullOrWhiteSpace(secFetchSiteHeader) &&
+            string.Equals(secFetchSiteHeader.Trim(), "cross-site", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         if (!string.IsNullOrWhiteSpace(hostHeader) && !IsLoopbackAuthority(hostHeader))
         {
             return false;
@@ -574,6 +603,64 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
             {
                 return false;
             }
+        }
+
+        if (!string.IsNullOrWhiteSpace(refererHeader))
+        {
+            if (!Uri.TryCreate(refererHeader, UriKind.Absolute, out var refererUri) ||
+                !IsLoopbackHostName(refererUri.Host))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    internal static bool IsSafeLocalApiFilePath(string fullPath, out string? blockReason)
+    {
+        blockReason = null;
+        if (string.IsNullOrWhiteSpace(fullPath))
+        {
+            blockReason = "File path cannot be empty.";
+            return false;
+        }
+
+        var normalized = Path.GetFullPath(fullPath);
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+        static string WithTrailingSep(string dir)
+        {
+            var full = Path.GetFullPath(dir);
+            return full.EndsWith(Path.DirectorySeparatorChar) ? full : full + Path.DirectorySeparatorChar;
+        }
+
+        var protectedDirs = new[]
+        {
+            AppPaths.ConfigDirectory,
+            AppPaths.DataDirectory,
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".gnupg"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "autostart"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share", "applications")
+        };
+
+        foreach (var dir in protectedDirs)
+        {
+            var prefix = WithTrailingSep(dir);
+            if (string.Equals(normalized, Path.GetFullPath(dir), comparison) ||
+                normalized.StartsWith(prefix, comparison))
+            {
+                blockReason = "Access to protected application or system credentials directory is not allowed.";
+                return false;
+            }
+        }
+
+        var fileName = Path.GetFileName(normalized);
+        if (fileName is ".bashrc" or ".bash_profile" or ".profile" or ".zshrc")
+        {
+            blockReason = "Modifying or reading shell startup files via local API is not allowed.";
+            return false;
         }
 
         return true;
