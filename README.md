@@ -1,4 +1,4 @@
-# TundraDrive v2.7.1
+# TundraDrive v2.7.2
 
 [![GitHub](https://img.shields.io/badge/GitHub-TundraLab%2FTundraDrive-181717?logo=github)](https://github.com/TundraLab/TundraDrive)
 [![Autor Único](https://img.shields.io/badge/Autor%20e%20Dev%20Único-%40GustaHerin-181717?logo=github)](https://github.com/GustaHerin)
@@ -80,14 +80,14 @@ chmod +x install-tundradrive.sh
 
 - **AppImage (`x86_64`, roda direto sem instalar):**
   ```bash
-  curl -fLO https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-2.7.1-x86_64.AppImage
-  chmod +x TundraDrive-2.7.1-x86_64.AppImage
-  ./TundraDrive-2.7.1-x86_64.AppImage
+  curl -fLO https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-2.7.2-x86_64.AppImage
+  chmod +x TundraDrive-2.7.2-x86_64.AppImage
+  ./TundraDrive-2.7.2-x86_64.AppImage
   ```
 - **Fedora / RHEL / openSUSE (`.rpm`):**
   ```bash
-  curl -fLO https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-2.7.1-1.x86_64.rpm
-  sudo dnf install -y ./TundraDrive-2.7.1-1.x86_64.rpm
+  curl -fLO https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-2.7.2-1.x86_64.rpm
+  sudo dnf install -y ./TundraDrive-2.7.2-1.x86_64.rpm
   ```
 
 <details>
@@ -99,7 +99,7 @@ chmod +x install-tundradrive.sh
   - `./install-tundradrive.sh --appimage`: baixa, valida `SHA-256` e instala o `.AppImage` integrado ao usuário.
   - `./install-tundradrive.sh --download-only`: baixa `.rpm`, `.AppImage` e `SHA256SUMS.txt` na pasta atual.
   - `./install-tundradrive.sh --uninstall`: remove a instalação local ou `.rpm` mantendo suas configurações.
-- **AppImage sem FUSE:** `./TundraDrive-2.7.1-x86_64.AppImage --appimage-extract-and-run`
+- **AppImage sem FUSE:** `./TundraDrive-2.7.2-x86_64.AppImage --appimage-extract-and-run`
 - **Pacotes opcionais para pré-visualização completa (PDF, Office, áudio e vídeo):**
   - Fedora: `sudo dnf install poppler-utils ghostscript ffmpeg libreoffice ImageMagick`
   - Pop!_OS / Ubuntu: `sudo apt install poppler-utils ghostscript ffmpeg libreoffice imagemagick`

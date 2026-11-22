@@ -109,6 +109,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
     private bool _autoCheckUpdates = true;
 
     [ObservableProperty]
+    private int _selectedUpdateFrequencyIndex;
+
+    [ObservableProperty]
     private string _downloadDirectory = AppPaths.DefaultDownloadDirectory;
 
     [ObservableProperty]
@@ -236,6 +239,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     ];
 
     public ObservableCollection<string> ConflictPolicies { get; } = [];
+    public ObservableCollection<string> UpdateFrequencies { get; } = [];
 
     public SettingsViewModel(
         IAppSettingsService settingsService,
@@ -333,6 +337,13 @@ public sealed partial class SettingsViewModel : ViewModelBase
         NotificationsEnabled = current.NotificationsEnabled;
         MinimizeToTrayOnClose = current.MinimizeToTrayOnClose;
         AutoCheckUpdates = current.AutoCheckUpdates;
+        SelectedUpdateFrequencyIndex = current.UpdateCheckIntervalDays switch
+        {
+            0 => 3,
+            7 => 2,
+            15 => 1,
+            _ => 0
+        };
         DownloadDirectory = string.IsNullOrWhiteSpace(current.DownloadDirectory)
             ? AppPaths.DefaultDownloadDirectory
             : current.DownloadDirectory;
@@ -565,6 +576,14 @@ public sealed partial class SettingsViewModel : ViewModelBase
         ConflictPolicies.Add(Loc.Text("ConflictPreferRemote"));
         ConflictPolicies.Add(Loc.Text("ConflictRenameCopy"));
         SelectedConflictPolicyIndex = Math.Clamp(savedIndex, 0, ConflictPolicies.Count - 1);
+
+        var savedFreqIndex = Math.Max(0, SelectedUpdateFrequencyIndex);
+        UpdateFrequencies.Clear();
+        UpdateFrequencies.Add(Loc.Text("UpdateFrequencyMonthly"));
+        UpdateFrequencies.Add(Loc.Text("UpdateFrequencyBiweekly"));
+        UpdateFrequencies.Add(Loc.Text("UpdateFrequencyWeekly"));
+        UpdateFrequencies.Add(Loc.Text("UpdateFrequencyOnStartup"));
+        SelectedUpdateFrequencyIndex = Math.Clamp(savedFreqIndex, 0, UpdateFrequencies.Count - 1);
     }
 
     private void RefreshPathAndApiTexts()
@@ -603,6 +622,14 @@ public sealed partial class SettingsViewModel : ViewModelBase
             var intervalValue = (int)(SyncIntervalSeconds ?? 120);
             var languageCode = SelectedLanguageIndex == 1 ? "en-US" : "pt-BR";
 
+            var updateIntervalDays = SelectedUpdateFrequencyIndex switch
+            {
+                3 => 0,
+                2 => 7,
+                1 => 15,
+                _ => 30
+            };
+
             var updated = new AppSettings
             {
                 Language = languageCode,
@@ -612,6 +639,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
                 NotificationsEnabled = NotificationsEnabled,
                 MinimizeToTrayOnClose = MinimizeToTrayOnClose,
                 AutoCheckUpdates = AutoCheckUpdates,
+                UpdateCheckIntervalDays = updateIntervalDays,
+                LastUpdateCheckUtc = _settingsService.Current.LastUpdateCheckUtc,
                 DownloadDirectory = string.IsNullOrWhiteSpace(DownloadDirectory)
                     ? AppPaths.DefaultDownloadDirectory
                     : Path.GetFullPath(DownloadDirectory.Trim()),

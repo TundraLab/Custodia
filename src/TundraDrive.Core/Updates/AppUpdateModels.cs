@@ -1,4 +1,33 @@
+using TundraDrive.Core.Models;
+
 namespace TundraDrive.Core.Updates;
+
+public static class UpdateSchedulePolicy
+{
+    public const int DefaultMonthlyIntervalDays = 30;
+
+    public static bool IsCheckDue(AppSettings settings, DateTimeOffset utcNow)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        if (!settings.AutoCheckUpdates)
+        {
+            return false;
+        }
+
+        if (!settings.LastUpdateCheckUtc.HasValue)
+        {
+            return true;
+        }
+
+        var intervalDays = Math.Clamp(settings.UpdateCheckIntervalDays, 0, 365);
+        if (intervalDays == 0)
+        {
+            return true;
+        }
+
+        return (utcNow - settings.LastUpdateCheckUtc.Value) >= TimeSpan.FromDays(intervalDays);
+    }
+}
 
 public enum AppInstallKind
 {

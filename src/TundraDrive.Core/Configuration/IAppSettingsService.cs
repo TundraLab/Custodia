@@ -8,4 +8,5 @@ public interface IAppSettingsService
     event EventHandler<AppSettings>? SettingsChanged;
     Task<AppSettings> LoadAsync(CancellationToken cancellationToken = default);
     Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default);
+    Task SaveSilentlyAsync(AppSettings settings, CancellationToken cancellationToken = default);
 }

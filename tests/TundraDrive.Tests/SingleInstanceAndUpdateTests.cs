@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using TundraDrive.Core.Configuration;
+using TundraDrive.Core.Models;
 using TundraDrive.Core.Updates;
 using TundraDrive.Desktop.Localization;
 using TundraDrive.Desktop.ViewModels;
@@ -149,12 +151,22 @@ public sealed class SingleInstanceAndUpdateTests
 
             var loc = new LocalizationService();
             loc.SetLanguage("pt-BR");
-            var aboutVm = new AboutViewModel(loc, svc);
+            var settingsSvc = new InMemorySettingsService();
+            var aboutVm = new AboutViewModel(loc, svc, settingsSvc);
+            Assert.Equal(TimeSpan.FromSeconds(5), aboutVm.MinimumCheckAnimationDuration);
+
+            aboutVm.MinimumCheckAnimationDuration = TimeSpan.FromMilliseconds(220);
+            var sw = Stopwatch.StartNew();
             await aboutVm.CheckForUpdatesCommand.ExecuteAsync(null);
+            sw.Stop();
+
+            Assert.True(sw.Elapsed >= TimeSpan.FromMilliseconds(180));
             Assert.True(aboutVm.IsUpdateAvailable);
             Assert.Contains("2.7.0", aboutVm.UpdateStatusText);
             Assert.True(aboutVm.HasReleaseNotes);
             Assert.Contains("Melhorias", aboutVm.LatestReleaseNotes);
+            Assert.NotNull(settingsSvc.Current.LastUpdateCheckUtc);
+            Assert.Equal(1, settingsSvc.SilentSaveCount);
         }
         finally
         {
@@ -219,6 +231,54 @@ public sealed class SingleInstanceAndUpdateTests
             {
                 Directory.Delete(tempDir, recursive: true);
             }
+        }
+    }
+
+    [Fact]
+    public void UpdateSchedulePolicy_DefaultsToMonthlyChecksEvery30Days()
+    {
+        var settings = new AppSettings();
+        Assert.True(settings.AutoCheckUpdates);
+        Assert.Equal(30, settings.UpdateCheckIntervalDays);
+        Assert.Null(settings.LastUpdateCheckUtc);
+
+        var now = new DateTimeOffset(2026, 11, 19, 12, 0, 0, TimeSpan.Zero);
+        Assert.True(UpdateSchedulePolicy.IsCheckDue(settings, now));
+
+        settings.LastUpdateCheckUtc = now.AddDays(-10);
+        Assert.False(UpdateSchedulePolicy.IsCheckDue(settings, now));
+
+        settings.LastUpdateCheckUtc = now.AddDays(-29).AddMinutes(-59);
+        Assert.False(UpdateSchedulePolicy.IsCheckDue(settings, now));
+
+        settings.LastUpdateCheckUtc = now.AddDays(-30);
+        Assert.True(UpdateSchedulePolicy.IsCheckDue(settings, now));
+
+        settings.AutoCheckUpdates = false;
+        Assert.False(UpdateSchedulePolicy.IsCheckDue(settings, now));
+    }
+
+    private sealed class InMemorySettingsService : IAppSettingsService
+    {
+        public AppSettings Current { get; private set; } = new();
+        public int SilentSaveCount { get; private set; }
+        public event EventHandler<AppSettings>? SettingsChanged;
+
+        public Task<AppSettings> LoadAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(Current);
+
+        public Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
+        {
+            Current = settings;
+            SettingsChanged?.Invoke(this, settings);
+            return Task.CompletedTask;
+        }
+
+        public Task SaveSilentlyAsync(AppSettings settings, CancellationToken cancellationToken = default)
+        {
+            Current = settings;
+            SilentSaveCount++;
+            return Task.CompletedTask;
         }
     }
 

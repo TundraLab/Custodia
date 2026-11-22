@@ -76,6 +76,7 @@
             <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
               <TextBlock Classes="SectionTitle" Text="{Binding Loc.UpdatesSectionTitle}" />
               <TextBlock Classes="MutedMeta" FontSize="12.5" Text="{Binding InstalledModeSummary}" />
+              <TextBlock Classes="MutedMeta" FontSize="11.5" Text="{Binding LastCheckSummary}" />
             </StackPanel>
 
             <Button Grid.Column="1"
@@ -101,6 +102,13 @@
                      IsVisible="{Binding UpdateStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                      Foreground="{StaticResource TundraTextSecondary}"
                      Text="{Binding UpdateStatusText}" />
+
+          <ProgressBar Height="5"
+                       Minimum="0"
+                       Maximum="100"
+                       Value="{Binding UpdateCheckProgress}"
+                       IsVisible="{Binding IsCheckingUpdates}"
+                       Foreground="{StaticResource TundraAccent}" />
 
           <Border Classes="FlatRow"
                   Background="#13171F"

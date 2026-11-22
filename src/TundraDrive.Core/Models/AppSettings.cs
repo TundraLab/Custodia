@@ -16,6 +16,8 @@ public sealed class AppSettings
     public bool AutoMemoryCleanupEnabled { get; set; } = true;
     public int MemoryCleanupIntervalMinutes { get; set; } = 5;
     public bool AutoCheckUpdates { get; set; } = true;
+    public int UpdateCheckIntervalDays { get; set; } = 30;
+    public DateTimeOffset? LastUpdateCheckUtc { get; set; }
     public ConflictResolutionPolicy ConflictPolicy { get; set; } = ConflictResolutionPolicy.KeepNewest;
     public List<string> IgnorePatterns { get; set; } =
     [

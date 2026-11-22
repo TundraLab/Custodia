@@ -200,6 +200,7 @@ public interface ILocalizationService : INotifyPropertyChanged
 
     string AutoCheckUpdatesCheckbox { get; }
     string AutoCheckUpdatesHint { get; }
+    string UpdateFrequencyLabel { get; }
     string UpdatesSectionTitle { get; }
     string UpdateCheckButton { get; }
     string UpdateCheckingButton { get; }
