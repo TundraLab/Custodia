@@ -8,6 +8,7 @@ using TundraDrive.Core.Drive;
 using TundraDrive.Core.Persistence;
 using TundraDrive.Core.Security;
 using TundraDrive.Core.Sync;
+using TundraDrive.Core.Updates;
 using TundraDrive.Desktop.Localization;
 using TundraDrive.Desktop.Services;
 using TundraDrive.Desktop.ViewModels;
@@ -21,19 +22,33 @@ internal static class Program
     {
         ConfigureLinuxProcessIdentity("TundraDrive");
 
+        var singleInstanceResult = SingleInstanceGuard.TryAcquireOrActivate();
+        if (!singleInstanceResult.IsPrimary)
+        {
+            return;
+        }
+
+        using var singleInstanceGuard = singleInstanceResult.Guard;
+
         var services = ConfigureServices();
 
         var connectionFactory = services.GetRequiredService<SqliteConnectionFactory>();
         DatabaseInitializer.InitializeAsync(connectionFactory).GetAwaiter().GetResult();
 
-        BuildAvaloniaApp(services)
+        BuildAvaloniaApp(services, singleInstanceGuard)
             .StartWithClassicDesktopLifetime(args);
     }
 
-    public static AppBuilder BuildAvaloniaApp() => BuildAvaloniaApp(null);
+    public static AppBuilder BuildAvaloniaApp() => BuildAvaloniaApp(null, null);
 
-    public static AppBuilder BuildAvaloniaApp(IServiceProvider? services) =>
-        AppBuilder.Configure(() => new App { Services = services })
+    public static AppBuilder BuildAvaloniaApp(
+        IServiceProvider? services,
+        SingleInstanceGuard? singleInstanceGuard = null) =>
+        AppBuilder.Configure(() => new App
+            {
+                Services = services,
+                SingleInstance = singleInstanceGuard
+            })
             .UsePlatformDetect()
             .With(new SkiaOptions
             {
@@ -87,6 +102,7 @@ internal static class Program
         services.AddSingleton<IDesktopNotificationService, LinuxNotificationService>();
         services.AddSingleton<FilePreviewService>();
         services.AddSingleton<MemoryCleanerService>();
+        services.AddSingleton<IAppUpdateService, GitHubAppUpdateService>();
 
         services.AddSingleton<SqliteConnectionFactory>();
         services.AddSingleton<ISyncStateRepository, SqliteSyncStateRepository>();

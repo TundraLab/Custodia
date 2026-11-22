@@ -197,4 +197,13 @@ public interface ILocalizationService : INotifyPropertyChanged
     string AboutDeveloperLabel { get; }
     string AboutVersionLabel { get; }
     string AboutTechStack { get; }
+
+    string AutoCheckUpdatesCheckbox { get; }
+    string AutoCheckUpdatesHint { get; }
+    string UpdatesSectionTitle { get; }
+    string UpdateCheckButton { get; }
+    string UpdateCheckingButton { get; }
+    string UpdateInstallNowButton { get; }
+    string UpdateOpenReleaseButton { get; }
+    string UpdateBannerActionButton { get; }
 }

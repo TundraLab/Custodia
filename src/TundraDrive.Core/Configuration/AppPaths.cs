@@ -23,6 +23,9 @@ public static class AppPaths
     public static string DatabaseFilePath =>
         Path.Combine(DataDirectory, "tundradrive.db");
 
+    public static string UpdatesDirectory =>
+        Path.Combine(DataDirectory, "updates");
+
     public static string DefaultDownloadDirectory =>
         Path.Combine(UserHome, "Downloads");
 }

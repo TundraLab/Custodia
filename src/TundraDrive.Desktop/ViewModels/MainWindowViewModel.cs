@@ -82,6 +82,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(UiScaleFactor))]
     private int _uiScalePercent = 100;
 
+    [ObservableProperty]
+    private bool _isUpdateBannerVisible;
+
+    [ObservableProperty]
+    private string _updateBannerText = string.Empty;
+
+    private bool _updateNotificationSent;
+
     public bool HasAccountAvatar => AccountAvatarBitmap is not null;
     public double UiScaleFactor => Math.Clamp(UiScalePercent, 100, 300) / 100.0;
 
@@ -184,6 +192,19 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         SelectedNavigationIndex = 0;
         FileHubVm.SelectedSourceFilterIndex = 2;
+    }
+
+    [RelayCommand]
+    private void OpenUpdatesFromBanner()
+    {
+        SelectedNavigationIndex = 5;
+        IsUpdateBannerVisible = false;
+    }
+
+    [RelayCommand]
+    private void DismissUpdateBanner()
+    {
+        IsUpdateBannerVisible = false;
     }
 
     [RelayCommand]
@@ -290,6 +311,40 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             await ActivityLogsVm.RefreshLogsAsync();
             SettingsVm.LoadFromCurrent();
         });
+
+        if (settings.AutoCheckUpdates)
+        {
+            _ = CheckForUpdatesOnStartupAsync();
+        }
+    }
+
+    private async Task CheckForUpdatesOnStartupAsync()
+    {
+        try
+        {
+            await Task.Delay(3000);
+            var result = await AboutVm.CheckForUpdatesAsync();
+            if (result is { IsUpdateAvailable: true })
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    UpdateBannerText = Loc.Format("UpdateBannerTitleFmt", result.LatestVersion);
+                    IsUpdateBannerVisible = true;
+                });
+
+                if (!_updateNotificationSent && _settingsService.Current.NotificationsEnabled)
+                {
+                    _updateNotificationSent = true;
+                    await _notificationService.NotifyAsync(
+                        Loc.Format("UpdateNotifyTitleFmt", result.LatestVersion),
+                        Loc.Text("UpdateNotifyBody"));
+                }
+            }
+        }
+        catch
+        {
+            // Quiet startup update check should never interrupt sync startup.
+        }
     }
 
     private void OnAccountChanged(object? sender, DriveAccount account)

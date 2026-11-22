@@ -68,6 +68,61 @@
           </WrapPanel>
         </StackPanel>
       </Border>
+
+      <!-- Atualizações -->
+      <Border Classes="SurfaceCard" Padding="24">
+        <StackPanel Spacing="14">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+              <TextBlock Classes="SectionTitle" Text="{Binding Loc.UpdatesSectionTitle}" />
+              <TextBlock Classes="MutedMeta" FontSize="12.5" Text="{Binding InstalledModeSummary}" />
+            </StackPanel>
+
+            <Button Grid.Column="1"
+                    Classes="SecondaryAction"
+                    IsEnabled="{Binding CanCheckUpdates}"
+                    Command="{Binding CheckForUpdatesCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Width="13" Height="13"
+                          Classes.Spinning="{Binding IsCheckingUpdates}"
+                          Foreground="{StaticResource TundraTextPrimary}"
+                          Data="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z">
+                  <PathIcon.RenderTransform>
+                    <RotateTransform />
+                  </PathIcon.RenderTransform>
+                </PathIcon>
+                <TextBlock Text="{Binding CheckUpdatesButtonText}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </Grid>
+
+          <TextBlock FontSize="12.5"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding UpdateStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Foreground="{StaticResource TundraTextSecondary}"
+                     Text="{Binding UpdateStatusText}" />
+
+          <ProgressBar Height="6"
+                       Minimum="0"
+                       Maximum="100"
+                       Value="{Binding UpdateDownloadProgress}"
+                       IsVisible="{Binding IsDownloadingUpdate}"
+                       Foreground="{StaticResource TundraAccent}" />
+
+          <WrapPanel Orientation="Horizontal"
+                     IsVisible="{Binding IsUpdateAvailable}">
+            <Button Classes="PrimaryAction"
+                    Margin="0,0,10,4"
+                    IsEnabled="{Binding CanInstallUpdate}"
+                    Content="{Binding Loc.UpdateInstallNowButton}"
+                    Command="{Binding InstallUpdateCommand}" />
+            <Button Classes="SecondaryAction"
+                    Margin="0,0,0,4"
+                    Content="{Binding Loc.UpdateOpenReleaseButton}"
+                    Command="{Binding OpenReleasePageCommand}" />
+          </WrapPanel>
+        </StackPanel>
+      </Border>
     </StackPanel>
   </ScrollViewer>
 </UserControl>

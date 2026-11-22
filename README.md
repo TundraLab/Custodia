@@ -71,7 +71,7 @@ Cada pasta mapeada pode operar em **Espelho Bidirecional (`PC <-> Drive`)** ou *
 Abre instantaneamente no terminal, detecta sua distribuição Linux, baixa apenas o formato selecionado (**`.rpm`** ou **`.AppImage`**), valida a assinatura **SHA-256**, instala ícones/atalhos e configura inicialização automática:
 
 ```bash
-curl -fsSL https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-Installer-2.6.0-x86_64.sh -o install-tundradrive.sh
+curl -fsSL https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-Installer-x86_64.sh -o install-tundradrive.sh
 chmod +x install-tundradrive.sh
 ./install-tundradrive.sh
 ```
@@ -94,6 +94,7 @@ chmod +x install-tundradrive.sh
 <summary>Opções avançadas (flags do instalador, pacote .deb, mídia e ícone no GNOME)</summary>
 
 - **Atalhos do `install-tundradrive.sh`:**
+  - `./install-tundradrive.sh --update`: detecta sua instalação atual (`.rpm` ou `.AppImage`) e atualiza para a versão mais recente do GitHub Releases.
   - `./install-tundradrive.sh --rpm`: baixa, valida `SHA-256` e instala o `.rpm`.
   - `./install-tundradrive.sh --appimage`: baixa, valida `SHA-256` e instala o `.AppImage` integrado ao usuário.
   - `./install-tundradrive.sh --download-only`: baixa `.rpm`, `.AppImage` e `SHA256SUMS.txt` na pasta atual.

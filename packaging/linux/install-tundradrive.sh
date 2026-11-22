@@ -12,15 +12,35 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." 2>/dev/null && pwd || pwd)"
 DIST_DIR="${REPO_ROOT}/dist"
 
 VERSION="${TUNDRA_VERSION:-2.6.0}"
-RELEASE_TAG="v${VERSION}"
 REPO_SLUG="TundraLab/TundraDrive"
 RELEASE_BASE_URL="https://github.com/${REPO_SLUG}/releases/latest/download"
 RAW_BASE_URL="https://raw.githubusercontent.com/${REPO_SLUG}/main"
+DOWNLOAD_DIR="${TUNDRA_DOWNLOAD_DIR:-${PWD}}"
 
+resolve_latest_release_version() {
+  if [[ -n "${TUNDRA_VERSION:-}" ]] || [[ "${TUNDRA_OFFLINE:-0}" == "1" ]]; then
+    return 0
+  fi
+
+  if [[ -d "${DIST_DIR}" ]] && compgen -G "${DIST_DIR}/TundraDrive-*.rpm" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if command -v curl >/dev/null 2>&1; then
+    local latest_url tag
+    latest_url="$(curl -fsSLI -o /dev/null -w '%{url_effective}' --max-time 3 "https://github.com/${REPO_SLUG}/releases/latest" 2>/dev/null || true)"
+    tag="${latest_url##*/}"
+    if [[ "${tag}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?)$ ]]; then
+      VERSION="${BASH_REMATCH[1]}"
+    fi
+  fi
+}
+
+resolve_latest_release_version
+RELEASE_TAG="v${VERSION}"
 APPIMAGE_ASSET="TundraDrive-${VERSION}-x86_64.AppImage"
 RPM_ASSET="TundraDrive-${VERSION}-1.x86_64.rpm"
 SUMS_ASSET="SHA256SUMS.txt"
-DOWNLOAD_DIR="${TUNDRA_DOWNLOAD_DIR:-${PWD}}"
 
 if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; then
   BOLD="\033[1m"
@@ -520,6 +540,19 @@ prompt_yes_no() {
   [[ "${reply}" =~ ^[SsYy]$ ]]
 }
 
+stop_running_instance_if_any() {
+  if command -v pgrep >/dev/null 2>&1 && pgrep -u "${USER:-$(id -un)}" -x "TundraDrive" >/dev/null 2>&1; then
+    step_info "Encerrando instância em execução do TundraDrive antes de atualizar arquivos..."
+    pkill -TERM -u "${USER:-$(id -un)}" -x "TundraDrive" >/dev/null 2>&1 || true
+    for _ in $(seq 1 25); do
+      if ! pgrep -u "${USER:-$(id -un)}" -x "TundraDrive" >/dev/null 2>&1; then
+        break
+      fi
+      sleep 0.2
+    done
+  fi
+}
+
 offer_launch_app() {
   local launch_cmd="$1"
   if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
@@ -552,11 +585,20 @@ install_rpm_flow() {
   fi
 
   step_info "[3/4] Instalando pacote RPM no sistema (/opt/tundradrive)..."
+  stop_running_instance_if_any
   sudo -v
   if command -v dnf >/dev/null 2>&1; then
     local dnf_action="install"
+    local installed_evr=""
+    local target_evr=""
     if command -v rpm >/dev/null 2>&1 && rpm -q tundradrive >/dev/null 2>&1; then
-      dnf_action="reinstall"
+      installed_evr="$(rpm -q --qf '%{VERSION}-%{RELEASE}' tundradrive 2>/dev/null || true)"
+      target_evr="$(rpm -qp --qf '%{VERSION}-%{RELEASE}' "${rpm_path}" 2>/dev/null || echo "${VERSION}-1")"
+      if [[ "${installed_evr}" == "${target_evr}" ]]; then
+        dnf_action="reinstall"
+      else
+        dnf_action="upgrade"
+      fi
     fi
     run_with_spinner "Aplicando pacote ${RPM_ASSET} via DNF" sudo dnf "${dnf_action}" -y "${rpm_path}"
     if [[ "${install_media}" == "1" ]]; then
@@ -597,6 +639,7 @@ install_appimage_flow() {
   fi
 
   step_info "[3/4] Instalando AppImage integrado em ~/.local/opt/tundradrive..."
+  stop_running_instance_if_any
   local target_dir="${HOME}/.local/opt/tundradrive"
   local target_bin="${target_dir}/TundraDrive.AppImage"
   local local_bin_dir="${HOME}/.local/bin"
@@ -661,6 +704,7 @@ configure_extras_menu() {
 
 uninstall_flow() {
   echo ""
+  stop_running_instance_if_any
   step_info "Removendo instalação do TundraDrive (dados em ~/.config/tundradrive serão preservados)..."
   rm -rf "${HOME}/.local/opt/tundradrive"
   rm -f "${HOME}/.local/bin/tundradrive" \
@@ -701,14 +745,32 @@ download_menu() {
   esac
 }
 
+update_flow() {
+  local interactive="${1:-0}"
+  echo ""
+  step_info "Verificando instalação atual para atualizar para v${VERSION}..."
+  if command -v rpm >/dev/null 2>&1 && rpm -q tundradrive >/dev/null 2>&1; then
+    install_rpm_flow "${interactive}"
+  elif [[ -x "${HOME}/.local/opt/tundradrive/TundraDrive.AppImage" ]]; then
+    install_appimage_flow "${interactive}"
+  elif is_fedora_like; then
+    step_warn "Nenhuma instalação anterior detectada; instalando pacote .rpm v${VERSION}..."
+    install_rpm_flow "${interactive}"
+  else
+    step_warn "Nenhuma instalação anterior detectada; instalando pacote .AppImage v${VERSION}..."
+    install_appimage_flow "${interactive}"
+  fi
+}
+
 show_help() {
   print_header 0
   echo "Uso: ./install-tundradrive.sh [OPÇÃO]"
   echo ""
   echo "Opções:"
   echo "  (sem argumentos)    Abre o menu interativo do instalador"
-  echo "  --rpm               Baixa, valida SHA-256 e instala o pacote .rpm"
-  echo "  --appimage          Baixa, valida SHA-256 e instala o .AppImage integrado"
+  echo "  --update            Atualiza a instalação existente para a versão mais recente (v${VERSION})"
+  echo "  --rpm               Baixa, valida SHA-256 e instala/atualiza o pacote .rpm"
+  echo "  --appimage          Baixa, valida SHA-256 e instala/atualiza o .AppImage integrado"
   echo "  --download-rpm      Baixa apenas o arquivo .rpm no diretório atual"
   echo "  --download-appimage Baixa apenas o arquivo .AppImage no diretório atual"
   echo "  --download-only     Baixa ambos (.rpm e .AppImage) no diretório atual"
@@ -722,6 +784,11 @@ MODE="${1:---menu}"
 case "${MODE}" in
   --help|-h)
     show_help
+    exit 0
+    ;;
+  --update)
+    print_header 0
+    update_flow 0
     exit 0
     ;;
   --rpm)
@@ -787,11 +854,12 @@ fi
 while true; do
   print_header 1
   echo -e "${BOLD}Escolha uma ação:${RESET}"
-  echo -e "  ${CYAN}1)${RESET} Instalar pacote nativo ${BOLD}.rpm${RESET} (Fedora / RHEL / openSUSE) ${rpm_tag}"
-  echo -e "  ${CYAN}2)${RESET} Instalar pacote ${BOLD}.AppImage${RESET} integrado ao usuário (Pop!_OS / Ubuntu / universal) ${app_tag}"
-  echo -e "  ${CYAN}3)${RESET} Apenas baixar pacotes (${DIM}.rpm${RESET} / ${DIM}.AppImage${RESET}) nesta pasta"
-  echo -e "  ${CYAN}4)${RESET} Configurar autostart e extras de mídia"
-  echo -e "  ${CYAN}5)${RESET} Desinstalar TundraDrive"
+  echo -e "  ${CYAN}1)${RESET} Instalar ou atualizar pacote nativo ${BOLD}.rpm${RESET} (Fedora / RHEL / openSUSE) ${rpm_tag}"
+  echo -e "  ${CYAN}2)${RESET} Instalar ou atualizar pacote ${BOLD}.AppImage${RESET} integrado ao usuário (Pop!_OS / Ubuntu / universal) ${app_tag}"
+  echo -e "  ${CYAN}3)${RESET} Atualizar instalação atual automaticamente para ${BOLD}v${VERSION}${RESET}"
+  echo -e "  ${CYAN}4)${RESET} Apenas baixar pacotes (${DIM}.rpm${RESET} / ${DIM}.AppImage${RESET}) nesta pasta"
+  echo -e "  ${CYAN}5)${RESET} Configurar autostart e extras de mídia"
+  echo -e "  ${CYAN}6)${RESET} Desinstalar TundraDrive"
   echo -e "  ${CYAN}0)${RESET} Sair"
   echo ""
   read -rp "Opção [${default_choice}]: " CHOICE || break
@@ -807,14 +875,18 @@ while true; do
       read -rp "Pressione Enter para voltar ao menu..." _ || true
       ;;
     3)
-      download_menu
+      update_flow 1
       read -rp "Pressione Enter para voltar ao menu..." _ || true
       ;;
     4)
-      configure_extras_menu
+      download_menu
       read -rp "Pressione Enter para voltar ao menu..." _ || true
       ;;
     5)
+      configure_extras_menu
+      read -rp "Pressione Enter para voltar ao menu..." _ || true
+      ;;
+    6)
       uninstall_flow
       read -rp "Pressione Enter para voltar ao menu..." _ || true
       ;;

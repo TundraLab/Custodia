@@ -1,5 +1,6 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using TundraDrive.Core.Configuration;
 
 namespace TundraDrive.Desktop.Localization;
 
@@ -264,8 +265,30 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["AboutCompanyLabel"] = "Empresa",
         ["AboutProductLabel"] = "Produto",
         ["AboutDeveloperLabel"] = "Desenvolvedor",
-        ["AboutVersionLabel"] = "Versão 2.6v",
+        ["AboutVersionFmt"] = "Versão {0}",
         ["AboutTechStack"] = "Tecnologias: C# 10 / .NET 10, Avalonia UI 11, Google Drive API v3, SQLite + Dapper, FFmpeg",
+        ["AutoCheckUpdatesCheckbox"] = "Verificar atualizações automaticamente ao iniciar",
+        ["AutoCheckUpdatesHint"] = "Consulta novas releases em TundraLab/TundraDrive e notifica quando houver atualização.",
+        ["UpdatesSectionTitle"] = "Atualizações",
+        ["UpdateCheckButton"] = "Verificar atualizações",
+        ["UpdateCheckingButton"] = "Verificando...",
+        ["UpdateInstallNowButton"] = "Baixar e atualizar agora",
+        ["UpdateOpenReleaseButton"] = "Ver notas da release",
+        ["UpdateBannerActionButton"] = "Atualizar agora",
+        ["UpdateCurrentVersionFmt"] = "Versão atual: v{0} • Modo: {1}",
+        ["UpdateCheckingStatus"] = "Consultando GitHub Releases...",
+        ["UpdateUpToDateFmt"] = "Você já está usando a versão mais recente (v{0}).",
+        ["UpdateAvailableFmt"] = "Nova versão disponível: v{0}",
+        ["UpdateDownloadingFmt"] = "Baixando {0}... {1:0}% ({2:0.0} / {3:0.0} MB • {4:0.0} MB/s)",
+        ["UpdateInstallingStatus"] = "Aplicando atualização verificada e reiniciando o TundraDrive...",
+        ["UpdateDownloadedFolderStatusFmt"] = "Pacote validado por SHA-256 salvo em: {0}",
+        ["UpdateErrorFmt"] = "Não foi possível verificar ou baixar atualização: {0}",
+        ["UpdateBannerTitleFmt"] = "Nova versão v{0} disponível no GitHub Releases",
+        ["InstallKindRpm"] = "Pacote RPM",
+        ["InstallKindAppImage"] = "AppImage",
+        ["InstallKindStandalone"] = "Execução direta",
+        ["UpdateNotifyTitleFmt"] = "TundraDrive v{0} disponível",
+        ["UpdateNotifyBody"] = "Abra a aba Sobre para baixar e aplicar a atualização com verificação SHA-256.",
 
         ["NoAccountConnected"] = "Nenhuma conta conectada",
         ["ConnectHintSubtitle"] = "Conecte sua conta Google Drive para sincronizar pastas locais",
@@ -655,8 +678,30 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["AboutCompanyLabel"] = "Company",
         ["AboutProductLabel"] = "Product",
         ["AboutDeveloperLabel"] = "Developer",
-        ["AboutVersionLabel"] = "Version 2.6v",
+        ["AboutVersionFmt"] = "Version {0}",
         ["AboutTechStack"] = "Stack: C# 10 / .NET 10, Avalonia UI 11, Google Drive API v3, SQLite + Dapper, FFmpeg",
+        ["AutoCheckUpdatesCheckbox"] = "Automatically check for updates on startup",
+        ["AutoCheckUpdatesHint"] = "Queries official releases on TundraLab/TundraDrive and notifies you when a new version is ready.",
+        ["UpdatesSectionTitle"] = "Updates",
+        ["UpdateCheckButton"] = "Check for updates",
+        ["UpdateCheckingButton"] = "Checking...",
+        ["UpdateInstallNowButton"] = "Download and update now",
+        ["UpdateOpenReleaseButton"] = "View release notes",
+        ["UpdateBannerActionButton"] = "Update now",
+        ["UpdateCurrentVersionFmt"] = "Current version: v{0} • Mode: {1}",
+        ["UpdateCheckingStatus"] = "Checking GitHub Releases...",
+        ["UpdateUpToDateFmt"] = "You are already on the latest version (v{0}).",
+        ["UpdateAvailableFmt"] = "New version available: v{0}",
+        ["UpdateDownloadingFmt"] = "Downloading {0}... {1:0}% ({2:0.0} / {3:0.0} MB • {4:0.0} MB/s)",
+        ["UpdateInstallingStatus"] = "Applying verified update and restarting TundraDrive...",
+        ["UpdateDownloadedFolderStatusFmt"] = "SHA-256 verified package saved to: {0}",
+        ["UpdateErrorFmt"] = "Failed to check or download update: {0}",
+        ["UpdateBannerTitleFmt"] = "New version v{0} available on GitHub Releases",
+        ["InstallKindRpm"] = "RPM package",
+        ["InstallKindAppImage"] = "AppImage",
+        ["InstallKindStandalone"] = "Standalone build",
+        ["UpdateNotifyTitleFmt"] = "TundraDrive v{0} available",
+        ["UpdateNotifyBody"] = "Open the About tab to download and install the SHA-256 verified update.",
 
         ["NoAccountConnected"] = "No account connected",
         ["ConnectHintSubtitle"] = "Connect your Google Drive account to synchronize local folders",
@@ -1021,8 +1066,16 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string AboutCompanyLabel => Text("AboutCompanyLabel");
     public string AboutProductLabel => Text("AboutProductLabel");
     public string AboutDeveloperLabel => Text("AboutDeveloperLabel");
-    public string AboutVersionLabel => Text("AboutVersionLabel");
+    public string AboutVersionLabel => Format("AboutVersionFmt", AppVersionInfo.CurrentVersion);
     public string AboutTechStack => Text("AboutTechStack");
+    public string AutoCheckUpdatesCheckbox => Text("AutoCheckUpdatesCheckbox");
+    public string AutoCheckUpdatesHint => Text("AutoCheckUpdatesHint");
+    public string UpdatesSectionTitle => Text("UpdatesSectionTitle");
+    public string UpdateCheckButton => Text("UpdateCheckButton");
+    public string UpdateCheckingButton => Text("UpdateCheckingButton");
+    public string UpdateInstallNowButton => Text("UpdateInstallNowButton");
+    public string UpdateOpenReleaseButton => Text("UpdateOpenReleaseButton");
+    public string UpdateBannerActionButton => Text("UpdateBannerActionButton");
     public string TransferDetailLocalPath => Text("TransferDetailLocalPath");
     public string TransferDetailRelativePath => Text("TransferDetailRelativePath");
     public string TransferDetailRemoteId => Text("TransferDetailRemoteId");
