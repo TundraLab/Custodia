@@ -7,7 +7,7 @@ PROJECT_PATH="${REPO_ROOT}/src/TundraDrive.Desktop/TundraDrive.Desktop.csproj"
 ASSETS_DIR="${REPO_ROOT}/src/TundraDrive.Desktop/Assets"
 
 VERSION="${TUNDRA_VERSION:-$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "${PROJECT_PATH}" | head -n 1)}"
-VERSION="${VERSION:-2.6.0}"
+VERSION="${VERSION:-2.7.0}"
 ARCH="x86_64"
 
 BUILD_ROOT="${REPO_ROOT}/packaging/linux/build"

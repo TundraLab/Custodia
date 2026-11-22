@@ -2,6 +2,18 @@
 
 Todas as mudanças principais do TundraDrive seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [2.7.0] - 2026-11-18
+
+### Adicionado
+- Proteção estrita de **instância única** (`SingleInstanceGuard` com trava exclusiva e socket Unix local) que impede abrir múltiplas instâncias e restaura/foca automaticamente a janela já em execução (inclusive quando oculta na bandeja).
+- Suporte completo a **atualizações futuras** dentro do aplicativo: checagem automática e manual via GitHub Releases na aba **Sobre**, banner discreto e notificação nativa quando há versão nova, barra de progresso, validação `SHA-256` e aplicação automática para `.AppImage` e `.rpm` (`pkexec dnf/zypper/rpm`).
+- Opção **Verificar atualizações automaticamente ao iniciar** (`AutoCheckUpdates`) nas **Configurações**.
+- Instalador de terminal [install-tundradrive.sh](packaging/linux/install-tundradrive.sh) com resolução dinâmica da release mais recente, comando `--update`, encerramento seguro de instância em execução e upgrade automático via `dnf upgrade` quando a versão muda, além do ativo perene `TundraDrive-Installer-x86_64.sh`.
+
+### Alterado
+- Versão exibida na aba **Sobre** e no documento `OpenAPI` (`/openapi.json`) obtida dinamicamente do assembly (`AppVersionInfo`).
+- Removidas do [README.md](README.md) as referências ao formato `.deb` não distribuído.
+
 ## [2.6.0] - 2026-11-18
 
 ### Adicionado
@@ -14,8 +26,6 @@ Todas as mudanças principais do TundraDrive seguem versionamento semântico (`M
 - Suíte de testes automatizados com xUnit em `tests/TundraDrive.Tests` cobrindo localização, logs, Lixeira, segurança de caminhos e ViewModels.
 - Fluxo isolado para adicionar novas contas Google (`+ Conta`): solicitação prévia do `credentials.json` específico da conta antes de abrir o login OAuth no navegador.
 - Prévia visual das telas (`docs/images/preview-*.png`) e passo a passo ilustrado do Google Cloud OAuth no `README.md`.
-- Proteção de **instância única** (`SingleInstanceGuard` por lock exclusivo e socket Unix local) que impede múltiplas instâncias e restaura automaticamente a janela aberta (inclusive oculta na bandeja) ao executar o aplicativo novamente.
-- Sistema de **atualizações futuras**: checagem automática e manual via GitHub Releases na aba **Sobre**, barra de progresso, validação `SHA-256`, auto-atualização integrada para `.AppImage` e `.rpm` (com `pkexec`), além de resolução dinâmica da última versão e opção `--update` no `install-tundradrive.sh`.
 
 ### Segurança
 - Proteção contra `Path Traversal` na extração/download de arquivos do Google Drive, na resolução de subpastas sincronizadas e na sanitização de nomes enviados (`Path.GetFileName` e validação estrita dentro do diretório raiz).
