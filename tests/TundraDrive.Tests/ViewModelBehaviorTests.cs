@@ -4,6 +4,7 @@ using Avalonia.Media;
 using TundraDrive.Core.Drive;
 using TundraDrive.Core.Models;
 using TundraDrive.Core.Persistence;
+using TundraDrive.Core.Security;
 using TundraDrive.Core.Sync;
 using TundraDrive.Desktop.Localization;
 using TundraDrive.Desktop.Services;
@@ -177,5 +178,48 @@ public sealed class ViewModelBehaviorTests
         await fileHubVm.DownloadSelectedCommand.ExecuteAsync(null);
         Assert.Equal(["r1", "r2"], stubSync.DownloadedIds);
         Assert.Equal("2 arquivo(s) baixado(s).", fileHubVm.StatusSummary);
+    }
+
+    [Fact]
+    public async Task AccountsViewModel_AddAccountShowsPromptAndPassesCustomJsonBeforeBrowserAuth()
+    {
+        var loc = new LocalizationService();
+        loc.SetLanguage("pt-BR");
+
+        var syncProxy = DispatchProxy.Create<IDriveSyncService, StubDriveSyncProxy>();
+        var stubSync = (StubDriveSyncProxy)(object)syncProxy;
+        var authProxy = DispatchProxy.Create<IAuthCredentialManager, StubAuthProxy>();
+        var stubAuth = (StubAuthProxy)(object)authProxy;
+        stubAuth.Exists = true;
+
+        var accountsVm = new AccountsViewModel(syncProxy, authProxy, loc)
+        {
+            PickCredentialsFileCallback = () => Task.FromResult<string?>("/tmp/second-account.json")
+        };
+
+        await accountsVm.AddAccountCommand.ExecuteAsync(null);
+        Assert.True(accountsVm.IsAddAccountPromptVisible);
+        Assert.Empty(stubSync.ConnectCalls);
+
+        await accountsVm.ImportJsonAndAddAccountCommand.ExecuteAsync(null);
+        Assert.False(accountsVm.IsAddAccountPromptVisible);
+        Assert.Single(stubSync.ConnectCalls);
+        Assert.True(stubSync.ConnectCalls[0].AddNew);
+        Assert.Equal("/tmp/second-account.json", stubSync.ConnectCalls[0].CustomJson);
+    }
+}
+
+internal class StubAuthProxy : DispatchProxy
+{
+    public bool Exists { get; set; }
+    protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+    {
+        if (targetMethod?.Name == nameof(IAuthCredentialManager.CredentialsFileExists))
+            return Exists;
+        if (targetMethod?.Name == $"get_{nameof(IAuthCredentialManager.CredentialsFilePath)}")
+            return "/tmp/credentials.json";
+        if (targetMethod?.Name == $"get_{nameof(IAuthCredentialManager.TokensDirectoryPath)}")
+            return "/tmp/tokens";
+        return null;
     }
 }

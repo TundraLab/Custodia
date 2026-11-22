@@ -38,6 +38,9 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["ConnectShortButton"] = "Conectar",
         ["AddAccountShortButton"] = "+ Conta",
         ["AddAccountMenu"] = "Adicionar outra conta Google",
+        ["AddAccountPromptTitle"] = "Nova conta Google",
+        ["AddAccountUseCurrentJson"] = "Usar JSON atual",
+        ["AddAccountImportNewJson"] = "Importar outro JSON...",
         ["SwitchAccountLabel"] = "Contas conectadas",
         ["SwitchedToFmt"] = "Conta ativa alternada para {0}.",
         ["StorageWarningFmt"] = "Alerta: armazenamento quase cheio ({0:0}% utilizado). Considere liberar espaço ou ampliar seu plano.",
@@ -426,6 +429,9 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["ConnectShortButton"] = "Connect",
         ["AddAccountShortButton"] = "+ Account",
         ["AddAccountMenu"] = "Add another Google account",
+        ["AddAccountPromptTitle"] = "Add Google account",
+        ["AddAccountUseCurrentJson"] = "Use current JSON",
+        ["AddAccountImportNewJson"] = "Import another JSON...",
         ["SwitchAccountLabel"] = "Connected accounts",
         ["SwitchedToFmt"] = "Switched active account to {0}.",
         ["StorageWarningFmt"] = "Warning: storage almost full ({0:0}% used). Consider freeing space or upgrading your plan.",
@@ -872,6 +878,9 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string ConnectShortButton => Text("ConnectShortButton");
     public string AddAccountShortButton => Text("AddAccountShortButton");
     public string AddAccountMenu => Text("AddAccountMenu");
+    public string AddAccountPromptTitle => Text("AddAccountPromptTitle");
+    public string AddAccountUseCurrentJson => Text("AddAccountUseCurrentJson");
+    public string AddAccountImportNewJson => Text("AddAccountImportNewJson");
     public string SwitchAccountLabel => Text("SwitchAccountLabel");
     public string OnboardingTitle => Text("OnboardingTitle");
     public string OnboardingStep1Title => Text("OnboardingStep1Title");

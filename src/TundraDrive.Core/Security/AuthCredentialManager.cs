@@ -21,12 +21,37 @@ public sealed class AuthCredentialManager : IAuthCredentialManager
     }
 
     public string CredentialsFilePath => AppPaths.CredentialsFilePath;
+    public string AccountsCredentialsDirectoryPath => Path.Combine(AppPaths.ConfigDirectory, "accounts-credentials");
     public string TokensDirectoryPath => AppPaths.TokensDirectory;
 
-    public bool CredentialsFileExists() => File.Exists(CredentialsFilePath);
+    public string GetAccountCredentialsFilePath(string userKey)
+    {
+        var safeKey = string.Concat(
+            (string.IsNullOrWhiteSpace(userKey) ? "default" : userKey)
+            .Select(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_' ? ch : '_'));
+        return Path.Combine(AccountsCredentialsDirectoryPath, $"{safeKey}.json");
+    }
+
+    public string ResolveCredentialsFilePath(string? userKey = null)
+    {
+        if (!string.IsNullOrWhiteSpace(userKey))
+        {
+            var accountSpecific = GetAccountCredentialsFilePath(userKey);
+            if (File.Exists(accountSpecific))
+            {
+                return accountSpecific;
+            }
+        }
+
+        return CredentialsFilePath;
+    }
+
+    public bool CredentialsFileExists(string? userKey = null) =>
+        File.Exists(ResolveCredentialsFilePath(userKey));
 
     public async Task ImportCredentialsFileAsync(
         string sourceJsonPath,
+        string? userKey = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(sourceJsonPath) || !File.Exists(sourceJsonPath))
@@ -44,9 +69,60 @@ public sealed class AuthCredentialManager : IAuthCredentialManager
         }
 
         PosixPermissionHelper.EnsurePrivateDirectory(AppPaths.ConfigDirectory);
-        File.Copy(sourceJsonPath, CredentialsFilePath, overwrite: true);
-        PosixPermissionHelper.EnsureFileMode0600(CredentialsFilePath);
-        _logger.LogInformation("Imported OAuth2 credentials file into '{Path}' with mode 0600.", CredentialsFilePath);
+
+        if (string.IsNullOrWhiteSpace(userKey))
+        {
+            File.Copy(sourceJsonPath, CredentialsFilePath, overwrite: true);
+            PosixPermissionHelper.EnsureFileMode0600(CredentialsFilePath);
+            _logger.LogInformation("Imported global OAuth2 credentials file into '{Path}' with mode 0600.", CredentialsFilePath);
+            return;
+        }
+
+        PosixPermissionHelper.EnsurePrivateDirectory(AccountsCredentialsDirectoryPath);
+        var accountPath = GetAccountCredentialsFilePath(userKey);
+        File.Copy(sourceJsonPath, accountPath, overwrite: true);
+        PosixPermissionHelper.EnsureFileMode0600(accountPath);
+
+        if (!File.Exists(CredentialsFilePath))
+        {
+            File.Copy(sourceJsonPath, CredentialsFilePath, overwrite: true);
+            PosixPermissionHelper.EnsureFileMode0600(CredentialsFilePath);
+        }
+
+        _logger.LogInformation("Imported per-account OAuth2 credentials file into '{Path}' with mode 0600.", accountPath);
+    }
+
+    public Task CopyCredentialsAsync(
+        string sourceUserKey,
+        string targetUserKey,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var src = GetAccountCredentialsFilePath(sourceUserKey);
+        if (!File.Exists(src))
+        {
+            return Task.CompletedTask;
+        }
+
+        PosixPermissionHelper.EnsurePrivateDirectory(AccountsCredentialsDirectoryPath);
+        var dst = GetAccountCredentialsFilePath(targetUserKey);
+        File.Copy(src, dst, overwrite: true);
+        PosixPermissionHelper.EnsureFileMode0600(dst);
+        return Task.CompletedTask;
+    }
+
+    public void DeleteAccountCredentialsFile(string userKey)
+    {
+        if (string.IsNullOrWhiteSpace(userKey))
+        {
+            return;
+        }
+
+        var path = GetAccountCredentialsFilePath(userKey);
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
     }
 
     public async Task<bool> HasStoredTokenAsync(string userKey = "default")
@@ -59,16 +135,17 @@ public sealed class AuthCredentialManager : IAuthCredentialManager
         string userKey = "default",
         CancellationToken cancellationToken = default)
     {
-        if (!CredentialsFileExists())
+        var resolvedPath = ResolveCredentialsFilePath(userKey);
+        if (!File.Exists(resolvedPath))
         {
             throw new FileNotFoundException(
-                $"OAuth credentials file not found at '{CredentialsFilePath}'.",
-                CredentialsFilePath);
+                $"OAuth credentials file not found at '{resolvedPath}'.",
+                resolvedPath);
         }
 
-        PosixPermissionHelper.EnsureFileMode0600(CredentialsFilePath);
+        PosixPermissionHelper.EnsureFileMode0600(resolvedPath);
 
-        await using var stream = File.OpenRead(CredentialsFilePath);
+        await using var stream = File.OpenRead(resolvedPath);
         var clientSecrets = (await GoogleClientSecrets.FromStreamAsync(stream, cancellationToken)).Secrets;
 
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -90,9 +167,10 @@ public sealed class AuthCredentialManager : IAuthCredentialManager
         string userKey = "default",
         CancellationToken cancellationToken = default)
     {
-        if (!CredentialsFileExists())
+        var resolvedPath = ResolveCredentialsFilePath(userKey);
+        if (!File.Exists(resolvedPath))
         {
-            _logger.LogWarning("Credentials file missing at '{Path}'. Skipping silent auth restore.", CredentialsFilePath);
+            _logger.LogWarning("Credentials file missing at '{Path}'. Skipping silent auth restore.", resolvedPath);
             return null;
         }
 
@@ -160,6 +238,7 @@ public sealed class AuthCredentialManager : IAuthCredentialManager
         finally
         {
             await _tokenStore.DeleteAsync<TokenResponse>(userKey);
+            DeleteAccountCredentialsFile(userKey);
             PosixPermissionHelper.EnforcePrivateDirectoryFiles0600(TokensDirectoryPath);
         }
     }
@@ -167,6 +246,10 @@ public sealed class AuthCredentialManager : IAuthCredentialManager
     public async Task ClearAllLocalTokensAsync(CancellationToken cancellationToken = default)
     {
         await _tokenStore.ClearAsync();
+        if (Directory.Exists(AccountsCredentialsDirectoryPath))
+        {
+            Directory.Delete(AccountsCredentialsDirectoryPath, recursive: true);
+        }
         PosixPermissionHelper.EnforcePrivateDirectoryFiles0600(TokensDirectoryPath);
     }
 

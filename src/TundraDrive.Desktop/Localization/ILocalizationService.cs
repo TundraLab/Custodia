@@ -40,6 +40,9 @@ public interface ILocalizationService : INotifyPropertyChanged
     string ConnectShortButton { get; }
     string AddAccountShortButton { get; }
     string AddAccountMenu { get; }
+    string AddAccountPromptTitle { get; }
+    string AddAccountUseCurrentJson { get; }
+    string AddAccountImportNewJson { get; }
     string SwitchAccountLabel { get; }
     string OnboardingTitle { get; }
     string OnboardingStep1Title { get; }

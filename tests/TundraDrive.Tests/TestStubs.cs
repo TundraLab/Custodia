@@ -26,11 +26,19 @@ internal class StubDriveSyncProxy : DispatchProxy
     public DriveAccount Account { get; set; } = new() { IsConnected = true, EmailAddress = "user@test.com" };
     public List<string> DownloadedIds { get; } = [];
     public List<string> TrashedIds { get; } = [];
+    public List<(bool AddNew, string? CustomJson)> ConnectCalls { get; } = [];
 
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
     {
         if (targetMethod?.Name == $"get_{nameof(IDriveSyncService.CurrentAccount)}")
             return Account;
+        if (targetMethod?.Name == $"get_{nameof(IDriveSyncService.SavedAccounts)}")
+            return Array.Empty<DriveAccount>();
+        if (targetMethod?.Name == nameof(IDriveSyncService.ConnectAccountAsync))
+        {
+            ConnectCalls.Add(((bool)args![0]!, (string?)args[1]));
+            return Task.FromResult(Account);
+        }
         if (targetMethod?.Name == nameof(IDriveSyncService.GetTransferQueueSnapshot))
             return Array.Empty<TransferQueueItem>();
         if (targetMethod?.Name == nameof(IDriveSyncService.DownloadRemoteFileAsync))
