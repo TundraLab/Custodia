@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\TundraDrive.Core\TundraDrive.Core.csproj" />
+    <ProjectReference Include="..\..\src\TundraDrive.Api\TundraDrive.Api.csproj" />
     <ProjectReference Include="..\..\src\TundraDrive.Desktop\TundraDrive.Desktop.csproj" />
   </ItemGroup>
 

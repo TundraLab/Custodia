@@ -1,6 +1,10 @@
 # TundraDrive v2.6
 
 [![GitHub](https://img.shields.io/badge/GitHub-TundraLab%2FTundra--Nuvem-181717?logo=github)](https://github.com/TundraLab/Tundra-Nuvem)
+[![Fedora](https://img.shields.io/badge/Fedora-Workstation%20%2F%20KDE-51A2DA?logo=fedora&logoColor=white)](#sistemas-e-formatos)
+[![Pop!_OS](https://img.shields.io/badge/Pop!__OS-GNOME%20%2F%20COSMIC-48B9C7?logo=popos&logoColor=white)](#sistemas-e-formatos)
+[![KDE Plasma](https://img.shields.io/badge/KDE%20Plasma-5%20%2F%206-1D99F3?logo=kdeplasma&logoColor=white)](#sistemas-e-formatos)
+[![AppImage](https://img.shields.io/badge/AppImage-x86__64-2C7FB8?logo=linux&logoColor=white)](#opção-1-appimage-independente-sem-instalar-net)
 
 Cliente do Google Drive para Linux para sincronizar pastas, fazer backups e gerenciar seus arquivos direto do computador. Feito em C# (.NET 10.0), Avalonia UI 11.3.8 e ASP.NET Core Minimal API em loopback (`127.0.0.1:5080`).
 

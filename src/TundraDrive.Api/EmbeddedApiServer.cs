@@ -70,6 +70,25 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
             });
 
             var app = builder.Build();
+
+            // Protect against DNS rebinding and cross-site browser CSRF while keeping local scripts/agents working
+            app.Use(async (context, next) =>
+            {
+                var hostHeader = context.Request.Headers.Host.FirstOrDefault();
+                var originHeader = context.Request.Headers.Origin.FirstOrDefault();
+                if (!IsAllowedLoopbackRequest(hostHeader, originHeader))
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    await context.Response.WriteAsJsonAsync(new
+                    {
+                        error = "Forbidden: only local loopback requests are permitted."
+                    });
+                    return;
+                }
+
+                await next();
+            });
+
             MapEndpoints(app);
 
             await app.StartAsync(cancellationToken);
@@ -540,6 +559,38 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
 
         return System.Text.Json.JsonSerializer.Serialize(doc, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
     }
+
+    internal static bool IsAllowedLoopbackRequest(string? hostHeader, string? originHeader)
+    {
+        if (!string.IsNullOrWhiteSpace(hostHeader) && !IsLoopbackAuthority(hostHeader))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(originHeader))
+        {
+            if (!Uri.TryCreate(originHeader, UriKind.Absolute, out var originUri) ||
+                !IsLoopbackHostName(originUri.Host))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsLoopbackAuthority(string hostHeader)
+    {
+        var candidate = $"http://{hostHeader.Trim()}";
+        return Uri.TryCreate(candidate, UriKind.Absolute, out var uri) && IsLoopbackHostName(uri.Host);
+    }
+
+    private static bool IsLoopbackHostName(string? host) =>
+        !string.IsNullOrWhiteSpace(host) &&
+        (string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(host, "[::1]", StringComparison.OrdinalIgnoreCase));
 
     private static IResult NotConnectedProblem() =>
         Results.Problem(

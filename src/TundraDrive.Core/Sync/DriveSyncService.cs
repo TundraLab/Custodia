@@ -928,20 +928,58 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         }
     }
 
+    internal static string SanitizeRemoteSegment(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "item";
+        }
+
+        var cleaned = name
+            .Replace('/', '_')
+            .Replace('\\', '_')
+            .Replace('\0', '_');
+
+        if (cleaned is "." or "..")
+        {
+            return "_";
+        }
+
+        return cleaned;
+    }
+
+    internal static string ResolveSafeLocalPath(string rootDirectory, string relativePath)
+    {
+        var fullRoot = Path.GetFullPath(rootDirectory);
+        var rootWithSep = fullRoot.EndsWith(Path.DirectorySeparatorChar)
+            ? fullRoot
+            : fullRoot + Path.DirectorySeparatorChar;
+        var combined = Path.GetFullPath(Path.Combine(fullRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (!combined.StartsWith(rootWithSep, comparison))
+        {
+            throw new UnauthorizedAccessException($"Path traversal blocked for '{relativePath}'.");
+        }
+
+        return combined;
+    }
+
     private static string GetUniqueDestinationPath(string directory, string fileName)
     {
-        var candidate = Path.Combine(directory, fileName);
+        var safeFileName = SanitizeRemoteSegment(fileName);
+        var candidate = ResolveSafeLocalPath(directory, safeFileName);
         if (!File.Exists(candidate))
         {
             return candidate;
         }
 
-        var baseName = Path.GetFileNameWithoutExtension(fileName);
-        var ext = Path.GetExtension(fileName);
+        var baseName = Path.GetFileNameWithoutExtension(safeFileName);
+        var ext = Path.GetExtension(safeFileName);
         var counter = 1;
         while (File.Exists(candidate))
         {
-            candidate = Path.Combine(directory, $"{baseName} ({counter}){ext}");
+            candidate = ResolveSafeLocalPath(directory, $"{baseName} ({counter}){ext}");
             counter++;
         }
 
@@ -1159,7 +1197,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                     continue;
                 }
 
-                var targetLocalPath = Path.Combine(folder.LocalPath, relPath.Replace('/', Path.DirectorySeparatorChar));
+                var targetLocalPath = ResolveSafeLocalPath(folder.LocalPath, relPath);
                 await DownloadAndTrackAsync(folder, relPath, targetLocalPath, remoteFile, cancellationToken);
                 changesCount++;
             }
@@ -1472,7 +1510,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                     continue;
                 }
 
-                var safeName = child.Name.Replace('/', '_');
+                var safeName = SanitizeRemoteSegment(child.Name);
                 var relPath = string.IsNullOrEmpty(prefix) ? safeName : $"{prefix}/{safeName}";
 
                 if (child.IsFolder)
