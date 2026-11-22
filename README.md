@@ -66,37 +66,41 @@ Cada pasta mapeada pode operar em **Espelho Bidirecional (`PC <-> Drive`)** ou *
 
 ## Instalação
 
-Baixe o pacote correspondente nos **Releases** do repositório ou utilize o **Instalador Proprietário TundraDrive by TundraLab**:
+Você pode baixar os dois formatos (`.AppImage` e `.rpm`) direto pelo **terminal** a partir dos Releases ou utilizar o **Instalador Proprietário TundraDrive by TundraLab**:
 
-### Opção 1: Instalador Gráfico Proprietário (TundraDrive by TundraLab)
+### Opção 1: Baixar e instalar pelo terminal (`.AppImage` e `.rpm`)
 
-O instalador oficial permite instalar ou desinstalar tanto o pacote **`.AppImage`** integrado ao perfil do usuário quanto o pacote **`.rpm`** no sistema (via Polkit), configurando menu de aplicativos, ícones e inicialização automática:
-
-```bash
-./packaging/linux/install-tundradrive.sh
-# ou diretamente pelo AppImage:
-./TundraDrive-2.6.0-x86_64.AppImage --installer
-```
-
-### Opção 2: AppImage direto (independente, sem instalar `.NET`)
-
-```bash
-chmod +x TundraDrive-2.6.0-x86_64.AppImage
-./TundraDrive-2.6.0-x86_64.AppImage
-```
-
-*(Em sistemas sem FUSE habilitado, execute com `./TundraDrive-2.6.0-x86_64.AppImage --appimage-extract-and-run`.)*
-
-### Opção 3: Instalador nativo via terminal (`.rpm` / `.deb`)
-
-- **Fedora (`.rpm`):**
+- **AppImage (`x86_64`, independente, sem instalar `.NET`):**
   ```bash
-  sudo dnf install ./TundraDrive-2.6.0-1.x86_64.rpm
+  curl -fLO https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-2.6.0-x86_64.AppImage
+  chmod +x TundraDrive-2.6.0-x86_64.AppImage
+  ./TundraDrive-2.6.0-x86_64.AppImage
   ```
+  *(Para abrir o instalador gráfico direto pelo AppImage, rode `./TundraDrive-2.6.0-x86_64.AppImage --installer`. Em sistemas sem FUSE habilitado, adicione `--appimage-extract-and-run`.)*
+
+- **Fedora / RHEL / openSUSE (`.rpm`):**
+  ```bash
+  curl -fLO https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-2.6.0-1.x86_64.rpm
+  sudo dnf install -y ./TundraDrive-2.6.0-1.x86_64.rpm
+  ```
+
 - **Pop!_OS / Ubuntu / Debian (`.deb`):**
   ```bash
   sudo apt install ./TundraDrive-*.deb
   ```
+
+### Opção 2: Baixar via Instalador Proprietário (`TundraDrive by TundraLab`)
+
+Baixa e instala automaticamente o pacote escolhido (`.AppImage` ou `.rpm`), configurando menu, ícones e inicialização automática:
+
+```bash
+curl -fsSL https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-Installer-2.6.0-x86_64.sh -o install-tundradrive.sh
+chmod +x install-tundradrive.sh
+
+./install-tundradrive.sh              # Abre menu ou instalador gráfico
+./install-tundradrive.sh --appimage   # Baixa e instala o AppImage direto pelo terminal
+./install-tundradrive.sh --rpm        # Baixa e instala o .rpm direto pelo terminal
+```
 
 ### Extras opcionais do sistema
 

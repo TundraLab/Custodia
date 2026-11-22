@@ -371,13 +371,22 @@ public sealed partial class InstallerViewModel : ViewModelBase
     {
         if (string.IsNullOrWhiteSpace(RpmPackagePath) || !File.Exists(RpmPackagePath))
         {
-            throw new FileNotFoundException(
-                "Pacote .rpm não encontrado. Gere-o com ./packaging/linux/build-rpm.sh ou selecione o arquivo .rpm.");
+            RpmPackagePath = await DownloadReleaseAssetAsync(
+                $"TundraDrive-{AppVersion.TrimStart('v')}-1.x86_64.rpm",
+                "Baixando pacote oficial .rpm do GitHub Releases...");
+        }
+
+        var resolvedRpmPath = Path.GetFullPath(RpmPackagePath);
+        if (!File.Exists(resolvedRpmPath) ||
+            !resolvedRpmPath.EndsWith(".rpm", StringComparison.OrdinalIgnoreCase) ||
+            !resolvedRpmPath.StartsWith('/'))
+        {
+            throw new InvalidOperationException("Caminho de pacote .rpm inválido.");
         }
 
         StatusHeadline = "Solicitando autorização do sistema (Polkit) para instalar o pacote .rpm...";
-        ProgressValue = 25;
-        AppendLog($"Instalando pacote RPM: {RpmPackagePath}");
+        ProgressValue = 30;
+        AppendLog($"Instalando pacote RPM: {resolvedRpmPath}");
 
         await Task.Run(() =>
         {
@@ -389,7 +398,7 @@ public sealed partial class InstallerViewModel : ViewModelBase
                 privilegedCmd = "pkexec";
                 if (CommandExists("dnf"))
                 {
-                    args.AddRange(["dnf", "install", "-y", RpmPackagePath]);
+                    args.AddRange(["dnf", "install", "-y", resolvedRpmPath]);
                     if (InstallOptionalMediaPackages)
                     {
                         args.AddRange(["poppler-utils", "ghostscript", "ffmpeg", "libreoffice", "ImageMagick"]);
@@ -397,13 +406,13 @@ public sealed partial class InstallerViewModel : ViewModelBase
                 }
                 else
                 {
-                    args.AddRange(["rpm", "-Uvh", "--replacepkgs", RpmPackagePath]);
+                    args.AddRange(["rpm", "-Uvh", "--replacepkgs", resolvedRpmPath]);
                 }
             }
             else
             {
                 privilegedCmd = "rpm";
-                args.AddRange(["-Uvh", "--replacepkgs", RpmPackagePath]);
+                args.AddRange(["-Uvh", "--replacepkgs", resolvedRpmPath]);
             }
 
             AppendLog($"Executando: {privilegedCmd} {string.Join(' ', args)}");
@@ -724,6 +733,66 @@ public sealed partial class InstallerViewModel : ViewModelBase
         catch (Exception ex)
         {
             return (-1, ex.Message);
+        }
+    }
+
+    private async Task<string> DownloadReleaseAssetAsync(string assetFileName, string statusMessage)
+    {
+        var cacheDir = Path.Combine(UserHome, ".cache", "tundradrive-installer");
+        Directory.CreateDirectory(cacheDir);
+        var destinationPath = Path.Combine(cacheDir, assetFileName);
+        var downloadUrl = $"https://github.com/TundraLab/TundraDrive/releases/latest/download/{assetFileName}";
+
+        StatusHeadline = statusMessage;
+        ProgressValue = 10;
+        AppendLog($"Baixando {assetFileName} de {downloadUrl}...");
+
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+            using var response = await http.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            var totalBytes = response.Content.Headers.ContentLength;
+            await using var remoteStream = await response.Content.ReadAsStreamAsync();
+            await using var fileStream = File.Create(destinationPath);
+
+            var buffer = new byte[81920];
+            long readTotal = 0;
+            int bytesRead;
+            while ((bytesRead = await remoteStream.ReadAsync(buffer)) > 0)
+            {
+                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                readTotal += bytesRead;
+                if (totalBytes.HasValue && totalBytes.Value > 0)
+                {
+                    ProgressValue = 10 + (double)readTotal / totalBytes.Value * 18.0;
+                }
+            }
+
+            AppendLog($"Download concluído: {destinationPath}");
+            return destinationPath;
+        }
+        catch (Exception ex) when (CommandExists("gh"))
+        {
+            AppendLog($"Download HTTP direto indisponível ({ex.Message}); tentando via GitHub CLI (gh)...");
+            var (code, output) = RunProcess(
+                "gh",
+                ["release", "download", AppVersion, "-R", "TundraLab/TundraDrive", "-p", assetFileName, "-D", cacheDir, "--clobber"],
+                timeoutMs: 300000);
+            if (code == 0 && File.Exists(destinationPath))
+            {
+                AppendLog($"Download via gh concluído: {destinationPath}");
+                return destinationPath;
+            }
+
+            throw new FileNotFoundException(
+                $"Não foi possível baixar {assetFileName} ({output}). Baixe manualmente nos Releases do GitHub ou selecione o arquivo local.");
+        }
+        catch (Exception ex)
+        {
+            throw new FileNotFoundException(
+                $"Não foi possível baixar {assetFileName} ({ex.Message}). Selecione o pacote manualmente ou baixe nos Releases do GitHub.");
         }
     }
 

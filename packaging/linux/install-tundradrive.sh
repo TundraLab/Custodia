@@ -9,7 +9,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." 2>/dev/null && pwd || pwd)"
 DIST_DIR="${REPO_ROOT}/dist"
-VERSION="2.6.0"
+VERSION="${TUNDRA_VERSION:-2.6.0}"
+RELEASE_TAG="v${VERSION}"
+REPO_SLUG="TundraLab/TundraDrive"
+RELEASE_BASE_URL="https://github.com/${REPO_SLUG}/releases/latest/download"
+
+APPIMAGE_ASSET="TundraDrive-${VERSION}-x86_64.AppImage"
+RPM_ASSET="TundraDrive-${VERSION}-1.x86_64.rpm"
+DOWNLOAD_DIR="${TUNDRA_DOWNLOAD_DIR:-${PWD}}"
 
 BLUE="\033[1;34m"
 CYAN="\033[1;36m"
@@ -22,14 +29,15 @@ print_banner() {
   echo -e "${BLUE}======================================================================${RESET}"
   echo -e "${CYAN}   TundraDrive v${VERSION} • Instalador Proprietário by TundraLab${RESET}"
   echo -e "   Desenvolvedor: Gustavo Henrique Novaes Gomes (@GustaHerin)"
-  echo -e "   Repositório:   https://github.com/TundraLab/TundraDrive"
+  echo -e "   Repositório:   https://github.com/${REPO_SLUG}"
   echo -e "${BLUE}======================================================================${RESET}"
 }
 
 find_appimage() {
   for candidate in \
-    "${DIST_DIR}/TundraDrive-${VERSION}-x86_64.AppImage" \
-    "${SCRIPT_DIR}/TundraDrive-${VERSION}-x86_64.AppImage" \
+    "${DOWNLOAD_DIR}/${APPIMAGE_ASSET}" \
+    "${DIST_DIR}/${APPIMAGE_ASSET}" \
+    "${SCRIPT_DIR}/${APPIMAGE_ASSET}" \
     ./TundraDrive-*.AppImage \
     "${DIST_DIR}"/TundraDrive-*.AppImage; do
     if [[ -f "${candidate}" ]]; then
@@ -42,8 +50,9 @@ find_appimage() {
 
 find_rpm() {
   for candidate in \
-    "${DIST_DIR}/TundraDrive-${VERSION}-1.x86_64.rpm" \
-    "${SCRIPT_DIR}/TundraDrive-${VERSION}-1.x86_64.rpm" \
+    "${DOWNLOAD_DIR}/${RPM_ASSET}" \
+    "${DIST_DIR}/${RPM_ASSET}" \
+    "${SCRIPT_DIR}/${RPM_ASSET}" \
     ./TundraDrive-*.rpm \
     "${DIST_DIR}"/TundraDrive-*.rpm; do
     if [[ -f "${candidate}" ]]; then
@@ -51,6 +60,85 @@ find_rpm() {
       return 0
     fi
   done
+  return 1
+}
+
+download_release_asset() {
+  local asset_name="$1"
+  local dest_dir="${DOWNLOAD_DIR}"
+  mkdir -p "${dest_dir}"
+  local dest_path="${dest_dir}/${asset_name}"
+  local url="${RELEASE_BASE_URL}/${asset_name}"
+
+  echo -e "${CYAN}==> Baixando ${asset_name} de ${url}...${RESET}" >&2
+  if command -v curl >/dev/null 2>&1 && curl -fL --progress-bar "${url}" -o "${dest_path}.tmp"; then
+    mv -f "${dest_path}.tmp" "${dest_path}"
+    readlink -f "${dest_path}"
+    return 0
+  fi
+  rm -f "${dest_path}.tmp"
+
+  if command -v wget >/dev/null 2>&1 && wget -q --show-progress -O "${dest_path}.tmp" "${url}"; then
+    mv -f "${dest_path}.tmp" "${dest_path}"
+    readlink -f "${dest_path}"
+    return 0
+  fi
+  rm -f "${dest_path}.tmp"
+
+  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    echo -e "${YELLOW}==> Tentando download autenticado via GitHub CLI (gh)...${RESET}" >&2
+    if gh release download "${RELEASE_TAG}" -R "${REPO_SLUG}" -p "${asset_name}" -D "${dest_dir}" --clobber; then
+      readlink -f "${dest_path}"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+resolve_or_fetch_appimage() {
+  local found
+  found="$(find_appimage || true)"
+  if [[ -n "${found}" ]]; then
+    echo "${found}"
+    return 0
+  fi
+
+  if download_release_asset "${APPIMAGE_ASSET}"; then
+    return 0
+  fi
+
+  if [[ -x "${SCRIPT_DIR}/build-appimage.sh" ]]; then
+    echo -e "${YELLOW}==> Gerando ${APPIMAGE_ASSET} localmente pelo código-fonte...${RESET}" >&2
+    "${SCRIPT_DIR}/build-appimage.sh" >&2
+    find_appimage
+    return 0
+  fi
+
+  echo -e "${RED}ERRO: Não foi possível baixar nem localizar ${APPIMAGE_ASSET}.${RESET}" >&2
+  return 1
+}
+
+resolve_or_fetch_rpm() {
+  local found
+  found="$(find_rpm || true)"
+  if [[ -n "${found}" ]]; then
+    echo "${found}"
+    return 0
+  fi
+
+  if download_release_asset "${RPM_ASSET}"; then
+    return 0
+  fi
+
+  if [[ -x "${SCRIPT_DIR}/build-rpm.sh" ]]; then
+    echo -e "${YELLOW}==> Gerando ${RPM_ASSET} localmente pelo código-fonte...${RESET}" >&2
+    "${SCRIPT_DIR}/build-rpm.sh" >&2
+    find_rpm
+    return 0
+  fi
+
+  echo -e "${RED}ERRO: Não foi possível baixar nem localizar ${RPM_ASSET}.${RESET}" >&2
   return 1
 }
 
@@ -75,12 +163,7 @@ launch_gui_installer() {
 
 install_appimage_cli() {
   local appimage_path
-  appimage_path="$(find_appimage || true)"
-  if [[ -z "${appimage_path}" ]]; then
-    echo -e "${YELLOW}==> Pacote .AppImage ainda não encontrado em dist/. Gerando agora...${RESET}"
-    "${SCRIPT_DIR}/build-appimage.sh"
-    appimage_path="$(find_appimage)"
-  fi
+  appimage_path="$(resolve_or_fetch_appimage)"
 
   local target_dir="${HOME}/.local/opt/tundradrive"
   local target_bin="${target_dir}/TundraDrive.AppImage"
@@ -111,7 +194,7 @@ Version=1.0
 Name=TundraDrive
 GenericName=Google Drive Client
 Comment=TundraDrive by TundraLab - Cliente do Google Drive para Linux
-Icon=${icon_png_dir}/tundradrive.png
+Icon=tundradrive
 Exec="${target_bin}"
 Terminal=false
 Categories=Network;FileTransfer;Utility;
@@ -129,12 +212,7 @@ EOF
 
 install_rpm_cli() {
   local rpm_path
-  rpm_path="$(find_rpm || true)"
-  if [[ -z "${rpm_path}" ]]; then
-    echo -e "${YELLOW}==> Pacote .rpm ainda não encontrado em dist/. Gerando agora...${RESET}"
-    "${SCRIPT_DIR}/build-rpm.sh"
-    rpm_path="$(find_rpm)"
-  fi
+  rpm_path="$(resolve_or_fetch_rpm)"
 
   echo -e "${CYAN}==> Instalando pacote RPM: ${rpm_path}${RESET}"
   if command -v dnf >/dev/null 2>&1; then
@@ -178,6 +256,22 @@ case "${MODE}" in
     install_rpm_cli
     exit 0
     ;;
+  --download-appimage)
+    print_banner
+    resolve_or_fetch_appimage
+    exit 0
+    ;;
+  --download-rpm)
+    print_banner
+    resolve_or_fetch_rpm
+    exit 0
+    ;;
+  --download-only)
+    print_banner
+    resolve_or_fetch_appimage
+    resolve_or_fetch_rpm
+    exit 0
+    ;;
   --uninstall)
     print_banner
     uninstall_cli
@@ -193,9 +287,9 @@ esac
 
 print_banner
 echo "Escolha o modo de instalação:"
-echo "  1) Instalar Pacote .AppImage Integrado (Usuário local, sem root)"
-echo "  2) Instalar Pacote Nativo .rpm (Sistema Fedora / RHEL / openSUSE)"
-echo "  3) Compilar/Gerar pacotes .rpm e .AppImage em dist/"
+echo "  1) Baixar e instalar Pacote .AppImage Integrado (Usuário local, sem root)"
+echo "  2) Baixar e instalar Pacote Nativo .rpm (Sistema Fedora / RHEL / openSUSE)"
+echo "  3) Apenas baixar ambos os pacotes (.AppImage e .rpm) no diretório atual"
 echo "  4) Desinstalar TundraDrive"
 echo "  0) Sair"
 read -rp "Opção [1]: " CHOICE
@@ -205,8 +299,8 @@ case "${CHOICE}" in
   1) install_appimage_cli ;;
   2) install_rpm_cli ;;
   3)
-    "${SCRIPT_DIR}/build-appimage.sh"
-    FORCE_PUBLISH=0 "${SCRIPT_DIR}/build-rpm.sh"
+    resolve_or_fetch_appimage
+    resolve_or_fetch_rpm
     ;;
   4) uninstall_cli ;;
   *) exit 0 ;;
