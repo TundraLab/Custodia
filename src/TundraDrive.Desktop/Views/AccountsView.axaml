@@ -1,0 +1,245 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TundraDrive.Desktop.ViewModels"
+             x:Class="TundraDrive.Desktop.Views.AccountsView"
+             x:DataType="vm:AccountsViewModel">
+
+  <!-- Aba de contas -->
+  <ScrollViewer Padding="24" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Spacing="18">
+      <TextBlock Classes="PageTitle" Text="{Binding Loc.AccountsTitle}" />
+
+      <Border Classes="SurfaceCard">
+        <Border.ContextMenu>
+          <ContextMenu>
+            <MenuItem Header="{Binding Loc.RefreshQuotaButton}"
+                      IsVisible="{Binding IsConnected}"
+                      Command="{Binding RefreshCommand}" />
+            <MenuItem Header="{Binding Loc.CopyEmailMenu}"
+                      IsVisible="{Binding IsConnected}"
+                      Command="{Binding CopyEmailCommand}" />
+            <MenuItem Header="{Binding Loc.BuyMoreStorageButton}"
+                      IsVisible="{Binding IsConnected}"
+                      Command="{Binding BuyMoreStorageCommand}" />
+          </ContextMenu>
+        </Border.ContextMenu>
+        <StackPanel Spacing="14">
+          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="10" ColumnSpacing="12">
+            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="12">
+              <Border Width="42" Height="42" CornerRadius="21" ClipToBounds="True" Background="#252B36" BorderBrush="{StaticResource TundraBorderBrush}" BorderThickness="1">
+                <Grid>
+                  <PathIcon Width="18" Height="18"
+                            Foreground="{StaticResource TundraAccent}"
+                            IsVisible="{Binding !HasAccountAvatar}"
+                            Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88C7.55 15.8 9.68 15 12 15s4.45.8 6.14 2.12C16.43 19.18 14.03 20 12 20z" />
+                  <Image Source="{Binding AccountAvatarBitmap}"
+                         Stretch="UniformToFill"
+                         IsVisible="{Binding HasAccountAvatar}" />
+                </Grid>
+              </Border>
+
+              <StackPanel Spacing="2" VerticalAlignment="Center">
+                <TextBlock Classes="SectionTitle" Text="{Binding DisplayName}" TextWrapping="Wrap" />
+                <TextBlock Classes="Subtitle" Text="{Binding EmailAddress}" TextWrapping="Wrap" />
+              </StackPanel>
+            </StackPanel>
+
+            <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal">
+              <Button Classes="SecondaryAction"
+                      Margin="0,0,8,6"
+                      Content="{Binding Loc.ImportCredentialsButton}"
+                      Command="{Binding ImportCredentialsCommand}"
+                      IsVisible="{Binding !IsConnected}"
+                      IsEnabled="{Binding !IsBusy}" />
+              <Button Classes="PrimaryAction"
+                      Margin="0,0,8,6"
+                      Content="{Binding Loc.ConnectGoogleButton}"
+                      Command="{Binding ConnectCommand}"
+                      IsVisible="{Binding !IsConnected}" />
+              <Button Classes="DangerAction"
+                      Margin="0,0,8,6"
+                      Content="{Binding Loc.CancelAuthButton}"
+                      Command="{Binding CancelConnectCommand}"
+                      IsVisible="{Binding IsConnecting}" />
+              <Button Classes="SecondaryAction"
+                      Margin="0,0,8,6"
+                      Command="{Binding RefreshCommand}"
+                      IsVisible="{Binding IsConnected}"
+                      IsEnabled="{Binding !IsBusy}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Width="13" Height="13"
+                            IsVisible="{Binding ShowDefaultRefreshIcon}"
+                            Foreground="{StaticResource TundraTextPrimary}"
+                            Data="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+                  <PathIcon Width="13" Height="13"
+                            Classes="Spinning"
+                            IsVisible="{Binding IsRefreshingQuota}"
+                            Foreground="{StaticResource TundraAccent}"
+                            Data="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z">
+                    <PathIcon.RenderTransform>
+                      <RotateTransform />
+                    </PathIcon.RenderTransform>
+                  </PathIcon>
+                  <PathIcon Width="13" Height="13"
+                            IsVisible="{Binding IsQuotaRefreshed}"
+                            Foreground="#34D399"
+                            Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                  <TextBlock Text="{Binding Loc.RefreshQuotaButton}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button Classes="DangerAction"
+                      Margin="0,0,8,6"
+                      Content="{Binding Loc.DisconnectButton}"
+                      Command="{Binding DisconnectCommand}"
+                      IsVisible="{Binding IsConnected}"
+                      IsEnabled="{Binding !IsBusy}" />
+            </WrapPanel>
+          </Grid>
+
+          <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock Grid.Column="0" Classes="MutedMeta" FontSize="12.5" Text="{Binding Loc.StorageLabel}" />
+              <TextBlock Grid.Column="1" Classes="MutedMeta" FontSize="12.5" FontWeight="Medium" Foreground="{StaticResource TundraTextPrimary}" Text="{Binding QuotaUsageText}" />
+            </Grid>
+
+            <Border Height="8"
+                    CornerRadius="4"
+                    Background="#252B36"
+                    ClipToBounds="True"
+                    HorizontalAlignment="Stretch"
+                    SizeChanged="OnStorageBarSizeChanged">
+              <StackPanel Orientation="Horizontal" Spacing="1">
+                <Border Background="#3B82F6" Width="{Binding DriveBarWidth}" Height="8" />
+                <Border Background="#22D3EE" Width="{Binding OtherBarWidth}" Height="8" />
+                <Border Background="#64748B" Width="{Binding TrashBarWidth}" Height="8" />
+              </StackPanel>
+            </Border>
+
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Grid.Column="0" Spacing="6" VerticalAlignment="Center">
+                <WrapPanel Orientation="Horizontal">
+                  <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,14,2">
+                    <Border Width="8" Height="8" CornerRadius="4" Background="#3B82F6" VerticalAlignment="Center" />
+                    <TextBlock Classes="MutedMeta" FontSize="11.5" Text="{Binding Loc.StorageDriveLegend}" />
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,14,2">
+                    <Border Width="8" Height="8" CornerRadius="4" Background="#22D3EE" VerticalAlignment="Center" />
+                    <TextBlock Classes="MutedMeta" FontSize="11.5" Text="{Binding Loc.StorageOtherLegend}" />
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,2">
+                    <Border Width="8" Height="8" CornerRadius="4" Background="#64748B" VerticalAlignment="Center" />
+                    <TextBlock Classes="MutedMeta" FontSize="11.5" Text="{Binding Loc.StorageTrashLegend}" />
+                  </StackPanel>
+                </WrapPanel>
+                <TextBlock Classes="MutedMeta" FontSize="11.5" Text="{Binding QuotaBreakdownText}" TextWrapping="Wrap" />
+              </StackPanel>
+
+              <Button Grid.Column="1"
+                      Classes="SecondaryAction"
+                      Padding="10,5"
+                      FontSize="12"
+                      VerticalAlignment="Center"
+                      IsVisible="{Binding IsConnected}"
+                      Content="{Binding Loc.BuyMoreStorageButton}"
+                      Command="{Binding BuyMoreStorageCommand}" />
+            </Grid>
+
+            <Border IsVisible="{Binding HasStorageAlert}"
+                    BorderBrush="{Binding StorageProgressBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="10,8"
+                    Margin="0,4,0,0">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock Grid.Column="0"
+                           FontSize="12"
+                           FontWeight="Medium"
+                           Foreground="{Binding StorageAlertTextBrush}"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           Text="{Binding StorageAlertMessage}" />
+                <Button Grid.Column="1"
+                        Classes="PrimaryAction"
+                        Content="{Binding Loc.BuyMoreStorageButton}"
+                        Command="{Binding BuyMoreStorageCommand}" />
+              </Grid>
+            </Border>
+          </StackPanel>
+
+          <TextBlock Classes="MutedMeta"
+                     TextWrapping="Wrap"
+                     Text="{Binding StatusMessage}"
+                     IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+      </Border>
+
+      <!-- Assistente guiado de conexão -->
+      <Border Classes="SurfaceCard" IsVisible="{Binding !IsConnected}">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="SectionTitle" Text="{Binding Loc.OnboardingTitle}" TextWrapping="Wrap" />
+
+          <Border Classes="FlatRow">
+            <StackPanel Spacing="6">
+              <TextBlock FontSize="12.5" FontWeight="SemiBold" Text="{Binding Loc.OnboardingStep1Title}" TextWrapping="Wrap" />
+              <TextBlock Classes="Subtitle" FontSize="12" Text="{Binding Loc.OnboardingStep1Desc}" TextWrapping="Wrap" />
+              <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <Button Classes="SecondaryAction"
+                        Margin="0,0,8,4"
+                        Content="{Binding Loc.OpenEnableDriveApiButton}"
+                        Command="{Binding OpenEnableDriveApiCommand}" />
+                <Button Classes="SecondaryAction"
+                        Margin="0,0,8,4"
+                        Content="{Binding Loc.OpenCloudConsoleButton}"
+                        Command="{Binding OpenCloudConsoleCommand}" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="FlatRow">
+            <StackPanel Spacing="6">
+              <TextBlock FontSize="12.5" FontWeight="SemiBold" Text="{Binding Loc.OnboardingStep2Title}" TextWrapping="Wrap" />
+              <TextBlock Classes="Subtitle" FontSize="12" Text="{Binding Loc.OnboardingStep2Desc}" TextWrapping="Wrap" />
+              <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <Button Classes="SecondaryAction"
+                        Content="{Binding Loc.ImportCredentialsButton}"
+                        Command="{Binding ImportCredentialsCommand}"
+                        IsEnabled="{Binding !IsBusy}" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="FlatRow">
+            <StackPanel Spacing="6">
+              <TextBlock FontSize="12.5" FontWeight="SemiBold" Text="{Binding Loc.OnboardingStep3Title}" TextWrapping="Wrap" />
+              <TextBlock Classes="Subtitle" FontSize="12" Text="{Binding Loc.OnboardingStep3Desc}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="SurfaceCard">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="SectionTitle" Text="{Binding Loc.SecuritySectionTitle}" TextWrapping="Wrap" />
+
+          <Border Classes="FlatRow">
+            <StackPanel Spacing="4">
+              <TextBlock FontSize="12.5" FontWeight="SemiBold" Text="{Binding Loc.CredentialsFileLabel}" TextWrapping="Wrap" />
+              <TextBlock Classes="MutedMeta" FontFamily="monospace" Text="{Binding CredentialsPath}" TextWrapping="Wrap" />
+              <TextBlock Classes="Subtitle" FontSize="12" Text="{Binding CredentialsStatusText}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="FlatRow">
+            <StackPanel Spacing="4">
+              <TextBlock FontSize="12.5" FontWeight="SemiBold" Text="{Binding Loc.TokensDirLabel}" TextWrapping="Wrap" />
+              <TextBlock Classes="MutedMeta" FontFamily="monospace" Text="{Binding TokensDirectoryPath}" TextWrapping="Wrap" />
+              <TextBlock Classes="Subtitle" FontSize="12" Text="{Binding TokenSecurityText}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <TextBlock Classes="MutedMeta" TextWrapping="Wrap" Text="{Binding Loc.SafeDeletionNotice}" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

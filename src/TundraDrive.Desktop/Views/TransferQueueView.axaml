@@ -1,0 +1,192 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TundraDrive.Desktop.ViewModels"
+             x:Class="TundraDrive.Desktop.Views.TransferQueueView"
+             x:DataType="vm:TransferQueueViewModel">
+
+  <!-- Aba de fila de transferências -->
+  <Grid RowDefinitions="Auto,*" Margin="24" RowSpacing="16">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+      <StackPanel Grid.Column="0" Spacing="4">
+        <TextBlock Classes="PageTitle" Text="{Binding Loc.TransferQueueTitle}" />
+        <TextBlock Classes="Subtitle" Text="{Binding SummaryText}" TextWrapping="Wrap" />
+      </StackPanel>
+
+      <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+        <Button Classes="DangerAction"
+                Margin="0,0,8,0"
+                Content="{Binding Loc.CancelButton}"
+                IsEnabled="{Binding CanCancelSelected}"
+                Command="{Binding CancelSelectedCommand}" />
+        <Button Classes="SecondaryAction"
+                Content="{Binding Loc.ClearCompletedButton}"
+                Command="{Binding ClearCompletedCommand}" />
+      </WrapPanel>
+    </Grid>
+
+    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="10">
+        <Border Classes="SurfaceCard" IsVisible="{Binding HasNoItems}">
+          <TextBlock Classes="Subtitle" Text="{Binding Loc.NoTransfersHint}" TextWrapping="Wrap" />
+        </Border>
+
+        <ListBox Classes="CardList"
+                 ItemsSource="{Binding Items}"
+                 SelectedItem="{Binding SelectedItem}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:TransferItemViewModel">
+              <Border Padding="14,12" Background="Transparent">
+                <Border.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="{Binding Loc.CancelButton}"
+                              IsVisible="{Binding CanCancel}"
+                              Command="{Binding CancelCommand}" />
+                    <MenuItem Header="{Binding Loc.CopyNameMenu}"
+                              Command="{Binding CopyNameCommand}" />
+                    <MenuItem Header="{Binding Loc.CopyTargetPathMenu}"
+                              Command="{Binding CopyPathCommand}" />
+                  </ContextMenu>
+                </Border.ContextMenu>
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="8" ColumnSpacing="12">
+                  <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                    <!-- Ícones animados durante a operação -->
+                    <PathIcon Classes="UploadPulse"
+                              Width="15" Height="15"
+                              Foreground="{StaticResource TundraAccent}"
+                              IsVisible="{Binding IsUploadingActive}"
+                              Data="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z">
+                      <PathIcon.RenderTransform>
+                        <TranslateTransform />
+                      </PathIcon.RenderTransform>
+                    </PathIcon>
+                    <PathIcon Classes="DownloadPulse"
+                              Width="15" Height="15"
+                              Foreground="#2EA043"
+                              IsVisible="{Binding IsDownloadingActive}"
+                              Data="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z">
+                      <PathIcon.RenderTransform>
+                        <TranslateTransform />
+                      </PathIcon.RenderTransform>
+                    </PathIcon>
+                    <PathIcon Classes="DeletePulse"
+                              Width="15" Height="15"
+                              Foreground="#EF4444"
+                              IsVisible="{Binding IsDeletingActive}"
+                              Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z">
+                      <PathIcon.RenderTransform>
+                        <TranslateTransform />
+                      </PathIcon.RenderTransform>
+                    </PathIcon>
+
+                    <!-- Ícones estáticos após conclusão -->
+                    <PathIcon Width="15" Height="15"
+                              Foreground="#3B82F6"
+                              Opacity="0.78"
+                              IsVisible="{Binding IsUploadingStatic}"
+                              Data="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" />
+                    <PathIcon Width="15" Height="15"
+                              Foreground="#2EA043"
+                              Opacity="0.78"
+                              IsVisible="{Binding IsDownloadingStatic}"
+                              Data="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                    <PathIcon Width="15" Height="15"
+                              Foreground="#EF4444"
+                              Opacity="0.78"
+                              IsVisible="{Binding IsDeletingStatic}"
+                              Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+
+                    <StackPanel Spacing="2">
+                      <TextBlock FontSize="13.5" FontWeight="SemiBold" Text="{Binding FileName}" TextWrapping="Wrap" />
+                      <TextBlock Classes="MutedMeta" Text="{Binding SubtitleText}" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </StackPanel>
+
+                  <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBlock Classes="MutedMeta" FontSize="11.5" Text="{Binding TimestampDisplay}" VerticalAlignment="Center" />
+                    <TextBlock Classes="MutedMeta" FontSize="11.5" Text="•" VerticalAlignment="Center" />
+                    <Border Width="8" Height="8" CornerRadius="4" Background="{Binding AccentBorderBrush}" VerticalAlignment="Center" />
+                    <TextBlock Classes="MutedMeta" Text="{Binding DirectionDisplay}" />
+                  </StackPanel>
+
+                  <ProgressBar Grid.Row="1" Grid.ColumnSpan="2"
+                               Minimum="0" Maximum="100"
+                               Foreground="{Binding TransferProgressBrush}"
+                               Value="{Binding ProgressPercentage}" />
+
+                  <Grid Grid.Row="2" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <TextBlock Grid.Column="0" Classes="MutedMeta" Text="{Binding StatusDisplay}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Column="1" Classes="MutedMeta" Text="{Binding ProgressDisplay}" />
+                  </Grid>
+
+                  <!-- Painel expansível ao clicar no card -->
+                  <Border Grid.Row="3" Grid.ColumnSpan="2"
+                          Margin="0,6,0,0"
+                          Padding="12,10"
+                          CornerRadius="6"
+                          Background="#141922"
+                          BorderBrush="{StaticResource TundraBorderBrush}"
+                          BorderThickness="1"
+                          IsVisible="{Binding IsSelected}">
+                    <StackPanel Spacing="8">
+                      <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="4">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Classes="MutedMeta" Text="{Binding Loc.TransferDetailLocalPath}" IsVisible="{Binding HasLocalPath}" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" FontSize="12" Foreground="#D0D7DE" Text="{Binding LocalPath}" TextWrapping="Wrap" IsVisible="{Binding HasLocalPath}" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Classes="MutedMeta" Text="{Binding Loc.TransferDetailRelativePath}" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" FontSize="12" Foreground="#D0D7DE" Text="{Binding RelativePath}" TextWrapping="Wrap" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Classes="MutedMeta" Text="{Binding Loc.TransferDetailRemoteId}" IsVisible="{Binding HasRemoteFileId}" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" FontSize="12" FontFamily="monospace" Foreground="#94A3B8" Text="{Binding RemoteFileId}" TextWrapping="Wrap" IsVisible="{Binding HasRemoteFileId}" />
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Classes="MutedMeta" Text="{Binding Loc.TransferDetailStarted}" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" FontSize="12" Foreground="#D0D7DE" Text="{Binding StartedDisplay}" />
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Classes="MutedMeta" Text="{Binding Loc.TransferDetailCompleted}" IsVisible="{Binding HasCompletedTime}" />
+                        <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="10" IsVisible="{Binding HasCompletedTime}">
+                          <TextBlock FontSize="12" Foreground="#D0D7DE" Text="{Binding CompletedDisplay}" />
+                          <TextBlock Classes="MutedMeta" Text="•" />
+                          <TextBlock Classes="MutedMeta" Text="{Binding Loc.TransferDetailDuration}" />
+                          <TextBlock FontSize="12" Foreground="#D0D7DE" Text="{Binding DurationDisplay}" />
+                          <TextBlock Classes="MutedMeta" Text="•" IsVisible="{Binding HasSpeedDisplay}" />
+                          <TextBlock Classes="MutedMeta" Text="{Binding Loc.TransferDetailAvgSpeed}" IsVisible="{Binding HasSpeedDisplay}" />
+                          <TextBlock FontSize="12" Foreground="#38BDF8" Text="{Binding SpeedDisplay}" IsVisible="{Binding HasSpeedDisplay}" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Classes="MutedMeta" Foreground="#EF4444" Text="{Binding Loc.TransferDetailError}" IsVisible="{Binding HasError}" />
+                        <TextBlock Grid.Row="5" Grid.Column="1" FontSize="12" Foreground="#FCA5A5" Text="{Binding ErrorMessage}" TextWrapping="Wrap" IsVisible="{Binding HasError}" />
+                      </Grid>
+
+                      <WrapPanel Orientation="Horizontal">
+                        <Button Classes="SecondaryAction"
+                                Margin="0,0,8,4"
+                                Padding="10,5"
+                                FontSize="12"
+                                Content="{Binding Loc.OpenLocalFolderMenu}"
+                                IsVisible="{Binding HasLocalPath}"
+                                Command="{Binding OpenFolderCommand}" />
+                        <Button Classes="SecondaryAction"
+                                Margin="0,0,8,4"
+                                Padding="10,5"
+                                FontSize="12"
+                                Content="{Binding Loc.TransferCopyPathButton}"
+                                IsVisible="{Binding HasLocalPath}"
+                                Command="{Binding CopyPathCommand}" />
+                        <Button Classes="SecondaryAction"
+                                Margin="0,0,8,4"
+                                Padding="10,5"
+                                FontSize="12"
+                                Content="{Binding Loc.TransferCopyDriveIdButton}"
+                                IsVisible="{Binding HasRemoteFileId}"
+                                Command="{Binding CopyRemoteIdCommand}" />
+                      </WrapPanel>
+                    </StackPanel>
+                  </Border>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

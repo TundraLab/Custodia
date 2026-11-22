@@ -1,0 +1,278 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TundraDrive.Desktop.ViewModels"
+             xmlns:views="using:TundraDrive.Desktop.Views"
+             x:Class="TundraDrive.Desktop.Views.SyncFoldersView"
+             x:DataType="vm:SyncFoldersViewModel">
+
+  <!-- Aba de pastas de sincronização -->
+  <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="24" RowSpacing="14">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+      <TextBlock Grid.Column="0" Classes="PageTitle" VerticalAlignment="Center" Text="{Binding Loc.SyncFoldersTitle}" />
+
+      <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+        <Button Classes="SecondaryAction"
+                Margin="0,0,8,4"
+                Content="{Binding Loc.MappedFoldersButton}"
+                Command="{Binding ShowMappedFoldersCommand}"
+                IsVisible="{Binding IsRemoteBrowserActive}" />
+        <Button Classes="SecondaryAction"
+                Margin="0,0,8,4"
+                Content="{Binding Loc.RemoteBrowserButton}"
+                Command="{Binding OpenRemoteBrowserCommand}"
+                IsVisible="{Binding !IsRemoteBrowserActive}" />
+        <Button Classes="SecondaryAction"
+                Margin="0,0,8,4"
+                Content="{Binding Loc.MapLocalFolderButton}"
+                Command="{Binding AddLocalFolderToRootCommand}" />
+        <Button Classes="PrimaryAction"
+                Margin="0,0,0,4"
+                Content="{Binding Loc.SyncAllButton}"
+                Command="{Binding SyncAllCommand}" />
+      </WrapPanel>
+    </Grid>
+
+    <Border Grid.Row="1"
+            Classes="SurfaceCard"
+            Padding="14,12"
+            BorderBrush="{Binding StorageAlertBorderBrush}">
+      <StackPanel Spacing="10">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+          <StackPanel Grid.Column="0" Spacing="4">
+            <TextBlock Classes="MutedMeta" FontSize="11.5" Text="{Binding QuotaSummaryText}" />
+            <Border Height="6"
+                    CornerRadius="3"
+                    Background="#252B36"
+                    ClipToBounds="True"
+                    HorizontalAlignment="Stretch"
+                    SizeChanged="OnStorageBarSizeChanged">
+              <StackPanel Orientation="Horizontal" Spacing="1">
+                <Border Background="#3B82F6" Width="{Binding DriveBarWidth}" Height="6" />
+                <Border Background="#22D3EE" Width="{Binding OtherBarWidth}" Height="6" />
+                <Border Background="#64748B" Width="{Binding TrashBarWidth}" Height="6" />
+              </StackPanel>
+            </Border>
+            <WrapPanel Orientation="Horizontal">
+              <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,12,0">
+                <Border Width="7" Height="7" CornerRadius="4" Background="#3B82F6" VerticalAlignment="Center" />
+                <TextBlock Classes="MutedMeta" FontSize="11" Text="{Binding DriveLegendText}" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,12,0">
+                <Border Width="7" Height="7" CornerRadius="4" Background="#22D3EE" VerticalAlignment="Center" />
+                <TextBlock Classes="MutedMeta" FontSize="11" Text="{Binding OtherLegendText}" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Border Width="7" Height="7" CornerRadius="4" Background="#64748B" VerticalAlignment="Center" />
+                <TextBlock Classes="MutedMeta" FontSize="11" Text="{Binding TrashLegendText}" />
+              </StackPanel>
+            </WrapPanel>
+          </StackPanel>
+
+          <Button Grid.Column="1"
+                  Classes="SecondaryAction"
+                  Padding="10,5"
+                  VerticalAlignment="Center"
+                  IsVisible="{Binding IsAccountConnected}"
+                  Content="{Binding Loc.BuyMoreShortButton}"
+                  Command="{Binding BuyMoreStorageCommand}" />
+        </Grid>
+
+        <Grid IsVisible="{Binding HasStorageAlert}" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <TextBlock Grid.Column="0"
+                     FontSize="12"
+                     FontWeight="Medium"
+                     Foreground="{Binding StorageAlertTextBrush}"
+                     VerticalAlignment="Center"
+                     TextWrapping="Wrap"
+                     Text="{Binding StorageAlertMessage}" />
+          <Button Grid.Column="1"
+                  Classes="PrimaryAction"
+                  Content="{Binding Loc.BuyMoreStorageButton}"
+                  Command="{Binding BuyMoreStorageCommand}" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="2"
+            Classes="FlatRow"
+            Padding="12,8"
+            IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <TextBlock Classes="Subtitle"
+                 FontSize="12.5"
+                 TextWrapping="Wrap"
+                 Text="{Binding StatusMessage}" />
+    </Border>
+
+    <Grid Grid.Row="3" RowDefinitions="Auto,*" RowSpacing="10" IsVisible="{Binding !IsRemoteBrowserActive}">
+      <!-- Barra contextual da pasta selecionada -->
+      <Border Grid.Row="0" Classes="FlatRow" Padding="10,7" IsVisible="{Binding !HasNoFolders}">
+        <WrapPanel Orientation="Horizontal">
+          <Button Classes="PrimaryAction"
+                  Margin="0,0,6,0"
+                  Padding="10,5"
+                  FontSize="12"
+                  IsEnabled="{Binding HasSelectedFolder}"
+                  Content="{Binding Loc.SyncNowButton}"
+                  Command="{Binding SyncSelectedFolderCommand}" />
+          <Button Classes="SecondaryAction"
+                  Margin="0,0,6,0"
+                  Padding="10,5"
+                  FontSize="12"
+                  IsEnabled="{Binding HasSelectedFolder}"
+                  Content="{Binding SelectedPauseLabel}"
+                  Command="{Binding TogglePauseSelectedFolderCommand}" />
+          <Button Classes="SecondaryAction"
+                  Margin="0,0,6,0"
+                  Padding="10,5"
+                  FontSize="12"
+                  IsEnabled="{Binding HasSelectedFolder}"
+                  Content="{Binding SelectedModeToggleLabel}"
+                  Command="{Binding ToggleModeSelectedFolderCommand}" />
+          <Button Classes="SecondaryAction"
+                  Margin="0,0,6,0"
+                  Padding="10,5"
+                  FontSize="12"
+                  IsEnabled="{Binding HasSelectedFolder}"
+                  Content="{Binding Loc.OpenLocalFolderMenu}"
+                  Command="{Binding OpenSelectedFolderCommand}" />
+          <Button Classes="DangerAction"
+                  Padding="10,5"
+                  FontSize="12"
+                  IsEnabled="{Binding HasSelectedFolder}"
+                  Content="{Binding Loc.RemoveButton}"
+                  Command="{Binding RemoveSelectedFolderCommand}" />
+        </WrapPanel>
+      </Border>
+
+      <Grid Grid.Row="1">
+        <Border Classes="SurfaceCard" VerticalAlignment="Top" IsVisible="{Binding HasNoFolders}">
+          <TextBlock Classes="Subtitle" TextWrapping="Wrap" Text="{Binding Loc.EmptyFoldersHint}" />
+        </Border>
+
+        <ListBox Classes="CardList"
+                 IsVisible="{Binding !HasNoFolders}"
+                 ItemsSource="{Binding Folders}"
+                 SelectedItem="{Binding SelectedFolder}"
+                 DoubleTapped="OnFolderDoubleTapped">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:SyncFolderItemViewModel">
+              <Border Padding="14,12" Background="Transparent">
+                <Border.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="{Binding Loc.SyncNowButton}" Command="{Binding SyncNowCommand}" />
+                    <MenuItem Header="{Binding PauseButtonLabel}" Command="{Binding TogglePauseCommand}" />
+                    <MenuItem Header="{Binding ModeToggleButtonLabel}" Command="{Binding ToggleModeCommand}" />
+                    <MenuItem Header="{Binding Loc.OpenLocalFolderMenu}" Command="{Binding OpenLocalFolderCommand}" />
+                    <Separator />
+                    <MenuItem Header="{Binding Loc.RemoveButton}" Command="{Binding RemoveCommand}" />
+                  </ContextMenu>
+                </Border.ContextMenu>
+                <StackPanel Spacing="10">
+                  <!-- Mapa visual: De onde (PC) <-> Para onde (Google Drive) -->
+                  <Border Background="#13171F"
+                          BorderBrush="{StaticResource TundraBorderBrush}"
+                          BorderThickness="1"
+                          CornerRadius="6"
+                          Padding="12,10">
+                    <Grid ColumnDefinitions="*,Auto,*,Auto" ColumnSpacing="12">
+                      <!-- Origem Local (PC) -->
+                      <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <PathIcon Width="13" Height="13"
+                                    Foreground="#60A5FA"
+                                    Data="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z" />
+                          <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#93C5FD" Text="{Binding Loc.SyncOriginLocalLabel}" />
+                        </StackPanel>
+                        <TextBlock FontSize="13" FontWeight="SemiBold" FontFamily="monospace" Text="{Binding LocalPath}" TextWrapping="Wrap" />
+                      </StackPanel>
+
+                      <!-- Seta / Direção (conector limpo sem pílulas flutuantes) -->
+                      <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="3" MinWidth="112">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                          <Border Width="18" Height="1" Background="#3B82F6" IsVisible="{Binding IsTwoWayMode}" VerticalAlignment="Center" Opacity="0.6" />
+                          <Border Width="18" Height="1" Background="#D97706" IsVisible="{Binding !IsTwoWayMode}" VerticalAlignment="Center" Opacity="0.6" />
+                          <PathIcon Width="15" Height="15"
+                                    Foreground="#60A5FA"
+                                    IsVisible="{Binding IsTwoWayMode}"
+                                    Data="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z" />
+                          <PathIcon Width="15" Height="15"
+                                    Foreground="#FBBF24"
+                                    IsVisible="{Binding !IsTwoWayMode}"
+                                    Data="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" />
+                          <Border Width="18" Height="1" Background="#3B82F6" IsVisible="{Binding IsTwoWayMode}" VerticalAlignment="Center" Opacity="0.6" />
+                          <Border Width="18" Height="1" Background="#D97706" IsVisible="{Binding !IsTwoWayMode}" VerticalAlignment="Center" Opacity="0.6" />
+                        </StackPanel>
+                        <TextBlock HorizontalAlignment="Center"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="#93C5FD"
+                                   IsVisible="{Binding IsTwoWayMode}"
+                                   Text="{Binding DirectionBadgeText}" />
+                        <TextBlock HorizontalAlignment="Center"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="#FCD34D"
+                                   IsVisible="{Binding !IsTwoWayMode}"
+                                   Text="{Binding DirectionBadgeText}" />
+                      </StackPanel>
+
+                      <!-- Destino Remoto (Google Drive) -->
+                      <StackPanel Grid.Column="2" Spacing="3" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <PathIcon Width="13" Height="13"
+                                    Foreground="#34D399"
+                                    Data="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" />
+                          <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#6EE7B7" Text="{Binding Loc.SyncDestinationCloudLabel}" />
+                        </StackPanel>
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding RemoteFolderName}" TextWrapping="Wrap" />
+                      </StackPanel>
+
+                      <Border Grid.Column="3"
+                              Width="9" Height="9"
+                              CornerRadius="5"
+                              VerticalAlignment="Center"
+                              Background="{Binding AccentBorderBrush}" />
+                    </Grid>
+                  </Border>
+
+                  <!-- Explicação clara do sentido e últimas estatísticas -->
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <TextBlock Grid.Column="0" Classes="Subtitle" FontSize="12" Text="{Binding DirectionExplanation}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Column="1" Classes="MutedMeta" FontSize="11.5" VerticalAlignment="Center" Text="{Binding LastSyncedDisplay}" />
+                  </Grid>
+
+                  <Border BorderBrush="{StaticResource TundraBorderBrush}"
+                          BorderThickness="0,1,0,0"
+                          Padding="0,8,0,0">
+                    <StackPanel Spacing="6">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Classes="Spinning"
+                                  Width="13" Height="13"
+                                  Foreground="{StaticResource TundraAccent}"
+                                  IsVisible="{Binding IsSyncing}"
+                                  Data="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z">
+                          <PathIcon.RenderTransform>
+                            <RotateTransform />
+                          </PathIcon.RenderTransform>
+                        </PathIcon>
+                        <TextBlock Classes="MutedMeta" Text="{Binding StateDisplay}" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <ProgressBar Height="3"
+                                   IsIndeterminate="True"
+                                   IsVisible="{Binding IsSyncing}" />
+                    </StackPanel>
+                  </Border>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+    </Grid>
+
+    <!-- Navegador remoto -->
+    <Grid Grid.Row="3" IsVisible="{Binding IsRemoteBrowserActive}">
+      <views:RemoteBrowserView DataContext="{Binding RemoteBrowser}" />
+    </Grid>
+  </Grid>
+</UserControl>
