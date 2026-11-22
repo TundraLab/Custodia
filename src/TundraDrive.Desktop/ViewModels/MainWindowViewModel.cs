@@ -290,12 +290,27 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public async Task InitializeAsync()
     {
-        await _syncService.InitializeAsync();
+        try
+        {
+            await _syncService.InitializeAsync();
+        }
+        catch
+        {
+            // Keep UI initialization alive even if early boot storage/network is still settling
+        }
+
         _lastKnownOnline = _syncService.IsOnline;
-        await _apiServer.StartAsync();
+
+        try
+        {
+            await _apiServer.StartAsync();
+        }
+        catch
+        {
+        }
 
         var settings = _settingsService.Current;
-        if (settings.StartOnBoot && !_autostartManager.IsEnabled())
+        if (settings.StartOnBoot)
         {
             _autostartManager.SetEnabled(true);
         }

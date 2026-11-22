@@ -51,7 +51,24 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
         }
 
         await InitializeDriveServiceAsync(credential, key, cancellationToken);
-        return await GetAccountInfoAsync(cancellationToken);
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(6));
+            return await GetAccountInfoAsync(cts.Token);
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Remote account metadata unavailable during startup restore for '{UserKey}'; using local session.", key);
+            return new DriveAccount
+            {
+                Id = key,
+                DisplayName = "Conta Google",
+                EmailAddress = string.Empty,
+                IsConnected = true,
+                ConnectedAtUtc = DateTimeOffset.UtcNow
+            };
+        }
     }
 
     public Task<DriveAccount?> SwitchSessionAsync(string userKey, CancellationToken cancellationToken = default) =>

@@ -100,6 +100,18 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
         if (restored is not null)
         {
+            var cached = SavedAccounts.FirstOrDefault(a =>
+                string.Equals(a.Id, restored.Id, StringComparison.Ordinal));
+            if (cached is not null && string.IsNullOrWhiteSpace(restored.EmailAddress))
+            {
+                restored.DisplayName = string.IsNullOrWhiteSpace(cached.DisplayName)
+                    ? restored.DisplayName
+                    : cached.DisplayName;
+                restored.EmailAddress = cached.EmailAddress;
+                restored.PhotoUrl = cached.PhotoUrl;
+                restored.Quota = cached.Quota;
+            }
+
             CurrentAccount = restored;
             await _repository.UpsertAccountAsync(restored, cancellationToken);
             await PersistActiveAccountIdAsync(restored.Id, cancellationToken);

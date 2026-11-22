@@ -2,6 +2,13 @@
 
 Todas as mudanças principais do TundraDrive seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [2.7.4] - 2026-11-20
+
+### Corrigido
+- **Inicialização com o sistema sem duplicidade nem fechamento:** ao ligar o computador e entrar na sessão do Linux, o aplicativo aguarda a barra superior do sistema terminar de carregar antes de registrar o ícone na bandeja, evitando o surgimento de dois ícones e o fechamento inesperado logo após o login.
+- **Recuperação automática do ícone da bandeja:** caso o painel superior do sistema seja reiniciado ou apresente falha temporária durante o registro do ícone, o TundraDrive permanece aberto e recria o ícone automaticamente.
+- **Limpeza de atalhos duplicados no menu:** instalações via pacote `.rpm` não geram mais um segundo atalho redundante na pasta do usuário.
+
 ## [2.7.3] - 2026-11-19
 
 ### Melhorado

@@ -59,8 +59,18 @@ public sealed class LinuxAutostartManager : IAutostartManager
             Categories=Utility;
             StartupWMClass=TundraDrive
             X-GNOME-Autostart-enabled=true
+            X-GNOME-Autostart-Delay=4
+            X-KDE-autostart-after=panel
             StartupNotify=false
             """;
+
+        var existingContent = File.Exists(DesktopEntryPath)
+            ? File.ReadAllText(DesktopEntryPath)
+            : null;
+        if (string.Equals(existingContent?.Trim(), content.Trim(), StringComparison.Ordinal))
+        {
+            return;
+        }
 
         File.WriteAllText(DesktopEntryPath, content);
         _logger.LogInformation("Created XDG autostart entry at '{Path}'.", DesktopEntryPath);
