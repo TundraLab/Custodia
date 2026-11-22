@@ -70,10 +70,6 @@ cat > "${APPDIR}/AppRun" <<'EOF'
 #!/usr/bin/env bash
 HERE="$(dirname "$(readlink -f "${0}")")"
 export PATH="${HERE}/usr/bin:${PATH}"
-INVOKED_NAME="$(basename "${ARGV0:-$0}")"
-if [[ "${INVOKED_NAME}" == *Installer* ]] || [[ "${INVOKED_NAME}" == *installer* ]]; then
-  exec "${HERE}/usr/bin/TundraDrive" --installer "$@"
-fi
 exec "${HERE}/usr/bin/TundraDrive" "$@"
 EOF
 chmod -R a+rX "${APPDIR}"

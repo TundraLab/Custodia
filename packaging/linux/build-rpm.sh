@@ -50,12 +50,6 @@ exec "/opt/tundradrive/TundraDrive" "$@"
 EOF
 chmod 755 "${RPM_STAGE}/usr/bin/tundradrive"
 
-cat > "${RPM_STAGE}/usr/bin/tundradrive-installer" <<'EOF'
-#!/usr/bin/env bash
-exec "/opt/tundradrive/TundraDrive" --installer "$@"
-EOF
-chmod 755 "${RPM_STAGE}/usr/bin/tundradrive-installer"
-
 cp "${ASSETS_DIR}/tundradrive-icon.png" "${RPM_STAGE}/usr/share/icons/hicolor/256x256/apps/tundradrive.png"
 cp "${ASSETS_DIR}/tundradrive-icon.svg" "${RPM_STAGE}/usr/share/icons/hicolor/scalable/apps/tundradrive.svg"
 cp "${REPO_ROOT}/LICENSE" "${RPM_STAGE}/usr/share/licenses/tundradrive/LICENSE"
@@ -131,10 +125,6 @@ contents:
     dst: "/opt/tundradrive"
   - src: "${RPM_STAGE}/usr/bin/tundradrive"
     dst: "/usr/bin/tundradrive"
-    file_info:
-      mode: 0755
-  - src: "${RPM_STAGE}/usr/bin/tundradrive-installer"
-    dst: "/usr/bin/tundradrive-installer"
     file_info:
       mode: 0755
   - src: "${RPM_STAGE}/usr/share/applications/tundradrive.desktop"
