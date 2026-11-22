@@ -291,12 +291,59 @@ public sealed partial class AboutViewModel : ViewModelBase
             ? RepositoryUrl + "/releases/latest"
             : result.ReleaseUrl;
         IsUpdateAvailable = result.IsUpdateAvailable;
-        LatestReleaseNotes = result.ReleaseNotes;
+        LatestReleaseNotes = FormatReleaseNotesForDisplay(result.ReleaseNotes);
         IsUpdateError = false;
         RefreshLocalizedStatusFromCache();
         OnPropertyChanged(nameof(HasReleaseNotes));
         OnPropertyChanged(nameof(HasUpdateCheckResult));
         OnPropertyChanged(nameof(CanInstallUpdate));
+    }
+
+    internal static string FormatReleaseNotesForDisplay(string? rawNotes)
+    {
+        if (string.IsNullOrWhiteSpace(rawNotes))
+        {
+            return string.Empty;
+        }
+
+        var lines = rawNotes.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        var formatted = new List<string>(lines.Length);
+        var previousBlank = false;
+
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.Trim();
+            if (string.IsNullOrEmpty(line))
+            {
+                if (formatted.Count > 0 && !previousBlank)
+                {
+                    formatted.Add(string.Empty);
+                    previousBlank = true;
+                }
+                continue;
+            }
+
+            line = line.Replace("**", string.Empty, StringComparison.Ordinal)
+                       .Replace("__", string.Empty, StringComparison.Ordinal)
+                       .Replace("`", string.Empty, StringComparison.Ordinal);
+
+            if (line.StartsWith('#'))
+            {
+                line = line.TrimStart('#').Trim();
+            }
+            else if (line.StartsWith("- ", StringComparison.Ordinal) || line.StartsWith("* ", StringComparison.Ordinal))
+            {
+                line = "• " + line[2..].TrimStart();
+            }
+
+            if (!string.IsNullOrEmpty(line))
+            {
+                formatted.Add(line);
+                previousBlank = false;
+            }
+        }
+
+        return string.Join('\n', formatted).Trim();
     }
 
     private void RefreshLocalizedStatusFromCache()
