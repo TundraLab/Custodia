@@ -10,6 +10,24 @@ Cliente do Google Drive para Linux para sincronizar pastas, fazer backups e gere
 
 Repositório: https://github.com/TundraLab/Tundra-Nuvem
 
+## Prévia visual
+
+![Prévia das telas do TundraDrive](docs/images/preview-showcase.png)
+
+<details>
+<summary>Ver todas as 6 telas individuais</summary>
+
+| Tela | Prévia |
+| :--- | :--- |
+| **Meu Driver** | ![Meu Driver](docs/images/preview-01-meu-driver.png) |
+| **Pastas de Sincronização** | ![Pastas de Sincronização](docs/images/preview-02-pastas.png) |
+| **Fila de Transferências** | ![Fila de Transferências](docs/images/preview-03-transferencias.png) |
+| **Logs de Atividade** | ![Logs de Atividade](docs/images/preview-04-logs.png) |
+| **Configurações** | ![Configurações](docs/images/preview-05-configuracoes.png) |
+| **Sobre** | ![Sobre](docs/images/preview-06-sobre.png) |
+
+</details>
+
 ## Sistemas e formatos
 
 - Testado em **Fedora** e **Pop!_OS** (incluindo hardware mais modesto), com suporte aos ambientes GNOME, COSMIC e KDE Plasma 5/6.
