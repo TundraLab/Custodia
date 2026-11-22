@@ -250,10 +250,11 @@ Para gerar os pacotes `.AppImage` e `.rpm` (`x86_64`) localmente em `dist/`:
 
 ## Licença e Propriedade Intelectual
 
-**Todos os Direitos Reservados (`All Rights Reserved`)**
-Copyright © 2026 **TundraLab** e **Gustavo Henrique Novaes Gomes** ([`@GustaHerin`](https://github.com/GustaHerin)).
+**Software Proprietário (Source-Available).**  
+**Todos os Direitos Reservados (All Rights Reserved)**  
+Copyright © 2026 TundraLab e Gustavo Henrique Novaes Gomes (@GustaHerin).
 
-- **Código-fonte (Portfólio e Auditoria):** Este repositório é público apenas para leitura, avaliação técnica e portfólio. Não é concedida permissão para copiar, modificar, redistribuir ou utilizar o código-fonte (no todo ou em parte) para fins comerciais ou projetos externos sem autorização prévia por escrito.
-- **Uso dos pacotes oficiais (`.AppImage` / `.rpm`):** Usuários finais podem baixar, instalar e executar gratuitamente os instaladores oficiais publicados na aba **Releases** para uso pessoal ou corporativo interno, sendo vedada a redistribuição ou modificação comercial.
+- **Código-fonte (Portfólio e Auditoria):** Este repositório é público apenas para leitura, estudo e avaliação técnica. Por não ser código aberto (open source), não é concedida qualquer permissão para copiar, modificar, criar obras derivadas, redistribuir ou utilizar o código-fonte (no todo ou em parte) em projetos próprios, externos, comerciais ou não comerciais sem autorização prévia e expressa por escrito.
+- **Uso dos pacotes oficiais (`.AppImage` / `.rpm`):** Usuários finais podem baixar, instalar e executar gratuitamente os instaladores oficiais publicados na aba [Releases](../../releases) exclusivamente para uso pessoal ou corporativo interno, sendo vedada qualquer modificação, engenharia reversa (fora dos limites legais) ou redistribuição — gratuita ou comercial — fora dos canais oficiais da TundraLab.
 
-Consulte os termos completos em [LICENSE](LICENSE).
+Consulte os termos completos em [LICENSE](./LICENSE).
