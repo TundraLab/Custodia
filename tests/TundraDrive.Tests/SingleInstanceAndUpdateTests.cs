@@ -153,6 +153,8 @@ public sealed class SingleInstanceAndUpdateTests
             await aboutVm.CheckForUpdatesCommand.ExecuteAsync(null);
             Assert.True(aboutVm.IsUpdateAvailable);
             Assert.Contains("2.7.0", aboutVm.UpdateStatusText);
+            Assert.True(aboutVm.HasReleaseNotes);
+            Assert.Contains("Melhorias", aboutVm.LatestReleaseNotes);
         }
         finally
         {

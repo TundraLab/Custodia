@@ -2,6 +2,13 @@
 
 Todas as mudanças principais do TundraDrive seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [2.7.1] - 2026-11-19
+
+### Melhorado
+- Exibição das notas da release disponíveis diretamente no card de **Atualizações** da aba **Sobre** antes de baixar/instalar.
+- Versão instalada exibida também no tooltip do ícone da bandeja do sistema (`TundraDrive v2.7.1`).
+- Instalador de terminal [install-tundradrive.sh](packaging/linux/install-tundradrive.sh) agora baixa pacotes de instalação/atualização em pasta temporária `/tmp/tundra-stage.*` e remove automaticamente após concluir, mantendo a pasta atual limpa (sem alterar o comportamento de `--download-*`).
+
 ## [2.7.0] - 2026-11-18
 
 ### Adicionado

@@ -373,7 +373,7 @@ public partial class App : Application
         _trayIcon = new TrayIcon
         {
             Icon = new WindowIcon(iconStream),
-            ToolTipText = "TundraDrive",
+            ToolTipText = $"TundraDrive v{AppVersionInfo.CurrentVersion}",
             Menu = menu,
             IsVisible = true
         };

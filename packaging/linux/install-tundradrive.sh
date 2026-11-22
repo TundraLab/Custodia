@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ==============================================================================
-# TundraDrive v2.7.0 - Instalador Oficial de Terminal by TundraLab
+# TundraDrive v2.7.1 - Instalador Oficial de Terminal by TundraLab
 # Autor e Desenvolvedor: Gustavo Henrique Novaes Gomes (@GustaHerin)
 # Licença: Proprietária / Todos os Direitos Reservados
 # ==============================================================================
@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." 2>/dev/null && pwd || pwd)"
 DIST_DIR="${REPO_ROOT}/dist"
 
-VERSION="${TUNDRA_VERSION:-2.7.0}"
+VERSION="${TUNDRA_VERSION:-2.7.1}"
 REPO_SLUG="TundraLab/TundraDrive"
 RELEASE_BASE_URL="https://github.com/${REPO_SLUG}/releases/latest/download"
 RAW_BASE_URL="https://raw.githubusercontent.com/${REPO_SLUG}/main"
@@ -165,9 +165,13 @@ step_err() {
 }
 
 ACTIVE_BG_PID=""
+ACTIVE_TMP_STAGE=""
 cleanup_ui() {
   if [[ -n "${ACTIVE_BG_PID:-}" ]]; then
     kill "${ACTIVE_BG_PID}" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "${ACTIVE_TMP_STAGE:-}" && -d "${ACTIVE_TMP_STAGE}" ]]; then
+    rm -rf "${ACTIVE_TMP_STAGE}" >/dev/null 2>&1 || true
   fi
   if [[ -t 2 ]]; then
     printf "\033[?25h" >&2 || true
@@ -571,9 +575,13 @@ offer_launch_app() {
 install_rpm_flow() {
   local interactive="${1:-0}"
   echo ""
+  local stage_dir
+  stage_dir="$(mktemp -d /tmp/tundra-stage.XXXXXX)"
+  ACTIVE_TMP_STAGE="${stage_dir}"
+
   step_info "[1/4] Obtendo pacote oficial .rpm..."
   local rpm_path
-  rpm_path="$(resolve_or_fetch_rpm)"
+  rpm_path="$(resolve_or_fetch_rpm "${stage_dir}")"
 
   step_info "[2/4] Verificando integridade do pacote..."
   verify_sha256_if_available "${rpm_path}"
@@ -618,6 +626,11 @@ install_rpm_flow() {
   step_info "[4/4] Atualizando menu de aplicativos e ícones..."
   write_user_desktop_files "\"/usr/bin/tundradrive\"" "${enable_autostart}"
 
+  if [[ -n "${stage_dir:-}" && -d "${stage_dir}" ]]; then
+    rm -rf "${stage_dir}"
+    ACTIVE_TMP_STAGE=""
+  fi
+
   echo ""
   step_ok "${BOLD}TundraDrive v${VERSION} (.rpm) instalado com sucesso!${RESET}"
   echo -e "  ${DIM}Executável: /usr/bin/tundradrive  |  Menu: TundraDrive${RESET}"
@@ -629,9 +642,13 @@ install_rpm_flow() {
 install_appimage_flow() {
   local interactive="${1:-0}"
   echo ""
+  local stage_dir
+  stage_dir="$(mktemp -d /tmp/tundra-stage.XXXXXX)"
+  ACTIVE_TMP_STAGE="${stage_dir}"
+
   step_info "[1/4] Obtendo pacote oficial .AppImage..."
   local appimage_path
-  appimage_path="$(resolve_or_fetch_appimage)"
+  appimage_path="$(resolve_or_fetch_appimage "${stage_dir}")"
 
   step_info "[2/4] Verificando integridade do pacote..."
   verify_sha256_if_available "${appimage_path}"
@@ -661,6 +678,11 @@ EOF
 
   step_info "[4/4] Registrando atalhos, ícones e menu (GNOME / COSMIC / KDE Plasma)..."
   write_user_desktop_files "\"${target_bin}\"" "${enable_autostart}"
+
+  if [[ -n "${stage_dir:-}" && -d "${stage_dir}" ]]; then
+    rm -rf "${stage_dir}"
+    ACTIVE_TMP_STAGE=""
+  fi
 
   echo ""
   step_ok "${BOLD}TundraDrive v${VERSION} (.AppImage) instalado com sucesso!${RESET}"
