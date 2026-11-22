@@ -66,9 +66,19 @@ Cada pasta mapeada pode operar em **Espelho Bidirecional (`PC <-> Drive`)** ou *
 
 ## Instalação
 
-Baixe o pacote correspondente nos **Releases** do repositório:
+Baixe o pacote correspondente nos **Releases** do repositório ou utilize o **Instalador Proprietário TundraDrive by TundraLab**:
 
-### Opção 1: AppImage (independente, sem instalar `.NET`)
+### Opção 1: Instalador Gráfico Proprietário (TundraDrive by TundraLab)
+
+O instalador oficial permite instalar ou desinstalar tanto o pacote **`.AppImage`** integrado ao perfil do usuário quanto o pacote **`.rpm`** no sistema (via Polkit), configurando menu de aplicativos, ícones e inicialização automática:
+
+```bash
+./packaging/linux/install-tundradrive.sh
+# ou diretamente pelo AppImage:
+./TundraDrive-2.6.0-x86_64.AppImage --installer
+```
+
+### Opção 2: AppImage direto (independente, sem instalar `.NET`)
 
 ```bash
 chmod +x TundraDrive-2.6.0-x86_64.AppImage
@@ -77,11 +87,11 @@ chmod +x TundraDrive-2.6.0-x86_64.AppImage
 
 *(Em sistemas sem FUSE habilitado, execute com `./TundraDrive-2.6.0-x86_64.AppImage --appimage-extract-and-run`.)*
 
-### Opção 2: Instalador nativo (`.rpm` / `.deb`)
+### Opção 3: Instalador nativo via terminal (`.rpm` / `.deb`)
 
 - **Fedora (`.rpm`):**
   ```bash
-  sudo dnf install ./TundraDrive-*.rpm
+  sudo dnf install ./TundraDrive-2.6.0-1.x86_64.rpm
   ```
 - **Pop!_OS / Ubuntu / Debian (`.deb`):**
   ```bash
@@ -220,10 +230,11 @@ dotnet test TundraDrive.sln
 dotnet run --project src/TundraDrive.Desktop/TundraDrive.Desktop.csproj
 ```
 
-Para gerar o AppImage autossuficiente (`x86_64`) localmente:
+Para gerar os pacotes `.AppImage` e `.rpm` (`x86_64`) localmente em `dist/`:
 
 ```bash
 ./packaging/linux/build-appimage.sh
+./packaging/linux/build-rpm.sh
 ```
 
 ### Estrutura do código

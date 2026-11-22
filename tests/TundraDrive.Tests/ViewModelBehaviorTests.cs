@@ -207,6 +207,33 @@ public sealed class ViewModelBehaviorTests
         Assert.True(stubSync.ConnectCalls[0].AddNew);
         Assert.Equal("/tmp/second-account.json", stubSync.ConnectCalls[0].CustomJson);
     }
+
+    [Fact]
+    public async Task InstallerViewModel_SwitchesBetweenAppImageAndRpmModesWithTundraLabBranding()
+    {
+        var vm = new InstallerViewModel
+        {
+            PickPackageFileCallback = ext => Task.FromResult<string?>(
+                ext == "rpm" ? "/tmp/TundraDrive-2.6.0-1.x86_64.rpm" : "/tmp/TundraDrive-2.6.0-x86_64.AppImage")
+        };
+
+        Assert.Equal("TundraDrive by TundraLab", vm.BrandTitle);
+        Assert.Equal("TundraLab", vm.CompanyName);
+        Assert.Contains("Gustavo Henrique", vm.DeveloperName);
+
+        vm.SelectAppImageModeCommand.Execute(null);
+        Assert.True(vm.IsAppImageSelected);
+        Assert.False(vm.IsRpmSelected);
+        await vm.BrowsePackageCommand.ExecuteAsync(null);
+        Assert.Equal("/tmp/TundraDrive-2.6.0-x86_64.AppImage", vm.SelectedPackagePath);
+
+        vm.SelectRpmModeCommand.Execute(null);
+        Assert.True(vm.IsRpmSelected);
+        Assert.False(vm.IsAppImageSelected);
+        await vm.BrowsePackageCommand.ExecuteAsync(null);
+        Assert.Equal("/tmp/TundraDrive-2.6.0-1.x86_64.rpm", vm.SelectedPackagePath);
+        Assert.Contains("/opt/tundradrive", vm.TargetInstallDestination);
+    }
 }
 
 internal class StubAuthProxy : DispatchProxy
