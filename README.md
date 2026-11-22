@@ -8,7 +8,7 @@
 [![AppImage](https://img.shields.io/badge/AppImage-x86__64-2C7FB8?logo=linux&logoColor=white)](#instalação)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Avalonia UI](https://img.shields.io/badge/Avalonia%20UI-11.3.8-8B44AC)](https://avaloniaui.net/)
-[![Licença MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Licença](https://img.shields.io/badge/License-All%20Rights%20Reserved-red)](LICENSE)
 
 Cliente do Google Drive para Linux para sincronizar pastas, fazer backups e gerenciar seus arquivos direto do computador. Feito em C# (.NET 10.0), Avalonia UI 11.3.8 e ASP.NET Core Minimal API em loopback (`127.0.0.1:5080`).
 
@@ -249,3 +249,13 @@ Para gerar os pacotes `.AppImage` e `.rpm` (`x86_64`) localmente em `dist/`:
 - `tests/TundraDrive.Tests`: suíte de testes unitários xUnit.
 
 </details>
+
+## Licença e Propriedade Intelectual
+
+**Todos os Direitos Reservados (`All Rights Reserved`)**
+Copyright © 2026 **TundraLab** e **Gustavo Henrique Novaes Gomes** ([`@GustaHerin`](https://github.com/GustaHerin)).
+
+- **Código-fonte (Portfólio e Auditoria):** Este repositório é público apenas para leitura, avaliação técnica e portfólio. Não é concedida permissão para copiar, modificar, redistribuir ou utilizar o código-fonte (no todo ou em parte) para fins comerciais ou projetos externos sem autorização prévia por escrito.
+- **Uso dos pacotes oficiais (`.AppImage` / `.rpm`):** Usuários finais podem baixar, instalar e executar gratuitamente os instaladores oficiais publicados na aba **Releases** para uso pessoal ou corporativo interno, sendo vedada a redistribuição ou modificação comercial.
+
+Consulte os termos completos em [LICENSE](LICENSE).
