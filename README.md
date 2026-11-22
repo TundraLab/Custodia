@@ -19,10 +19,11 @@ Repositório: https://github.com/TundraLab/TundraDrive
 ![Prévia das telas do TundraDrive](docs/images/preview-showcase.png)
 
 <details>
-<summary>Ver todas as 6 telas individuais</summary>
+<summary>Ver todas as telas individuais (Instalador e aplicativo)</summary>
 
 | Tela | Prévia |
 | :--- | :--- |
+| **Instalador Proprietário (`by TundraLab`)** | ![Instalador Proprietário TundraDrive by TundraLab](docs/images/preview-instalador.png) |
 | **Meu Driver** | ![Meu Driver](docs/images/preview-01-meu-driver.png) |
 | **Pastas de Sincronização** | ![Pastas de Sincronização](docs/images/preview-02-pastas.png) |
 | **Fila de Transferências** | ![Fila de Transferências](docs/images/preview-03-transferencias.png) |
@@ -66,9 +67,29 @@ Cada pasta mapeada pode operar em **Espelho Bidirecional (`PC <-> Drive`)** ou *
 
 ## Instalação
 
-Você pode baixar os dois formatos (`.AppImage` e `.rpm`) direto pelo **terminal** a partir dos Releases ou utilizar o **Instalador Proprietário TundraDrive by TundraLab**:
+A forma recomendada e principal de instalar o TundraDrive no Linux é pelo **Instalador Proprietário TundraDrive by TundraLab**, que gerencia os formatos **`.AppImage`** e **`.rpm`**, cria atalhos no menu, registra ícones (GNOME, COSMIC e KDE Plasma 5/6) e configura a inicialização automática.
 
-### Opção 1: Baixar e instalar pelo terminal (`.AppImage` e `.rpm`)
+### Opção 1 (Recomendada): Instalador Proprietário (`TundraDrive by TundraLab`)
+
+![Instalador Proprietário TundraDrive by TundraLab](docs/images/preview-instalador.png)
+
+Baixe o lançador oficial ou abra direto pelo `.AppImage` com `--installer`:
+
+```bash
+curl -fsSL https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-Installer-2.6.0-x86_64.sh -o install-tundradrive.sh
+chmod +x install-tundradrive.sh
+./install-tundradrive.sh
+```
+
+Atalhos diretos via terminal pelo instalador:
+
+```bash
+./install-tundradrive.sh --appimage   # Baixa e instala o .AppImage integrado ao usuário
+./install-tundradrive.sh --rpm        # Baixa e instala o .rpm no sistema (Fedora / RHEL)
+./TundraDrive-2.6.0-x86_64.AppImage --installer  # Abre a janela do instalador direto do AppImage
+```
+
+### Opção 2: Baixar pacotes avulsos pelo terminal (`.AppImage`, `.rpm` e `.deb`)
 
 - **AppImage (`x86_64`, independente, sem instalar `.NET`):**
   ```bash
@@ -76,7 +97,7 @@ Você pode baixar os dois formatos (`.AppImage` e `.rpm`) direto pelo **terminal
   chmod +x TundraDrive-2.6.0-x86_64.AppImage
   ./TundraDrive-2.6.0-x86_64.AppImage
   ```
-  *(Para abrir o instalador gráfico direto pelo AppImage, rode `./TundraDrive-2.6.0-x86_64.AppImage --installer`. Em sistemas sem FUSE habilitado, adicione `--appimage-extract-and-run`.)*
+  *(Em sistemas sem FUSE habilitado, adicione `--appimage-extract-and-run`.)*
 
 - **Fedora / RHEL / openSUSE (`.rpm`):**
   ```bash
@@ -88,19 +109,6 @@ Você pode baixar os dois formatos (`.AppImage` e `.rpm`) direto pelo **terminal
   ```bash
   sudo apt install ./TundraDrive-*.deb
   ```
-
-### Opção 2: Baixar via Instalador Proprietário (`TundraDrive by TundraLab`)
-
-Baixa e instala automaticamente o pacote escolhido (`.AppImage` ou `.rpm`), configurando menu, ícones e inicialização automática:
-
-```bash
-curl -fsSL https://github.com/TundraLab/TundraDrive/releases/latest/download/TundraDrive-Installer-2.6.0-x86_64.sh -o install-tundradrive.sh
-chmod +x install-tundradrive.sh
-
-./install-tundradrive.sh              # Abre menu ou instalador gráfico
-./install-tundradrive.sh --appimage   # Baixa e instala o AppImage direto pelo terminal
-./install-tundradrive.sh --rpm        # Baixa e instala o .rpm direto pelo terminal
-```
 
 ### Extras opcionais do sistema
 
