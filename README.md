@@ -12,9 +12,7 @@
 [![Avalonia UI](https://img.shields.io/badge/Avalonia%20UI-11.3.8-8B44AC)](https://avaloniaui.net/)
 [![Licença](https://img.shields.io/badge/License-All%20Rights%20Reserved-red)](LICENSE)
 
-**Seus arquivos. Sempre seguros.** Cliente do Google Drive para Linux para sincronizar pastas, fazer backups e gerenciar seus arquivos direto do computador. Feito em C# (.NET 10.0), Avalonia UI 11.3.8 e ASP.NET Core Minimal API em loopback (`127.0.0.1:5080`).
-
-Repositório: https://github.com/TundraLab/Custodia
+**Seus arquivos. Sempre seguros.** Cliente do Google Drive para Linux para sincronizar pastas, fazer backups e gerenciar seus arquivos direto do computador.
 
 ## Prévia visual
 
