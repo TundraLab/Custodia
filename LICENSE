@@ -3,24 +3,49 @@ Proprietary License / Todos os Direitos Reservados (All Rights Reserved)
 Copyright (c) 2026 TundraLab - Gustavo Henrique Novaes Gomes (@GustaHerin)
 Todos os direitos reservados.
 
-Este software e todo o seu código-fonte, documentação, arquitetura, interface gráfica,
-scripts de empacotamento e ativos visuais ("Software") são propriedade intelectual
-exclusiva de TundraLab e Gustavo Henrique Novaes Gomes (@GustaHerin).
+Este software, incluindo seu código-fonte, documentação, arquitetura, interface
+gráfica, scripts de empacotamento e ativos visuais ("Software"), é propriedade
+intelectual exclusiva de TundraLab e Gustavo Henrique Novaes Gomes (@GustaHerin).
 
-1. Código-fonte (Source-Available / Portfólio):
-   O código-fonte é disponibilizado exclusivamente para fins de leitura, avaliação
-   técnica e portfólio profissional. Nenhuma licença é concedida para copiar,
-   reproduzir, modificar, adaptar, criar obras derivadas, sublicenciar, distribuir,
-   publicar ou utilizar o código-fonte (no todo ou em parte) em outros projetos ou
-   produtos comerciais sem autorização prévia e expressa por escrito dos autores.
+1. Acesso ao Código-Fonte (Source-Available):
+   O código-fonte é disponibilizado publicamente exclusivamente para fins de
+   visualização, leitura, estudo e avaliação técnica (incluindo clonagem local
+   ou fork no GitHub estritamente para esses fins). Nenhuma permissão ou licença
+   é concedida para copiar, reproduzir, modificar, adaptar, criar obras
+   derivadas, sublicenciar, distribuir, publicar ou utilizar trechos do código
+   em outros projetos (comerciais ou não) sem autorização prévia e expressa
+   por escrito do titular.
 
-2. Aplicativo Compilado (Binários Oficiais):
-   Usuários finais têm permissão gratuita para baixar, instalar e executar os
-   pacotes oficiais compilados distribuídos diretamente nos Releases oficiais de
-   TundraLab/Custodia (.AppImage e .rpm) exclusivamente para uso pessoal ou
-   interno, sendo proibida a engenharia reversa, alteração ou redistribuição comercial.
+2. Uso dos Binários Oficiais (.AppImage e .rpm):
+   Usuários finais recebem uma licença gratuita, não exclusiva, intransferível
+   e revogável para baixar, instalar e executar os pacotes oficiais compilados
+   distribuídos nos canais oficiais de TundraLab/Custódia, exclusivamente para
+   uso pessoal ou uso interno em estações de trabalho próprias ou corporativas.
+   É proibida a redistribuição (gratuita ou comercial), revenda, oferta como
+   serviço (SaaS), descompilação, modificação ou engenharia reversa dos
+   binários, exceto nos limites expressamente permitidos pela legislação
+   aplicável.
 
-3. Isenção de Garantias:
-   O SOFTWARE É FORNECIDO "COMO ESTÁ", SEM GARANTIAS DE QUALQUER TIPO, EXPRESSAS
-   OU IMPLÍCITAS. EM NENHUMA HIPÓTESE OS AUTORES OU TITULARES DE DIREITOS SERÃO
-   RESPONSÁVEIS POR QUAISQUER DANOS DECORRENTES DO USO OU INCAPACIDADE DE USO DO SOFTWARE.
+3. Contribuições Externas:
+   Caso envie sugestões, relatórios de erro ou Pull Requests ao repositório, o
+   colaborador declara possuir os direitos sobre o material enviado e concede à
+   TundraLab e a Gustavo Henrique Novaes Gomes uma licença mundial, perpétua,
+   irrevogável, não exclusiva e isenta de royalties para usar, reproduzir,
+   modificar, distribuir e incorporar a contribuição ao Software, inclusive em
+   versões comerciais futuras.
+
+4. Marcas e Identidade Visual:
+   Esta licença não concede qualquer direito de uso sobre os nomes "TundraLab",
+   "Custódia", logotipos, ícones ou identidade visual associados ao projeto.
+
+5. Componentes de Terceiros:
+   O Software utiliza bibliotecas e componentes de terceiros, os quais
+   permanecem sujeitos às suas respectivas licenças originais.
+
+6. Isenção de Garantias e Limitação de Responsabilidade:
+   O SOFTWARE É FORNECIDO "COMO ESTÁ" ("AS IS"), SEM GARANTIAS DE QUALQUER
+   TIPO, EXPRESSAS OU IMPLÍCITAS, INCLUINDO, MAS NÃO SE LIMITANDO A, GARANTIAS
+   DE COMERCIALIZAÇÃO, ADEQUAÇÃO A UM PROPÓSITO ESPECÍFICO E NÃO VIOLAÇÃO. EM
+   NENHUMA HIPÓTESE OS AUTORES OU TITULARES DE DIREITOS SERÃO RESPONSÁVEIS POR
+   QUAISQUER DANOS DIRETOS, INDIRETOS, INCIDENTAIS, ESPECIAIS OU CONSEQUENCIAIS
+   DECORRENTES DO USO OU DA INCAPACIDADE DE USO DO SOFTWARE.
