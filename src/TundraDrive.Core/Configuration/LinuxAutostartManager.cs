@@ -68,13 +68,22 @@ public sealed class LinuxAutostartManager : IAutostartManager
 
     private static string ResolveExecCommand()
     {
+        var processPath = Environment.ProcessPath;
+        if (!string.IsNullOrWhiteSpace(processPath) &&
+            processPath.StartsWith("/opt/tundradrive/", StringComparison.Ordinal))
+        {
+            return File.Exists("/usr/bin/tundradrive")
+                ? "\"/usr/bin/tundradrive\""
+                : $"\"{processPath}\"";
+        }
+
         var appImagePath = Environment.GetEnvironmentVariable("APPIMAGE");
-        if (!string.IsNullOrWhiteSpace(appImagePath))
+        if (!string.IsNullOrWhiteSpace(appImagePath) &&
+            !appImagePath.Contains("/.cache/tundradrive-installer/", StringComparison.Ordinal))
         {
             return $"\"{appImagePath}\"";
         }
 
-        var processPath = Environment.ProcessPath;
         var entryAssemblyPath = Assembly.GetEntryAssembly()?.Location;
 
         if (!string.IsNullOrWhiteSpace(processPath) &&
