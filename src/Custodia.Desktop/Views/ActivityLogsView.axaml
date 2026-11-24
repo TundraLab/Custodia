@@ -22,28 +22,52 @@
                 Command="{Binding RefreshLogsCommand}" />
         <Button Classes="m3-danger-outlined"
                 Margin="0,0,0,4"
+                IsEnabled="{Binding !HasNoLogs}"
                 Content="{Binding Loc.ClearLogsButton}"
-                Command="{Binding ClearLogsCommand}" />
+                Command="{Binding RequestClearLogsCommand}" />
       </WrapPanel>
     </Grid>
 
-    <!-- Filter bar -->
-    <Grid Grid.Row="1" ColumnDefinitions="190,*,Auto" ColumnSpacing="10">
-      <ComboBox Grid.Column="0"
-                HorizontalAlignment="Stretch"
-                ItemsSource="{Binding SeverityFilterOptions}"
-                SelectedIndex="{Binding SelectedSeverityFilterIndex}" />
+    <!-- Filter bar and inline clear confirmation -->
+    <StackPanel Grid.Row="1" Spacing="10">
+      <Grid ColumnDefinitions="190,*,Auto" ColumnSpacing="10">
+        <ComboBox Grid.Column="0"
+                  HorizontalAlignment="Stretch"
+                  ItemsSource="{Binding SeverityFilterOptions}"
+                  SelectedIndex="{Binding SelectedSeverityFilterIndex}" />
 
-      <TextBox Grid.Column="1"
-               Watermark="{Binding Loc.FilterLogsWatermark}"
-               Text="{Binding SearchText}"
-               KeyDown="OnSearchBoxKeyDown" />
+        <TextBox Grid.Column="1"
+                 Watermark="{Binding Loc.FilterLogsWatermark}"
+                 Text="{Binding SearchText}"
+                 KeyDown="OnSearchBoxKeyDown" />
 
-      <Button Grid.Column="2"
-              Classes="m3-tonal"
-              Content="{Binding Loc.ApplyFilterButton}"
-              Command="{Binding RefreshLogsCommand}" />
-    </Grid>
+        <Button Grid.Column="2"
+                Classes="m3-tonal"
+                Content="{Binding Loc.ApplyFilterButton}"
+                Command="{Binding RefreshLogsCommand}" />
+      </Grid>
+
+      <Border Classes="m3-banner-error"
+              IsVisible="{Binding IsClearConfirmVisible}">
+        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+          <TextBlock Grid.Column="0"
+                     FontSize="12.5"
+                     FontWeight="Medium"
+                     Foreground="{DynamicResource M3OnErrorContainer}"
+                     VerticalAlignment="Center"
+                     TextWrapping="Wrap"
+                     Text="{Binding Loc.ClearLogsConfirmTitle}" />
+          <Button Grid.Column="1"
+                  Classes="m3-outlined m3-compact"
+                  Content="{Binding Loc.CancelButton}"
+                  Command="{Binding CancelClearLogsCommand}" />
+          <Button Grid.Column="2"
+                  Classes="m3-danger-tonal m3-compact"
+                  Content="{Binding Loc.ConfirmButton}"
+                  Command="{Binding ConfirmClearLogsCommand}" />
+        </Grid>
+      </Border>
+    </StackPanel>
 
     <!-- Inset grouped activity log list -->
     <Border Grid.Row="2" Classes="m3-grouped-list">

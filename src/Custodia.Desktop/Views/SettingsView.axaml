@@ -65,6 +65,30 @@
         </WrapPanel>
       </Grid>
 
+      <!-- M3 segmented category bar -->
+      <Border Classes="m3-segmented-track" HorizontalAlignment="Left">
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <Button Classes="m3-segmented"
+                  Classes.m3-seg-active="{Binding IsGeneralTab}"
+                  Content="{Binding Loc.SettingsTabGeneral}"
+                  Command="{Binding SelectGeneralTabCommand}" />
+          <Button Classes="m3-segmented"
+                  Classes.m3-seg-active="{Binding IsAccountsTab}"
+                  Content="{Binding Loc.SettingsTabAccounts}"
+                  Command="{Binding SelectAccountsTabCommand}" />
+          <Button Classes="m3-segmented"
+                  Classes.m3-seg-active="{Binding IsSyncTab}"
+                  Content="{Binding Loc.SettingsTabSync}"
+                  Command="{Binding SelectSyncTabCommand}" />
+          <Button Classes="m3-segmented"
+                  Classes.m3-seg-active="{Binding IsApiTab}"
+                  Content="{Binding Loc.SettingsTabApi}"
+                  Command="{Binding SelectApiTabCommand}" />
+        </StackPanel>
+      </Border>
+
+      <!-- TAB 1: General (Appearance, System, Notifications, Downloads & Memory) -->
+      <StackPanel Spacing="22" IsVisible="{Binding IsGeneralTab}">
       <!-- 1. Appearance & Language -->
       <StackPanel Spacing="8">
         <TextBlock Classes="m3-group-label" Margin="4,0,0,0" Text="{Binding Loc.AppearanceSectionTitle}" />
@@ -78,10 +102,26 @@
                   <TextBlock Classes="m3-meta" Text="{Binding Loc.LanguageHint}" TextWrapping="Wrap" />
                 </StackPanel>
                 <ComboBox Grid.Column="1"
-                          Width="200"
+                          Width="220"
                           VerticalAlignment="Center"
                           ItemsSource="{Binding LanguageOptions}"
                           SelectedIndex="{Binding SelectedLanguageIndex}" />
+              </Grid>
+            </Border>
+
+            <Border Classes="m3-divider" />
+
+            <Border Classes="m3-grouped-row">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                  <TextBlock FontSize="13.5" FontWeight="Medium" Foreground="{DynamicResource M3OnSurface}" Text="{Binding Loc.UiAccentLabel}" TextWrapping="Wrap" />
+                  <TextBlock Classes="m3-meta" Text="{Binding Loc.UiAccentHint}" TextWrapping="Wrap" />
+                </StackPanel>
+                <ComboBox Grid.Column="1"
+                          Width="220"
+                          VerticalAlignment="Center"
+                          ItemsSource="{Binding AccentOptions}"
+                          SelectedIndex="{Binding SelectedAccentIndex}" />
               </Grid>
             </Border>
 
@@ -252,9 +292,10 @@
           </StackPanel>
         </Border>
       </StackPanel>
+      </StackPanel>
 
-      <!-- 5. OAuth Credentials & Connected Accounts -->
-      <StackPanel Spacing="10" DragDrop.AllowDrop="True">
+      <!-- TAB 2: OAuth Credentials & Connected Accounts -->
+      <StackPanel Spacing="10" DragDrop.AllowDrop="True" IsVisible="{Binding IsAccountsTab}">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="4,0,0,0">
           <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
             <TextBlock Classes="m3-group-label" Text="{Binding Loc.CredentialsAccountsSectionTitle}" />
@@ -495,8 +536,8 @@
         </Border>
       </StackPanel>
 
-      <!-- 6. Sync Engine -->
-      <StackPanel Spacing="8">
+      <!-- TAB 3: Sync Engine -->
+      <StackPanel Spacing="8" IsVisible="{Binding IsSyncTab}">
         <TextBlock Classes="m3-group-label" Margin="4,0,0,0" Text="{Binding Loc.SyncEngineSectionTitle}" />
 
         <Border Classes="m3-grouped-list">
@@ -555,8 +596,8 @@
         </Border>
       </StackPanel>
 
-      <!-- 7. Local REST API -->
-      <StackPanel Spacing="8">
+      <!-- TAB 4: Local REST API -->
+      <StackPanel Spacing="8" IsVisible="{Binding IsApiTab}">
         <TextBlock Classes="m3-group-label" Margin="4,0,0,0" Text="{Binding Loc.LocalApiSectionTitle}" />
 
         <Border Classes="m3-grouped-list">

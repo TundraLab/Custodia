@@ -16,6 +16,11 @@ using TundraDrive.Desktop.Services;
 
 namespace TundraDrive.Desktop.ViewModels;
 
+public sealed record FileHubMoveDestinationItem(string TargetId, string DisplayName)
+{
+    public override string ToString() => DisplayName;
+}
+
 public sealed class FileHubBreadcrumbItem
 {
     public string FolderId { get; }
@@ -272,6 +277,20 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private string _newFolderName = string.Empty;
 
     [ObservableProperty]
+    private bool _isRenameOpen;
+
+    [ObservableProperty]
+    private string _renameNewName = string.Empty;
+
+    [ObservableProperty]
+    private bool _isMoveOpen;
+
+    [ObservableProperty]
+    private int _selectedMoveDestinationIndex;
+
+    public ObservableCollection<FileHubMoveDestinationItem> MoveDestinations { get; } = [];
+
+    [ObservableProperty]
     private bool _isCustomizeFolderOpen;
 
     [ObservableProperty]
@@ -303,6 +322,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(HasMultipleSelected))]
     [NotifyPropertyChangedFor(nameof(CanPreviewSelected))]
     [NotifyPropertyChangedFor(nameof(CanCustomizeSelectedFolder))]
+    [NotifyPropertyChangedFor(nameof(CanRenameSelected))]
+    [NotifyPropertyChangedFor(nameof(CanMoveSelected))]
     [NotifyPropertyChangedFor(nameof(CanDownloadSelected))]
     [NotifyPropertyChangedFor(nameof(CanOpenSelectedInDrive))]
     [NotifyPropertyChangedFor(nameof(CanTrashSelected))]
@@ -326,6 +347,10 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     public bool HasMultipleSelected => SelectedCount > 1;
     public bool CanPreviewSelected => SelectedCount <= 1 && SelectedItem is { IsFolder: false };
     public bool CanCustomizeSelectedFolder => SelectedCount <= 1 && SelectedItem is { IsFolder: true, IsInTrash: false };
+    public bool CanRenameSelected => !IsTrashView && SelectedCount <= 1 && SelectedItem is not null &&
+                                     (!string.IsNullOrWhiteSpace(SelectedItem.RemoteFileId) || SelectedItem.HasLocalFile);
+    public bool CanMoveSelected => !IsTrashView && GetEffectiveSelectedItems().Any(i =>
+                                     !string.IsNullOrWhiteSpace(i.RemoteFileId) || i.HasLocalFile);
     public bool CanDownloadSelected => GetEffectiveSelectedItems().Any(i => i.CanDownload);
     public bool CanOpenSelectedInDrive => SelectedItem is not null && !string.IsNullOrWhiteSpace(SelectedItem.RemoteFileId);
     public bool CanTrashSelected => !IsTrashView && GetEffectiveSelectedItems().Any(i => i.CanMoveToTrash);
@@ -521,9 +546,13 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasMultipleSelected));
         OnPropertyChanged(nameof(CanPreviewSelected));
         OnPropertyChanged(nameof(CanCustomizeSelectedFolder));
+        OnPropertyChanged(nameof(CanRenameSelected));
+        OnPropertyChanged(nameof(CanMoveSelected));
         OnPropertyChanged(nameof(CanDownloadSelected));
         OnPropertyChanged(nameof(CanOpenSelectedInDrive));
         OnPropertyChanged(nameof(CanTrashSelected));
+        OnPropertyChanged(nameof(CanRenameSelected));
+        OnPropertyChanged(nameof(CanMoveSelected));
         OnPropertyChanged(nameof(CanRestoreSelected));
         OnPropertyChanged(nameof(CanDeleteSelectedPermanently));
         OnPropertyChanged(nameof(SelectionCountDisplay));
@@ -544,6 +573,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(TrashTabDisplay));
         OnPropertyChanged(nameof(CanEmptyTrash));
         OnPropertyChanged(nameof(CanTrashSelected));
+        OnPropertyChanged(nameof(CanRenameSelected));
+        OnPropertyChanged(nameof(CanMoveSelected));
         OnPropertyChanged(nameof(CanRestoreSelected));
         OnPropertyChanged(nameof(CanDeleteSelectedPermanently));
         OnPropertyChanged(nameof(EmptyStateText));
@@ -1672,7 +1703,212 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        IsRenameOpen = false;
+        IsMoveOpen = false;
         OpenCreateFolder();
+    }
+
+    [RelayCommand]
+    private void OpenRename()
+    {
+        if (!CanRenameSelected || SelectedItem is null)
+        {
+            return;
+        }
+
+        IsCreateFolderOpen = false;
+        IsMoveOpen = false;
+        RenameNewName = !string.IsNullOrWhiteSpace(SelectedItem.OriginalFolderName)
+            ? SelectedItem.OriginalFolderName
+            : SelectedItem.Name;
+        IsRenameOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelRename() => IsRenameOpen = false;
+
+    [RelayCommand]
+    private async Task ConfirmRenameAsync()
+    {
+        if (!CanRenameSelected || SelectedItem is null)
+        {
+            IsRenameOpen = false;
+            return;
+        }
+
+        var trimmed = (RenameNewName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(trimmed) ||
+            trimmed.Contains('/') ||
+            trimmed.Contains('\\') ||
+            trimmed is "." or "..")
+        {
+            return;
+        }
+
+        var item = SelectedItem;
+        IsLoading = true;
+        try
+        {
+            if (IsDriveFilter && !string.IsNullOrWhiteSpace(item.RemoteFileId) && _driveClient.IsConnected)
+            {
+                await _driveClient.MoveFileAsync(item.RemoteFileId, newName: trimmed);
+            }
+            else if (item.HasLocalFile && !string.IsNullOrWhiteSpace(item.LocalFullPath))
+            {
+                var parentDir = Path.GetDirectoryName(item.LocalFullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                if (string.IsNullOrWhiteSpace(parentDir))
+                {
+                    return;
+                }
+
+                var destinationPath = Path.Combine(parentDir, trimmed);
+                if (item.IsFolder && Directory.Exists(item.LocalFullPath))
+                {
+                    Directory.Move(item.LocalFullPath, destinationPath);
+                }
+                else if (File.Exists(item.LocalFullPath))
+                {
+                    File.Move(item.LocalFullPath, destinationPath, overwrite: false);
+                }
+            }
+
+            IsRenameOpen = false;
+            StatusSummary = Loc.Format("RenamedSuccessFmt", trimmed);
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusSummary = Loc.Format("RenameErrorFmt", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void OpenMove()
+    {
+        if (!CanMoveSelected)
+        {
+            return;
+        }
+
+        IsCreateFolderOpen = false;
+        IsRenameOpen = false;
+
+        var selectedSet = GetEffectiveSelectedItems().ToHashSet();
+        MoveDestinations.Clear();
+
+        if (IsDriveFilter)
+        {
+            if (!string.Equals(_driveFolderId, "root", StringComparison.Ordinal))
+            {
+                MoveDestinations.Add(new FileHubMoveDestinationItem("root", Loc.Text("MyDriveLabel")));
+            }
+
+            if (_driveBreadcrumbs.Count >= 2)
+            {
+                var parentCrumb = _driveBreadcrumbs[^2];
+                if (!string.Equals(parentCrumb.FolderId, "root", StringComparison.Ordinal) &&
+                    !string.Equals(parentCrumb.FolderId, _driveFolderId, StringComparison.Ordinal))
+                {
+                    MoveDestinations.Add(new FileHubMoveDestinationItem(parentCrumb.FolderId, $".. / {parentCrumb.Name}"));
+                }
+            }
+
+            foreach (var folder in Files.Where(f => f.IsFolder && !selectedSet.Contains(f) && !string.IsNullOrWhiteSpace(f.RemoteFileId)))
+            {
+                MoveDestinations.Add(new FileHubMoveDestinationItem(folder.RemoteFileId, folder.Name));
+            }
+        }
+        else if (IsLocalFilter)
+        {
+            foreach (var folder in Files.Where(f => f.IsFolder && !selectedSet.Contains(f) && !string.IsNullOrWhiteSpace(f.LocalFullPath)))
+            {
+                MoveDestinations.Add(new FileHubMoveDestinationItem(folder.LocalFullPath!, folder.Name));
+            }
+        }
+
+        if (MoveDestinations.Count == 0)
+        {
+            return;
+        }
+
+        SelectedMoveDestinationIndex = 0;
+        IsMoveOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelMove() => IsMoveOpen = false;
+
+    [RelayCommand]
+    private async Task ConfirmMoveAsync()
+    {
+        if (!CanMoveSelected || SelectedMoveDestinationIndex < 0 || SelectedMoveDestinationIndex >= MoveDestinations.Count)
+        {
+            IsMoveOpen = false;
+            return;
+        }
+
+        var destination = MoveDestinations[SelectedMoveDestinationIndex];
+        var targets = GetEffectiveSelectedItems();
+        if (targets.Count == 0)
+        {
+            IsMoveOpen = false;
+            return;
+        }
+
+        IsLoading = true;
+        try
+        {
+            var movedCount = 0;
+            foreach (var item in targets)
+            {
+                if (IsDriveFilter && !string.IsNullOrWhiteSpace(item.RemoteFileId) && _driveClient.IsConnected)
+                {
+                    if (string.Equals(item.RemoteFileId, destination.TargetId, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    await _driveClient.MoveFileAsync(item.RemoteFileId, destinationParentFolderId: destination.TargetId);
+                    movedCount++;
+                }
+                else if (IsLocalFilter && item.HasLocalFile && !string.IsNullOrWhiteSpace(item.LocalFullPath) && Directory.Exists(destination.TargetId))
+                {
+                    var itemName = Path.GetFileName(item.LocalFullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                    var targetPath = Path.Combine(destination.TargetId, itemName);
+                    if (string.Equals(item.LocalFullPath, targetPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    if (item.IsFolder && Directory.Exists(item.LocalFullPath))
+                    {
+                        Directory.Move(item.LocalFullPath, targetPath);
+                        movedCount++;
+                    }
+                    else if (File.Exists(item.LocalFullPath))
+                    {
+                        File.Move(item.LocalFullPath, targetPath, overwrite: false);
+                        movedCount++;
+                    }
+                }
+            }
+
+            IsMoveOpen = false;
+            StatusSummary = Loc.Format("MovedSuccessFmt", movedCount, destination.DisplayName);
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusSummary = Loc.Format("MoveErrorFmt", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     [RelayCommand]

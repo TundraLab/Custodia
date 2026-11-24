@@ -221,6 +221,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void OpenAccountSettings()
     {
+        SettingsVm.SelectedSettingsTabIndex = 1;
         SelectedNavigationIndex = 4;
     }
 

@@ -2,6 +2,17 @@
 
 Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [3.0.1] - 2026-11-24
+
+### Adicionado
+- **Seletor de cor de destaque:** agora você pode alternar o visual do Custódia entre **Azul** e **Verde Esmeralda** diretamente em **Configurações**.
+- **Renomear e mover em Meus Arquivos:** novos atalhos na barra de ações e no menu de contexto para renomear itens ou movê-los para outra pasta, tanto no Google Drive quanto nas pastas locais.
+- **Confirmação antes de ações destrutivas:** aviso de confirmação antes de remover uma pasta sincronizada ou limpar todo o histórico de logs de atividade.
+
+### Melhorado
+- **Configurações organizadas por categorias:** divisão em abas (**Geral**, **Contas**, **Sincronização** e **API Local**) com blocos mais enxutos e fáceis de navegar.
+- **Painel de atualizações ajustado:** rolagem própria no quadro de novidades e quebra de linha nos avisos de atualização na aba **Sobre**.
+
 ## [3.0.0] - 2026-11-24
 
 ### Alterado

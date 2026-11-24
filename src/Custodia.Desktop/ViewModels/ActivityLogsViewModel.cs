@@ -271,6 +271,9 @@ public sealed partial class ActivityLogsViewModel : ViewModelBase
     private bool _hasNoLogs = true;
 
     [ObservableProperty]
+    private bool _isClearConfirmVisible;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedLog))]
     [NotifyPropertyChangedFor(nameof(CanOpenSelectedTarget))]
     private ActivityLogItemViewModel? _selectedLog;
@@ -370,8 +373,28 @@ public sealed partial class ActivityLogsViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void RequestClearLogs()
+    {
+        if (!HasNoLogs)
+        {
+            IsClearConfirmVisible = true;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelClearLogs() => IsClearConfirmVisible = false;
+
+    [RelayCommand]
+    private async Task ConfirmClearLogsAsync()
+    {
+        IsClearConfirmVisible = false;
+        await ClearLogsAsync();
+    }
+
+    [RelayCommand]
     private async Task ClearLogsAsync()
     {
+        IsClearConfirmVisible = false;
         await _repository.ClearActivityLogsAsync();
         Logs.Clear();
         HasNoLogs = true;

@@ -183,6 +183,57 @@
         </Grid>
       </Border>
 
+      <!-- Inline rename bar -->
+      <Border Classes="m3-card"
+              Padding="12,10"
+              IsVisible="{Binding IsRenameOpen}">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+          <TextBlock Grid.Column="0"
+                     FontSize="12.5"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource M3OnSurface}"
+                     VerticalAlignment="Center"
+                     Text="{Binding Loc.RenameTitle}" />
+          <TextBox Grid.Column="1"
+                   Watermark="{Binding Loc.RenamePlaceholder}"
+                   Text="{Binding RenameNewName}" />
+          <Button Grid.Column="2"
+                  Classes="m3-filled m3-compact"
+                  Content="{Binding Loc.RenameConfirmButton}"
+                  Command="{Binding ConfirmRenameCommand}" />
+          <Button Grid.Column="3"
+                  Classes="m3-outlined m3-compact"
+                  Content="{Binding Loc.CancelButton}"
+                  Command="{Binding CancelRenameCommand}" />
+        </Grid>
+      </Border>
+
+      <!-- Inline move-to-folder bar -->
+      <Border Classes="m3-card"
+              Padding="12,10"
+              IsVisible="{Binding IsMoveOpen}">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+          <TextBlock Grid.Column="0"
+                     FontSize="12.5"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource M3OnSurface}"
+                     VerticalAlignment="Center"
+                     Text="{Binding Loc.MoveTitle}" />
+          <ComboBox Grid.Column="1"
+                    HorizontalAlignment="Stretch"
+                    ItemsSource="{Binding MoveDestinations}"
+                    SelectedIndex="{Binding SelectedMoveDestinationIndex}" />
+          <Button Grid.Column="2"
+                  Classes="m3-filled m3-compact"
+                  Content="{Binding Loc.MoveConfirmButton}"
+                  Command="{Binding ConfirmMoveCommand}" />
+          <Button Grid.Column="3"
+                  Classes="m3-outlined m3-compact"
+                  Content="{Binding Loc.CancelButton}"
+                  Command="{Binding CancelMoveCommand}" />
+        </Grid>
+      </Border>
+
       <!-- Inline folder customization panel (alias, color, and symbol) -->
       <Border Classes="m3-card"
               Padding="16,14"
@@ -333,6 +384,16 @@
                     Content="{Binding Loc.OpenInDriveButton}"
                     IsEnabled="{Binding CanOpenSelectedInDrive}"
                     Command="{Binding OpenSelectedInDriveCommand}" />
+            <Button Classes="m3-outlined m3-compact"
+                    Margin="0,0,6,0"
+                    Content="{Binding Loc.RenameButton}"
+                    IsEnabled="{Binding CanRenameSelected}"
+                    Command="{Binding OpenRenameCommand}" />
+            <Button Classes="m3-outlined m3-compact"
+                    Margin="0,0,6,0"
+                    Content="{Binding Loc.MoveToFolderButton}"
+                    IsEnabled="{Binding CanMoveSelected}"
+                    Command="{Binding OpenMoveCommand}" />
             <Button Classes="m3-danger-outlined m3-compact"
                     Margin="0,0,6,0"
                     Content="{Binding Loc.MoveToTrashButton}"
@@ -473,6 +534,12 @@
                   <MenuItem Header="{Binding Loc.CustomizeFolderButton}"
                             IsVisible="{Binding CanCustomizeSelectedFolder}"
                             Command="{Binding OpenCustomizeFolderCommand}" />
+                  <MenuItem Header="{Binding Loc.RenameButton}"
+                            IsVisible="{Binding CanRenameSelected}"
+                            Command="{Binding OpenRenameCommand}" />
+                  <MenuItem Header="{Binding Loc.MoveToFolderButton}"
+                            IsVisible="{Binding CanMoveSelected}"
+                            Command="{Binding OpenMoveCommand}" />
                   <MenuItem Header="{Binding SelectedItem.OpenInDriveLabel, FallbackValue=''}"
                             IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
                             Command="{Binding SelectedItem.OpenInDriveCommand}" />
@@ -588,6 +655,12 @@
                 <MenuItem Header="{Binding Loc.CustomizeFolderButton}"
                           IsVisible="{Binding CanCustomizeSelectedFolder}"
                           Command="{Binding OpenCustomizeFolderCommand}" />
+                <MenuItem Header="{Binding Loc.RenameButton}"
+                          IsVisible="{Binding CanRenameSelected}"
+                          Command="{Binding OpenRenameCommand}" />
+                <MenuItem Header="{Binding Loc.MoveToFolderButton}"
+                          IsVisible="{Binding CanMoveSelected}"
+                          Command="{Binding OpenMoveCommand}" />
                 <MenuItem Header="{Binding SelectedItem.OpenInDriveLabel, FallbackValue=''}"
                           IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
                           Command="{Binding SelectedItem.OpenInDriveCommand}" />

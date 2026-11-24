@@ -277,4 +277,24 @@ public interface ILocalizationService : INotifyPropertyChanged
     string NotificationsSectionTitle { get; }
     string StoragePerformanceSectionTitle { get; }
     string ApiEndpointsExpanderTitle { get; }
+
+    string UiAccentLabel { get; }
+    string UiAccentHint { get; }
+    string UiAccentBlueOption { get; }
+    string UiAccentEmeraldOption { get; }
+    string SettingsTabGeneral { get; }
+    string SettingsTabAccounts { get; }
+    string SettingsTabSync { get; }
+    string SettingsTabApi { get; }
+
+    string RenameButton { get; }
+    string RenameTitle { get; }
+    string RenamePlaceholder { get; }
+    string RenameConfirmButton { get; }
+    string MoveToFolderButton { get; }
+    string MoveTitle { get; }
+    string MoveDestinationLabel { get; }
+    string MoveConfirmButton { get; }
+
+    string ClearLogsConfirmTitle { get; }
 }

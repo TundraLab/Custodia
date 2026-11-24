@@ -144,14 +144,38 @@
           <Button Classes="m3-danger-outlined m3-compact"
                   IsEnabled="{Binding HasSelectedFolder}"
                   Content="{Binding Loc.RemoveButton}"
-                  Command="{Binding RemoveSelectedFolderCommand}" />
+                  Command="{Binding RequestRemoveSelectedFolderCommand}" />
         </WrapPanel>
       </Border>
 
-      <Grid Grid.Row="1">
-        <Border Classes="m3-card" VerticalAlignment="Top" IsVisible="{Binding HasNoFolders}">
-          <TextBlock Classes="m3-subtitle" TextWrapping="Wrap" Text="{Binding Loc.EmptyFoldersHint}" />
+      <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="10">
+        <!-- Inline remove folder confirmation banner -->
+        <Border Grid.Row="0"
+                Classes="m3-banner-error"
+                IsVisible="{Binding IsRemoveConfirmVisible}">
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <TextBlock Grid.Column="0"
+                       FontSize="12.5"
+                       FontWeight="Medium"
+                       Foreground="{DynamicResource M3OnErrorContainer}"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap"
+                       Text="{Binding RemoveConfirmPromptText}" />
+            <Button Grid.Column="1"
+                    Classes="m3-outlined m3-compact"
+                    Content="{Binding Loc.CancelButton}"
+                    Command="{Binding CancelRemoveFolderCommand}" />
+            <Button Grid.Column="2"
+                    Classes="m3-danger-tonal m3-compact"
+                    Content="{Binding Loc.ConfirmButton}"
+                    Command="{Binding ConfirmRemoveFolderCommand}" />
+          </Grid>
         </Border>
+
+        <Grid Grid.Row="1">
+          <Border Classes="m3-card" VerticalAlignment="Top" IsVisible="{Binding HasNoFolders}">
+            <TextBlock Classes="m3-subtitle" TextWrapping="Wrap" Text="{Binding Loc.EmptyFoldersHint}" />
+          </Border>
 
         <ListBox Classes="m3-cards"
                  IsVisible="{Binding !HasNoFolders}"
@@ -365,6 +389,7 @@
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
+        </Grid>
       </Grid>
     </Grid>
 

@@ -8,6 +8,7 @@ public sealed record FolderAppearanceOverride(
 public sealed class AppSettings
 {
     public string Language { get; set; } = "pt-BR";
+    public string UiAccent { get; set; } = "blue";
     public string ActiveAccountId { get; set; } = "default";
     public int UiScalePercent { get; set; } = 100;
     public bool StartOnBoot { get; set; }

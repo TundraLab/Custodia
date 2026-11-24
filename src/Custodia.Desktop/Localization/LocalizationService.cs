@@ -545,7 +545,29 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["SystemBehaviorSectionTitle"] = "Sistema e Atualizações",
         ["NotificationsSectionTitle"] = "Notificações",
         ["StoragePerformanceSectionTitle"] = "Downloads e Memória",
-        ["ApiEndpointsExpanderTitle"] = "Endpoints da API disponíveis"
+        ["ApiEndpointsExpanderTitle"] = "Endpoints da API disponíveis",
+        ["UiAccentLabel"] = "Cor de destaque",
+        ["UiAccentHint"] = "Alterna o destaque principal entre Azul (M3 Blue) e Verde Esmeralda.",
+        ["UiAccentBlueOption"] = "Azul (M3 Blue)",
+        ["UiAccentEmeraldOption"] = "Verde Esmeralda (Emerald)",
+        ["SettingsTabGeneral"] = "Geral",
+        ["SettingsTabAccounts"] = "Contas",
+        ["SettingsTabSync"] = "Sincronização",
+        ["SettingsTabApi"] = "API Local",
+        ["RenameButton"] = "Renomear",
+        ["RenameTitle"] = "Renomear item",
+        ["RenamePlaceholder"] = "Digite o novo nome...",
+        ["RenameConfirmButton"] = "Salvar nome",
+        ["MoveToFolderButton"] = "Mover",
+        ["MoveTitle"] = "Mover para pasta",
+        ["MoveDestinationLabel"] = "Pasta de destino",
+        ["MoveConfirmButton"] = "Mover aqui",
+        ["RenamedSuccessFmt"] = "Renomeado para \"{0}\".",
+        ["RenameErrorFmt"] = "Não foi possível renomear: {0}",
+        ["MovedSuccessFmt"] = "{0} item(ns) movido(s) para {1}.",
+        ["MoveErrorFmt"] = "Não foi possível mover: {0}",
+        ["RemoveFolderConfirmFmt"] = "Remover a pasta \"{0}\" da sincronização? Os arquivos locais e na nuvem não serão apagados.",
+        ["ClearLogsConfirmTitle"] = "Limpar todo o histórico de logs de atividade?"
     };
 
     private static readonly IReadOnlyDictionary<string, string> EnUs = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -1087,7 +1109,29 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["SystemBehaviorSectionTitle"] = "System & Updates",
         ["NotificationsSectionTitle"] = "Notifications",
         ["StoragePerformanceSectionTitle"] = "Downloads & Memory",
-        ["ApiEndpointsExpanderTitle"] = "Available API endpoints"
+        ["ApiEndpointsExpanderTitle"] = "Available API endpoints",
+        ["UiAccentLabel"] = "Accent color",
+        ["UiAccentHint"] = "Switches the primary accent between M3 Blue and Emerald Green.",
+        ["UiAccentBlueOption"] = "Blue (M3 Blue)",
+        ["UiAccentEmeraldOption"] = "Emerald Green",
+        ["SettingsTabGeneral"] = "General",
+        ["SettingsTabAccounts"] = "Accounts",
+        ["SettingsTabSync"] = "Sync",
+        ["SettingsTabApi"] = "Local API",
+        ["RenameButton"] = "Rename",
+        ["RenameTitle"] = "Rename item",
+        ["RenamePlaceholder"] = "Enter new name...",
+        ["RenameConfirmButton"] = "Save name",
+        ["MoveToFolderButton"] = "Move",
+        ["MoveTitle"] = "Move to folder",
+        ["MoveDestinationLabel"] = "Destination folder",
+        ["MoveConfirmButton"] = "Move here",
+        ["RenamedSuccessFmt"] = "Renamed to \"{0}\".",
+        ["RenameErrorFmt"] = "Could not rename: {0}",
+        ["MovedSuccessFmt"] = "Moved {0} item(s) to {1}.",
+        ["MoveErrorFmt"] = "Could not move: {0}",
+        ["RemoveFolderConfirmFmt"] = "Remove folder \"{0}\" from sync? Local and cloud files will not be deleted.",
+        ["ClearLogsConfirmTitle"] = "Clear all activity log history?"
     };
 
     public string CurrentLanguage { get; private set; } = "pt-BR";
@@ -1404,6 +1448,26 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string NotificationsSectionTitle => Text("NotificationsSectionTitle");
     public string StoragePerformanceSectionTitle => Text("StoragePerformanceSectionTitle");
     public string ApiEndpointsExpanderTitle => Text("ApiEndpointsExpanderTitle");
+
+    public string UiAccentLabel => Text("UiAccentLabel");
+    public string UiAccentHint => Text("UiAccentHint");
+    public string UiAccentBlueOption => Text("UiAccentBlueOption");
+    public string UiAccentEmeraldOption => Text("UiAccentEmeraldOption");
+    public string SettingsTabGeneral => Text("SettingsTabGeneral");
+    public string SettingsTabAccounts => Text("SettingsTabAccounts");
+    public string SettingsTabSync => Text("SettingsTabSync");
+    public string SettingsTabApi => Text("SettingsTabApi");
+
+    public string RenameButton => Text("RenameButton");
+    public string RenameTitle => Text("RenameTitle");
+    public string RenamePlaceholder => Text("RenamePlaceholder");
+    public string RenameConfirmButton => Text("RenameConfirmButton");
+    public string MoveToFolderButton => Text("MoveToFolderButton");
+    public string MoveTitle => Text("MoveTitle");
+    public string MoveDestinationLabel => Text("MoveDestinationLabel");
+    public string MoveConfirmButton => Text("MoveConfirmButton");
+
+    public string ClearLogsConfirmTitle => Text("ClearLogsConfirmTitle");
 
     public string TransferDetailLocalPath => Text("TransferDetailLocalPath");
     public string TransferDetailRelativePath => Text("TransferDetailRelativePath");

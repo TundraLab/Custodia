@@ -149,7 +149,34 @@ public sealed partial class SettingsViewModel : ViewModelBase
     public ILocalizationService Loc { get; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsGeneralTab))]
+    [NotifyPropertyChangedFor(nameof(IsAccountsTab))]
+    [NotifyPropertyChangedFor(nameof(IsSyncTab))]
+    [NotifyPropertyChangedFor(nameof(IsApiTab))]
+    private int _selectedSettingsTabIndex;
+
+    public bool IsGeneralTab => SelectedSettingsTabIndex == 0;
+    public bool IsAccountsTab => SelectedSettingsTabIndex == 1;
+    public bool IsSyncTab => SelectedSettingsTabIndex == 2;
+    public bool IsApiTab => SelectedSettingsTabIndex == 3;
+
+    [RelayCommand]
+    private void SelectGeneralTab() => SelectedSettingsTabIndex = 0;
+
+    [RelayCommand]
+    private void SelectAccountsTab() => SelectedSettingsTabIndex = 1;
+
+    [RelayCommand]
+    private void SelectSyncTab() => SelectedSettingsTabIndex = 2;
+
+    [RelayCommand]
+    private void SelectApiTab() => SelectedSettingsTabIndex = 3;
+
+    [ObservableProperty]
     private int _selectedLanguageIndex;
+
+    [ObservableProperty]
+    private int _selectedAccentIndex;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UiScaleDisplay))]
@@ -370,6 +397,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         "English (US)"
     ];
 
+    public ObservableCollection<string> AccentOptions { get; } = [];
     public ObservableCollection<string> ConflictPolicies { get; } = [];
     public ObservableCollection<string> UpdateFrequencies { get; } = [];
     public ObservableCollection<string> NotificationSoundOptions { get; } = [];
@@ -421,6 +449,12 @@ public sealed partial class SettingsViewModel : ViewModelBase
         Loc.SetLanguage(code);
     }
 
+    partial void OnSelectedAccentIndexChanged(int value)
+    {
+        var accent = value == 1 ? ThemeAccentService.EmeraldAccentId : ThemeAccentService.BlueAccentId;
+        ThemeAccentService.ApplyAccent(accent);
+    }
+
     partial void OnUiScalePercentChanged(int value)
     {
         var clamped = Math.Clamp(value, 100, 300);
@@ -467,6 +501,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
     {
         var current = _settingsService.Current;
         SelectedLanguageIndex = string.Equals(current.Language, "en-US", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        SelectedAccentIndex = ThemeAccentService.NormalizeAccent(current.UiAccent) == ThemeAccentService.EmeraldAccentId ? 1 : 0;
+        ThemeAccentService.ApplyAccent(current.UiAccent);
         UiScalePercent = Math.Clamp(current.UiScalePercent, 100, 300);
         StartOnBoot = current.StartOnBoot || _autostartManager.IsEnabled();
         NotificationsEnabled = current.NotificationsEnabled;
@@ -925,6 +961,12 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     private void RebuildLocalizedLists()
     {
+        var savedAccentIndex = Math.Max(0, SelectedAccentIndex);
+        AccentOptions.Clear();
+        AccentOptions.Add(Loc.Text("UiAccentBlueOption"));
+        AccentOptions.Add(Loc.Text("UiAccentEmeraldOption"));
+        SelectedAccentIndex = Math.Clamp(savedAccentIndex, 0, AccentOptions.Count - 1);
+
         var savedIndex = Math.Max(0, SelectedConflictPolicyIndex);
         ConflictPolicies.Clear();
         ConflictPolicies.Add(Loc.Text("ConflictKeepNewest"));
@@ -997,6 +1039,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
             var updated = new AppSettings
             {
                 Language = languageCode,
+                UiAccent = SelectedAccentIndex == 1 ? ThemeAccentService.EmeraldAccentId : ThemeAccentService.BlueAccentId,
                 ActiveAccountId = _settingsService.Current.ActiveAccountId,
                 UiScalePercent = Math.Clamp(UiScalePercent, 100, 300),
                 StartOnBoot = StartOnBoot,

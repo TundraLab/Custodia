@@ -40,6 +40,7 @@ public partial class App : Application
 
             var mainVm = Services.GetRequiredService<MainWindowViewModel>();
             var settingsService = Services.GetRequiredService<IAppSettingsService>();
+            ThemeAccentService.ApplyAccent(settingsService.Current.UiAccent);
             var memoryCleaner = Services.GetRequiredService<MemoryCleanerService>();
             var mainWindow = new MainWindow
             {

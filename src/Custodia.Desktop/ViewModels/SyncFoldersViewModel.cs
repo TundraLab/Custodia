@@ -300,7 +300,7 @@ public sealed partial class SyncFolderItemViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private Task RemoveAsync() => _parent.RemoveFolderAsync(Id);
+    private void Remove() => _parent.RequestRemoveFolder(Id);
 }
 
 public sealed partial class SyncFoldersViewModel : ViewModelBase
@@ -370,6 +370,26 @@ public sealed partial class SyncFoldersViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _trashLegendText = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRemoveConfirmVisible))]
+    [NotifyPropertyChangedFor(nameof(RemoveConfirmPromptText))]
+    private string? _pendingRemoveFolderId;
+
+    public bool IsRemoveConfirmVisible => !string.IsNullOrWhiteSpace(PendingRemoveFolderId);
+    public string RemoveConfirmPromptText
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(PendingRemoveFolderId))
+            {
+                return string.Empty;
+            }
+
+            var folder = Folders.FirstOrDefault(f => string.Equals(f.Id, PendingRemoveFolderId, StringComparison.Ordinal));
+            return Loc.Format("RemoveFolderConfirmFmt", folder?.DisplayTitle ?? string.Empty);
+        }
+    }
 
     public bool HasSelectedFolder => SelectedFolder is not null;
     public string SelectedPauseLabel => SelectedFolder?.PauseButtonLabel ?? Loc.Text("Pause");
@@ -540,6 +560,34 @@ public sealed partial class SyncFoldersViewModel : ViewModelBase
     private void CustomizeSelectedFolder()
     {
         SelectedFolder?.ToggleCustomizeCommand.Execute(null);
+    }
+
+    [RelayCommand]
+    private void RequestRemoveSelectedFolder()
+    {
+        if (SelectedFolder is not null)
+        {
+            PendingRemoveFolderId = SelectedFolder.Id;
+        }
+    }
+
+    public void RequestRemoveFolder(string folderId)
+    {
+        PendingRemoveFolderId = folderId;
+    }
+
+    [RelayCommand]
+    private void CancelRemoveFolder() => PendingRemoveFolderId = null;
+
+    [RelayCommand]
+    private async Task ConfirmRemoveFolderAsync()
+    {
+        var folderId = PendingRemoveFolderId;
+        PendingRemoveFolderId = null;
+        if (!string.IsNullOrWhiteSpace(folderId))
+        {
+            await RemoveFolderAsync(folderId);
+        }
     }
 
     [RelayCommand]
