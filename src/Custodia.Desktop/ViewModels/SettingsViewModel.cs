@@ -451,8 +451,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     partial void OnSelectedAccentIndexChanged(int value)
     {
-        var accent = value == 1 ? ThemeAccentService.EmeraldAccentId : ThemeAccentService.BlueAccentId;
-        ThemeAccentService.ApplyAccent(accent);
+        ThemeAccentService.ApplyAccent(ThemeAccentService.GetAccentIdByIndex(value));
     }
 
     partial void OnUiScalePercentChanged(int value)
@@ -501,7 +500,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     {
         var current = _settingsService.Current;
         SelectedLanguageIndex = string.Equals(current.Language, "en-US", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-        SelectedAccentIndex = ThemeAccentService.NormalizeAccent(current.UiAccent) == ThemeAccentService.EmeraldAccentId ? 1 : 0;
+        SelectedAccentIndex = ThemeAccentService.GetAccentIndex(current.UiAccent);
         ThemeAccentService.ApplyAccent(current.UiAccent);
         UiScalePercent = Math.Clamp(current.UiScalePercent, 100, 300);
         StartOnBoot = current.StartOnBoot || _autostartManager.IsEnabled();
@@ -965,6 +964,10 @@ public sealed partial class SettingsViewModel : ViewModelBase
         AccentOptions.Clear();
         AccentOptions.Add(Loc.Text("UiAccentBlueOption"));
         AccentOptions.Add(Loc.Text("UiAccentEmeraldOption"));
+        AccentOptions.Add(Loc.Text("UiAccentPurpleOption"));
+        AccentOptions.Add(Loc.Text("UiAccentAmberOption"));
+        AccentOptions.Add(Loc.Text("UiAccentRoseOption"));
+        AccentOptions.Add(Loc.Text("UiAccentCyanOption"));
         SelectedAccentIndex = Math.Clamp(savedAccentIndex, 0, AccentOptions.Count - 1);
 
         var savedIndex = Math.Max(0, SelectedConflictPolicyIndex);
@@ -1039,7 +1042,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
             var updated = new AppSettings
             {
                 Language = languageCode,
-                UiAccent = SelectedAccentIndex == 1 ? ThemeAccentService.EmeraldAccentId : ThemeAccentService.BlueAccentId,
+                UiAccent = ThemeAccentService.GetAccentIdByIndex(SelectedAccentIndex),
                 ActiveAccountId = _settingsService.Current.ActiveAccountId,
                 UiScalePercent = Math.Clamp(UiScalePercent, 100, 300),
                 StartOnBoot = StartOnBoot,

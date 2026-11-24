@@ -112,6 +112,10 @@ public sealed class HeadlessUiAndFeatureTests
         Assert.True(Application.Current!.Resources.TryGetValue("M3Primary", out var emeraldObj));
         Assert.Equal(Color.Parse("#6DD58C"), ((ISolidColorBrush)emeraldObj!).Color);
 
+        ThemeAccentService.ApplyAccent(ThemeAccentService.PurpleAccentId);
+        Assert.True(Application.Current!.Resources.TryGetValue("M3Primary", out var purpleObj));
+        Assert.Equal(Color.Parse("#D0BCFF"), ((ISolidColorBrush)purpleObj!).Color);
+
         ThemeAccentService.ApplyAccent(ThemeAccentService.BlueAccentId);
         Assert.True(Application.Current!.Resources.TryGetValue("M3Primary", out var blueObj));
         Assert.Equal(Color.Parse("#A8C7FA"), ((ISolidColorBrush)blueObj!).Color);
@@ -143,9 +147,10 @@ public sealed class HeadlessUiAndFeatureTests
         vm.SelectApiTabCommand.Execute(null);
         Assert.True(vm.IsApiTab);
 
-        vm.SelectedAccentIndex = 1;
+        Assert.Equal(6, vm.AccentOptions.Count);
+        vm.SelectedAccentIndex = 5;
         await vm.SaveSettingsCommand.ExecuteAsync(null);
-        Assert.Equal(ThemeAccentService.EmeraldAccentId, settingsService.Current.UiAccent);
+        Assert.Equal(ThemeAccentService.CyanAccentId, settingsService.Current.UiAccent);
     }
 
     [Fact]

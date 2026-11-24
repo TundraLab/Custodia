@@ -96,6 +96,9 @@ public interface ILocalizationService : INotifyPropertyChanged
     string ColOrigin { get; }
     string FileHubFilterDrive { get; }
     string FileHubFilterLocal { get; }
+    string FileHubFoldersSection { get; }
+    string FileHubFilesSection { get; }
+    string ClearSearchTooltip { get; }
     string OpenTrashTooltip { get; }
     string TrashBannerTitle { get; }
     string MappedFoldersButton { get; }
@@ -282,6 +285,10 @@ public interface ILocalizationService : INotifyPropertyChanged
     string UiAccentHint { get; }
     string UiAccentBlueOption { get; }
     string UiAccentEmeraldOption { get; }
+    string UiAccentPurpleOption { get; }
+    string UiAccentAmberOption { get; }
+    string UiAccentRoseOption { get; }
+    string UiAccentCyanOption { get; }
     string SettingsTabGeneral { get; }
     string SettingsTabAccounts { get; }
     string SettingsTabSync { get; }

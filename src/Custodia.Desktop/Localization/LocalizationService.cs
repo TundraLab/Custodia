@@ -83,9 +83,12 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["DownloadedToFmt"] = "Arquivo salvo em: {0}",
         ["FileHubEmptyFolder"] = "Esta pasta está vazia.",
         ["ColOrigin"] = "Origem",
-        ["FileHubFilterDrive"] = "Meus Arquivos",
-        ["FileHubFilterLocal"] = "Sincronizados localmente",
+        ["FileHubFilterDrive"] = "Google Drive",
+        ["FileHubFilterLocal"] = "Sincronizados",
         ["FileHubFilterTrash"] = "Lixeira",
+        ["FileHubFoldersSection"] = "Pastas",
+        ["FileHubFilesSection"] = "Arquivos",
+        ["ClearSearchTooltip"] = "Limpar busca",
         ["BackButton"] = "Voltar",
         ["TrashTabButton"] = "Lixeira",
         ["OpenTrashTooltip"] = "Abrir Lixeira do Google Drive",
@@ -142,7 +145,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["EmptyFoldersHint"] = "Nenhuma pasta mapeada ainda. Clique em \"Mapear Pasta Local\" ou explore o \"Navegador Remoto do Drive\".",
         ["AllFoldersPausedHint"] = "Todas as pastas mapeadas estão pausadas. Clique em \"Retomar\" em uma pasta para sincronizar.",
 
-        ["MyDriveLabel"] = "Meus Arquivos",
+        ["MyDriveLabel"] = "Meu Drive",
         ["SearchRemoteWatermark"] = "Pesquisar pastas ou arquivos no Google Drive...",
         ["SearchButton"] = "Buscar",
         ["SyncSelectedFolderButton"] = "Sincronizar Pasta Selecionada",
@@ -547,9 +550,13 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["StoragePerformanceSectionTitle"] = "Downloads e Memória",
         ["ApiEndpointsExpanderTitle"] = "Endpoints da API disponíveis",
         ["UiAccentLabel"] = "Cor de destaque",
-        ["UiAccentHint"] = "Alterna o destaque principal entre Azul (M3 Blue) e Verde Esmeralda.",
-        ["UiAccentBlueOption"] = "Azul (M3 Blue)",
-        ["UiAccentEmeraldOption"] = "Verde Esmeralda (Emerald)",
+        ["UiAccentHint"] = "Escolha a cor principal de botões e destaques.",
+        ["UiAccentBlueOption"] = "Azul",
+        ["UiAccentEmeraldOption"] = "Verde Esmeralda",
+        ["UiAccentPurpleOption"] = "Roxo",
+        ["UiAccentAmberOption"] = "Âmbar",
+        ["UiAccentRoseOption"] = "Rosa",
+        ["UiAccentCyanOption"] = "Ciano",
         ["SettingsTabGeneral"] = "Geral",
         ["SettingsTabAccounts"] = "Contas",
         ["SettingsTabSync"] = "Sincronização",
@@ -647,9 +654,12 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["DownloadedToFmt"] = "Saved to: {0}",
         ["FileHubEmptyFolder"] = "This folder is empty.",
         ["ColOrigin"] = "Origin",
-        ["FileHubFilterDrive"] = "My Files",
-        ["FileHubFilterLocal"] = "Synced locally",
+        ["FileHubFilterDrive"] = "Google Drive",
+        ["FileHubFilterLocal"] = "Synced",
         ["FileHubFilterTrash"] = "Trash",
+        ["FileHubFoldersSection"] = "Folders",
+        ["FileHubFilesSection"] = "Files",
+        ["ClearSearchTooltip"] = "Clear search",
         ["BackButton"] = "Back",
         ["TrashTabButton"] = "Trash",
         ["OpenTrashTooltip"] = "Open Google Drive Trash",
@@ -706,7 +716,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["EmptyFoldersHint"] = "No folders mapped yet. Click \"Map Local Folder\" or explore \"Remote Drive Browser\".",
         ["AllFoldersPausedHint"] = "All mapped folders are currently paused. Click \"Resume\" on a folder to synchronize.",
 
-        ["MyDriveLabel"] = "My Files",
+        ["MyDriveLabel"] = "My Drive",
         ["SearchRemoteWatermark"] = "Search folders or files in Google Drive...",
         ["SearchButton"] = "Search",
         ["SyncSelectedFolderButton"] = "Sync Selected Folder",
@@ -1111,9 +1121,13 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["StoragePerformanceSectionTitle"] = "Downloads & Memory",
         ["ApiEndpointsExpanderTitle"] = "Available API endpoints",
         ["UiAccentLabel"] = "Accent color",
-        ["UiAccentHint"] = "Switches the primary accent between M3 Blue and Emerald Green.",
-        ["UiAccentBlueOption"] = "Blue (M3 Blue)",
-        ["UiAccentEmeraldOption"] = "Emerald Green",
+        ["UiAccentHint"] = "Choose the main color for buttons and highlights.",
+        ["UiAccentBlueOption"] = "Blue",
+        ["UiAccentEmeraldOption"] = "Emerald",
+        ["UiAccentPurpleOption"] = "Purple",
+        ["UiAccentAmberOption"] = "Amber",
+        ["UiAccentRoseOption"] = "Rose",
+        ["UiAccentCyanOption"] = "Cyan",
         ["SettingsTabGeneral"] = "General",
         ["SettingsTabAccounts"] = "Accounts",
         ["SettingsTabSync"] = "Sync",
@@ -1278,6 +1292,9 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string ColOrigin => Text("ColOrigin");
     public string FileHubFilterDrive => Text("FileHubFilterDrive");
     public string FileHubFilterLocal => Text("FileHubFilterLocal");
+    public string FileHubFoldersSection => Text("FileHubFoldersSection");
+    public string FileHubFilesSection => Text("FileHubFilesSection");
+    public string ClearSearchTooltip => Text("ClearSearchTooltip");
     public string OpenTrashTooltip => Text("OpenTrashTooltip");
     public string TrashBannerTitle => Text("TrashBannerTitle");
     public string SyncFoldersTitle => Text("SyncFoldersTitle");
@@ -1453,6 +1470,10 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string UiAccentHint => Text("UiAccentHint");
     public string UiAccentBlueOption => Text("UiAccentBlueOption");
     public string UiAccentEmeraldOption => Text("UiAccentEmeraldOption");
+    public string UiAccentPurpleOption => Text("UiAccentPurpleOption");
+    public string UiAccentAmberOption => Text("UiAccentAmberOption");
+    public string UiAccentRoseOption => Text("UiAccentRoseOption");
+    public string UiAccentCyanOption => Text("UiAccentCyanOption");
     public string SettingsTabGeneral => Text("SettingsTabGeneral");
     public string SettingsTabAccounts => Text("SettingsTabAccounts");
     public string SettingsTabSync => Text("SettingsTabSync");
