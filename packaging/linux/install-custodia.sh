@@ -105,10 +105,20 @@ is_fedora_like() {
   command -v dnf >/dev/null 2>&1 || [[ -f /etc/fedora-release ]] || [[ -f /etc/redhat-release ]]
 }
 
+box_border() {
+  local left="$1"
+  local right="$2"
+  local line="" i
+  for ((i = 0; i < 76; i++)); do
+    line+="─"
+  done
+  echo -e "${BLUE}${left}${line}${right}${RESET}"
+}
+
 box_line() {
   local plain="$1"
   local styled="${2:-$1}"
-  local inner_width=72
+  local inner_width=74
   local len=${#plain}
   local pad=$(( inner_width - len ))
   if (( pad < 0 )); then
@@ -141,14 +151,14 @@ print_header() {
   local pkg_plain="Status:    .rpm [${rpm_st}]  |  .AppImage [${app_st}]"
   local pkg_styled="${INDIGO}Status:${RESET}    .rpm [${rpm_st}]  ${DIM}|${RESET}  .AppImage [${app_st}]"
 
-  echo -e "${BLUE}╭──────────────────────────────────────────────────────────────────────────╮${RESET}"
+  box_border "╭" "╮"
   box_line "${title_plain}" "${title_styled}"
   box_line "${dev_plain}" "${DIM}${dev_plain}${RESET}"
   box_line "${repo_plain}" "${DIM}${repo_plain}${RESET}"
-  echo -e "${BLUE}├──────────────────────────────────────────────────────────────────────────┤${RESET}"
+  box_border "├" "┤"
   box_line "${sys_plain}" "${sys_styled}"
   box_line "${pkg_plain}" "${pkg_styled}"
-  echo -e "${BLUE}╰──────────────────────────────────────────────────────────────────────────╯${RESET}"
+  box_border "╰" "╯"
   echo ""
 }
 
@@ -175,21 +185,42 @@ confirm_legal_terms() {
     return 0
   fi
 
+  local legal_title="Termos de Uso, Privacidade e Conformidade Google OAuth"
+  local l1_plain="• Escopo Google Drive: solicita https://www.googleapis.com/auth/drive"
+  local l1_styled="• ${BOLD}Escopo Google Drive:${RESET} solicita ${CYAN}https://www.googleapis.com/auth/drive${RESET}"
+  local l2_plain="  (escopo sensível) via credenciais próprias OAuth 2.0 (uso pessoal)."
+  local l3_plain="• Dados locais: arquivos, hashes e tokens (0600) ficam apenas neste PC;"
+  local l3_styled="• ${BOLD}Dados locais:${RESET} arquivos, hashes e tokens (${DIM}0600${RESET}) ficam apenas neste PC;"
+  local l4_plain="  nenhum arquivo ou token é enviado para servidores da TundraLab."
+  local l5_plain="• E-mails opcionais (contato.tundralab@gmail.com): envia apenas"
+  local l5_styled="• ${BOLD}E-mails opcionais (${DIM}contato.tundralab@gmail.com${RESET}): envia apenas"
+  local l6_plain="  e-mail e nome ao conectar/revogar se habilitado (opcional no app)."
+  local l7_plain="• Licença proprietária: All Rights Reserved (consulte LICENSE)."
+  local l7_styled="• ${BOLD}Licença proprietária:${RESET} All Rights Reserved (consulte LICENSE)."
+  local l8_plain="• Privacidade: https://github.com/${REPO_SLUG}/blob/main/PRIVACY.md"
+  local l8_styled="• ${BOLD}Privacidade:${RESET} https://github.com/${REPO_SLUG}/blob/main/PRIVACY.md"
+  local l9_plain="• Termos:      https://github.com/${REPO_SLUG}/blob/main/TERMS.md"
+  local l9_styled="• ${BOLD}Termos:${RESET}      https://github.com/${REPO_SLUG}/blob/main/TERMS.md"
+  local l10_plain="• Google Policy:"
+  local l10_styled="• ${BOLD}Google Policy:${RESET}"
+  local l11_plain="  https://developers.google.com/terms/api-services-user-data-policy"
+
   echo ""
-  echo -e "${BLUE}╭──────────────────────────────────────────────────────────────────────────╮${RESET}"
-  echo -e "${BLUE}│${RESET} ${BOLD}Termos de Uso, Privacidade e Conformidade Google OAuth${RESET}                   ${BLUE}│${RESET}"
-  echo -e "${BLUE}├──────────────────────────────────────────────────────────────────────────┤${RESET}"
-  echo -e "${BLUE}│${RESET} • ${BOLD}Escopo Google Drive:${RESET} solicita ${CYAN}https://www.googleapis.com/auth/drive${RESET}    ${BLUE}│${RESET}"
-  echo -e "${BLUE}│${RESET}   (escopo sensível) via credenciais próprias OAuth 2.0 (uso pessoal).    ${BLUE}│${RESET}"
-  echo -e "${BLUE}│${RESET} • ${BOLD}Dados locais:${RESET} arquivos, hashes e tokens (${DIM}0600${RESET}) ficam apenas neste PC;  ${BLUE}│${RESET}"
-  echo -e "${BLUE}│${RESET}   nenhum arquivo ou token é enviado para servidores da TundraLab.        ${BLUE}│${RESET}"
-  echo -e "${BLUE}│${RESET} • ${BOLD}E-mails opcionais (${DIM}contato.tundralab@gmail.com${RESET}): envia apenas e-mail e  ${BLUE}│${RESET}"
-  echo -e "${BLUE}│${RESET}   nome ao conectar/revogar se habilitado (pode recusar/desativar no app).${BLUE}│${RESET}"
-  echo -e "${BLUE}│${RESET} • ${BOLD}Licença proprietária:${RESET} All Rights Reserved (consulte LICENSE).          ${BLUE}│${RESET}"
-  echo -e "${BLUE}│${RESET} • ${BOLD}Privacidade:${RESET} https://github.com/${REPO_SLUG}/blob/main/PRIVACY.md   ${BLUE}│${RESET}"
-  echo -e "${BLUE}│${RESET} • ${BOLD}Termos:${RESET}      https://github.com/${REPO_SLUG}/blob/main/TERMS.md     ${BLUE}│${RESET}"
-  echo -e "${BLUE}│${RESET} • ${BOLD}Google Policy:${RESET} https://developers.google.com/terms/api-services-user-data-policy ${BLUE}│${RESET}"
-  echo -e "${BLUE}╰──────────────────────────────────────────────────────────────────────────╯${RESET}"
+  box_border "╭" "╮"
+  box_line "${legal_title}" "${BOLD}${legal_title}${RESET}"
+  box_border "├" "┤"
+  box_line "${l1_plain}" "${l1_styled}"
+  box_line "${l2_plain}" "${l2_plain}"
+  box_line "${l3_plain}" "${l3_styled}"
+  box_line "${l4_plain}" "${l4_plain}"
+  box_line "${l5_plain}" "${l5_styled}"
+  box_line "${l6_plain}" "${l6_plain}"
+  box_line "${l7_plain}" "${l7_styled}"
+  box_line "${l8_plain}" "${l8_styled}"
+  box_line "${l9_plain}" "${l9_styled}"
+  box_line "${l10_plain}" "${l10_styled}"
+  box_line "${l11_plain}" "${l11_plain}"
+  box_border "╰" "╯"
 
   if [[ "${AUTO_ACCEPT_TERMS:-0}" == "1" ]]; then
     LEGAL_ACCEPTED_IN_SESSION=1
