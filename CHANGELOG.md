@@ -5,55 +5,57 @@ Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJ
 ## [3.0.0] - 2026-11-24
 
 ### Alterado
-- **Identidade visual Material Design 3 (Dark Blue):** novo tema `Material3Theme.axaml` com tokens `DynamicResource`, elevação tonal sem bordas pesadas, botões pílula (`m3-filled`, `m3-tonal`, `m3-outlined`), controles segmentados, listas agrupadas estilo GNOME/M3 em **Configurações**, **Contas**, **Sobre** e **Logs**, além de paleta semântica harmonizada em todos os ViewModels.
+- **Visual totalmente renovado em Material Design 3:** toda a interface do Custódia agora conta com um tema escuro mais limpo, botões arredondados, barras de navegação em pílula e cartões sem bordas pesadas.
+- **Telas mais organizadas no estilo Linux/GNOME:** as seções de **Configurações**, **Contas**, **Sobre** e **Logs** agora agrupam opções relacionadas em listas limpas e fáceis de ler.
+- **Cores mais claras para status e alertas:** indicadores de envio, download, sucesso, aviso e erro foram padronizados para oferecer melhor contraste e leitura rápida.
 
 ### Adicionado
-- **Política de Privacidade, Termos de Uso e consentimento inicial:** adição de `PRIVACY.md` e `TERMS.md`, modal de revisão e aceite inicial no primeiro uso (com acesso contínuo na aba **Sobre**) e opt-in explícito para e-mails transacionais.
+- **Privacidade, Termos de Uso e aceite inicial:** ao abrir o Custódia pela primeira vez, você pode revisar os Termos de Uso, a Política de Privacidade e escolher se deseja receber e-mails automáticos de boas-vindas e desconexão. Esses documentos também ficam disponíveis a qualquer momento na aba **Sobre**.
 
 ## [2.9.2] - 2026-11-24
 
 ### Alterado
-- **Personalização de pastas direto em Meus Arquivos:** clique com o botão direito em qualquer pasta na lista ou na grade e escolha **Personalizar pasta** para definir apelido, cor e símbolo, com persistência para pastas sincronizadas e subpastas remotas/locais.
-- **Menu de contexto com exclusão destacada em vermelho:** ações **Mover para Lixeira**, **Excluir permanentemente** e **Esvaziar Lixeira** agora usam destaque e ícone vermelhos no menu de botão direito de **Meus Arquivos**.
-- **E-mails automáticos oficiais de `contato.tundralab@gmail.com` sem Gmail API:** integração via `AppsScriptMailerClient` para envio de mensagens de agradecimento/boas-vindas ao conectar e confirmação ao revogar/desconectar, removendo o escopo `gmail.send` dos usuários e o botão de ativação da Gmail API em Configurações.
-- **Documentação técnica e README atualizados:** correções terminológicas, bloco inicial de status, seção de Qualidade verificável, diagrama de arquitetura, decisões técnicas, guia expandido de segurança/privacidade e alinhamento completo com `LICENSE`.
+- **Personalização de pastas direto em Meus Arquivos:** clique com o botão direito em qualquer pasta (na lista ou na grade) e escolha **Personalizar pasta** para definir apelido, cor e ícone, mantendo suas preferências tanto nas pastas sincronizadas quanto nas pastas locais e da nuvem.
+- **Destaque vermelho para ações de exclusão:** as opções **Mover para Lixeira**, **Excluir permanentemente** e **Esvaziar Lixeira** agora aparecem destacadas em vermelho no menu de contexto de **Meus Arquivos**.
+- **E-mails automáticos sem precisar de permissão do Gmail:** os avisos oficiais de boas-vindas ao conectar uma conta e de confirmação ao desconectar agora são enviados diretamente pela TundraLab, sem exigir acesso ao seu Gmail.
+- **Documentação e guia de segurança atualizados:** explicações mais claras sobre privacidade, permissões e funcionamento do aplicativo.
 
 ### Corrigido
-- **Diagnóstico oculto no modo Sugestão:** a opção de incluir diagnóstico técnico e últimos avisos/erros na aba **Sobre** agora aparece e é considerada exclusivamente no modo **Bug / Erro**.
-- **Limpeza visual nas credenciais OAuth:** remoção do selo `Ativo • 0600` no cartão de `credentials.json` em **Configurações**.
+- **Envio de sugestões mais limpo na aba Sobre:** a opção de anexar diagnóstico técnico e histórico de erros agora aparece somente quando você escolhe relatar um problema (**Bug / Erro**), ficando oculta no modo **Sugestão**.
+- **Visual mais limpo no cartão de credenciais:** remoção de etiquetas redundantes na área de configuração de acesso em **Configurações**.
 
 ## [2.9.1] - 2026-11-24
 
 ### Alterado
-- **Ícone e menu dinâmicos na bandeja redesenhados:** animação pulsante com variação real de tamanho (56% a 100%) e glifos centralizados de alto contraste (`↑` azul, `↓` verde, `✕` vermelho, setas circulares `↻` e alerta `!`) para leitura clara na barra superior do sistema.
-- **Gestão visual de `credentials.json` e contas por diretório próprio:** armazenamento organizado em `~/.config/custodia/contas/<email>/`, detecção automática na pasta Downloads, suporte a arrastar e soltar `.json` em **Configurações**, visualização do `Project ID` / `Client ID` e ações rápidas por conta (`Alternar`, `Reconectar`, `Trocar JSON`, `Pasta`, `Revogar`).
-- **Configuração de pastas salva por conta:** as pastas mapeadas permanecem vinculadas ao e-mail da conta caso ela seja removida e adicionada novamente, com opção explícita para excluir essa configuração durante a remoção.
-- **Suporte unificado com seletor `Bug / Erro` vs `Sugestão` e diagnóstico opcional sanitizado:** seletor no topo da seção aplicando automaticamente `&labels=bug` ou `&labels=enhancement`, adaptação dos campos do formulário, opção desmarcada por padrão para incluir ambiente e últimos avisos/erros (com mascaramento de e-mail/usuário, prévia via botão **Ver dados** e corte seguro da URL preservando o log completo em **Copiar texto**).
-- **Menu completo de botão direito em Meus Arquivos:** funciona tanto em itens/pastas quanto em área vazia (lista e grade), oferecendo **Nova Pasta**, **Enviar Arquivo**, **Atualizar**, **Voltar**, **Selecionar Tudo**, **Limpar Seleção** e ações de lixeira.
+- **Ícone da bandeja redesenhado:** o ícone na barra superior do sistema ficou mais nítido e fácil de identificar durante envios, downloads, exclusões, sincronizações e alertas.
+- **Gerenciamento de contas e credenciais mais prático:** agora é possível arrastar e soltar o arquivo de credenciais direto na aba **Configurações**, detectar automaticamente arquivos baixados na pasta Downloads e gerenciar cada conta conectada com ações rápidas (**Alternar**, **Reconectar**, **Trocar JSON**, **Pasta** e **Revogar**).
+- **Pastas preservadas ao desconectar:** ao remover uma conta, você pode escolher manter a lista de pastas configuradas para quando conectar novamente no futuro.
+- **Suporte unificado para Bugs e Sugestões:** a aba **Sobre** agora adapta o formulário conforme o tipo de envio escolhido, com proteção automática de dados pessoais caso você opte por incluir um resumo de diagnóstico.
+- **Menu de contexto completo em Meus Arquivos:** clicar com o botão direito em áreas vazias da lista ou grade também oferece atalhos para **Nova Pasta**, **Enviar Arquivo**, **Atualizar**, **Voltar** e seleção de itens.
 
 ### Corrigido
-- **Status travado no menu da bandeja com fila zerada:** limpeza imediata de direções temporárias quando não há sincronização ou transferências ativas e timer coalescente no menu nativo para evitar que status antigos (como `✕ Excluindo arquivo...`) fiquem congelados na barra de notificação.
-- **Envio de avisos no Gmail ao conectar, reconectar ou desconectar:** resolução da credencial por conta alvo (inclusive secundárias), codificação Base64 UTF-8 do corpo HTML, timeout ampliado para 8s e atalho **Ativar Gmail API** em **Configurações**.
+- **Status preso na bandeja após concluir tarefas:** correção para garantir que o menu da bandeja volte ao estado ocioso assim que todas as transferências terminarem.
+- **Avisos por e-mail em contas secundárias:** melhoria na entrega de notificações de conexão e desconexão quando há mais de uma conta configurada.
 
 ## [2.9.0] - 2026-11-24
 
 ### Adicionado
-- **Ícone dinâmico na bandeja do sistema e menu com status vivo:** o ícone na barra de notificações anima estados de envio, download, exclusão, sincronização e erro, com indicadores claros no menu da bandeja.
-- **Criação de pastas direta e mapeamento em lote sem nomear manualmente:** novo botão **Nova Pasta** em **Meus Arquivos** (modo remoto e local) e no **Navegador Remoto**, além de seleção múltipla de pastas locais e botão **Sincronizar Pasta Local Aqui** mantendo nomes e subpastas automaticamente (inclusive diretórios vazios).
-- **Personalização por pasta:** escolha apelido, cor e ícone personalizados em **Pastas de Sincronização**, refletidos também em **Meus Arquivos**.
-- **Mensagens e animações de erro de transferência:** alertas visuais na barra lateral, na **Fila de Transferências** (banner animado + destaque no cartão) e em **Meus Arquivos** quando ocorre falha de upload ou download.
-- **Variações de som nas notificações:** 6 toques simples sintetizados (com botão **Ouvir**) e opção para silenciar mantendo ou desativando o som das notificações.
-- **Avisos por e-mail no Gmail:** opção para enviar alerta automático para a própria conta Gmail ao conectar ou desconectar no Custódia.
-- **Agendamento de atualizações, suporte a erros e sugestões na aba Sobre:** exibição da frequência e previsão da próxima checagem, tratamento imediato de erro sem internet e formulários integrados para reportar erros ou enviar sugestões futuras.
-- **Notificação dedicada ao concluir sincronização inicial:** alerta próprio quando uma nova pasta adicionada termina sua primeira sincronização.
+- **Ícone dinâmico na bandeja do sistema:** acompanhamento visual em tempo real de envios, downloads, exclusões, sincronização e erros direto na barra superior do sistema.
+- **Criação de pastas e envio rápido em lote:** novo botão **Nova Pasta** em **Meus Arquivos** e no **Navegador Remoto**, além da possibilidade de selecionar várias pastas do computador de uma só vez mantendo a estrutura original (inclusive pastas vazias).
+- **Personalização de pastas:** defina apelido, cor e ícone personalizados em **Pastas de Sincronização**, refletidos automaticamente em **Meus Arquivos**.
+- **Alertas visuais para falhas de transferência:** avisos claros na barra lateral, na **Fila de Transferências** e em **Meus Arquivos** caso algum envio ou download falhe.
+- **Sons personalizáveis nas notificações:** escolha entre 6 toques simples (com botão para testar) ou deixe as notificações silenciosas.
+- **Avisos opcionais por e-mail:** opção para receber confirmação automática ao conectar ou desconectar sua conta Google.
+- **Previsão de atualizações e suporte integrado na aba Sobre:** exibição da frequência de checagem automática, aviso imediato quando não há internet e formulários para relatar erros ou enviar sugestões.
+- **Notificação ao concluir a primeira sincronização:** aviso dedicado quando uma nova pasta adicionada termina de sincronizar pela primeira vez.
 
 ### Alterado
-- **Renomeação oficial de Meu Driver para Meus Arquivos (`My Files` em EN-US):** aplicada na navegação, bandeja, navegador remoto, documentação e site oficial.
+- **Renomeação de Meu Driver para Meus Arquivos:** novo nome aplicado em toda a interface, menu da bandeja, navegador remoto e documentação.
 
 ### Corrigido
-- **Fila de transferências sem teto de 200 itens:** remoção do limite baixo que travava a contagem em 200 itens, preservando o histórico expandido e contadores exatos do serviço.
-- **Animação infinita de sincronização quando ocioso:** correção na ordem de atualização de estado em `TriggerFolderSyncAsync` e limpeza de itens órfãos para que a animação pare assim que todas as pastas terminarem.
-- **Animação infinita ao verificar atualizações sem internet:** detecção imediata de ausência de rede e encerramento seguro do loop de busca com mensagem de erro clara.
+- **Contagem completa na Fila de Transferências:** remoção do limite que interrompia a exibição em 200 itens, mostrando o histórico e os totais corretos.
+- **Animação de sincronização parada ao concluir:** correção para impedir que o indicador continue girando depois que todas as pastas terminam de sincronizar.
+- **Verificação de atualizações sem internet:** o botão de checagem agora encerra imediatamente e informa quando o computador está offline.
 
 ## [2.8.0] - 2026-11-20
 
