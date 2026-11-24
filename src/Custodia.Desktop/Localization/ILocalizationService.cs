@@ -271,4 +271,10 @@ public interface ILocalizationService : INotifyPropertyChanged
     string LegalTermsButton { get; }
     string LegalGooglePolicyButton { get; }
     string LegalReviewButton { get; }
+
+    string AppearanceSectionTitle { get; }
+    string SystemBehaviorSectionTitle { get; }
+    string NotificationsSectionTitle { get; }
+    string StoragePerformanceSectionTitle { get; }
+    string ApiEndpointsExpanderTitle { get; }
 }

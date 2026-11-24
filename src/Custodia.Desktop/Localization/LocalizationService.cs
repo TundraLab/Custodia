@@ -540,7 +540,12 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["LegalPrivacyButton"] = "Política de Privacidade",
         ["LegalTermsButton"] = "Termos de Uso",
         ["LegalGooglePolicyButton"] = "Google API User Data Policy",
-        ["LegalReviewButton"] = "Rever termo inicial"
+        ["LegalReviewButton"] = "Rever termo inicial",
+        ["AppearanceSectionTitle"] = "Aparência e Idioma",
+        ["SystemBehaviorSectionTitle"] = "Sistema e Atualizações",
+        ["NotificationsSectionTitle"] = "Notificações",
+        ["StoragePerformanceSectionTitle"] = "Downloads e Memória",
+        ["ApiEndpointsExpanderTitle"] = "Endpoints da API disponíveis"
     };
 
     private static readonly IReadOnlyDictionary<string, string> EnUs = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -1077,7 +1082,12 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["LegalPrivacyButton"] = "Privacy Policy",
         ["LegalTermsButton"] = "Terms of Use",
         ["LegalGooglePolicyButton"] = "Google API User Data Policy",
-        ["LegalReviewButton"] = "Review initial notice"
+        ["LegalReviewButton"] = "Review initial notice",
+        ["AppearanceSectionTitle"] = "Appearance & Language",
+        ["SystemBehaviorSectionTitle"] = "System & Updates",
+        ["NotificationsSectionTitle"] = "Notifications",
+        ["StoragePerformanceSectionTitle"] = "Downloads & Memory",
+        ["ApiEndpointsExpanderTitle"] = "Available API endpoints"
     };
 
     public string CurrentLanguage { get; private set; } = "pt-BR";
@@ -1389,6 +1399,11 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string LegalTermsButton => Text("LegalTermsButton");
     public string LegalGooglePolicyButton => Text("LegalGooglePolicyButton");
     public string LegalReviewButton => Text("LegalReviewButton");
+    public string AppearanceSectionTitle => Text("AppearanceSectionTitle");
+    public string SystemBehaviorSectionTitle => Text("SystemBehaviorSectionTitle");
+    public string NotificationsSectionTitle => Text("NotificationsSectionTitle");
+    public string StoragePerformanceSectionTitle => Text("StoragePerformanceSectionTitle");
+    public string ApiEndpointsExpanderTitle => Text("ApiEndpointsExpanderTitle");
 
     public string TransferDetailLocalPath => Text("TransferDetailLocalPath");
     public string TransferDetailRelativePath => Text("TransferDetailRelativePath");

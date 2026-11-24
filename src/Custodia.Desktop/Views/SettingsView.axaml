@@ -4,12 +4,12 @@
              x:Class="TundraDrive.Desktop.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
-  <!-- Settings tab using GNOME/M3 inset grouped lists -->
+  <!-- Settings tab organized into focused GNOME/M3 inset grouped lists -->
   <ScrollViewer Padding="24"
                 HorizontalScrollBarVisibility="Disabled"
                 VerticalScrollBarVisibility="Auto"
                 AllowAutoHide="False">
-    <StackPanel Spacing="22">
+    <StackPanel Spacing="22" MaxWidth="920" HorizontalAlignment="Stretch">
       <!-- Compact header toolbar -->
       <Grid MinHeight="48" ColumnDefinitions="*,Auto" ColumnSpacing="12">
         <TextBlock Grid.Column="0" Classes="m3-page-title" VerticalAlignment="Center" Text="{Binding Loc.SettingsTitle}" />
@@ -65,9 +65,9 @@
         </WrapPanel>
       </Grid>
 
-      <!-- General and language settings -->
+      <!-- 1. Appearance & Language -->
       <StackPanel Spacing="8">
-        <TextBlock Classes="m3-group-label" Margin="4,0,0,0" Text="{Binding Loc.GeneralSectionTitle}" />
+        <TextBlock Classes="m3-group-label" Margin="4,0,0,0" Text="{Binding Loc.AppearanceSectionTitle}" />
 
         <Border Classes="m3-grouped-list">
           <StackPanel>
@@ -112,47 +112,22 @@
                 </StackPanel>
               </Grid>
             </Border>
+          </StackPanel>
+        </Border>
+      </StackPanel>
 
-            <Border Classes="m3-divider" />
+      <!-- 2. System & Updates -->
+      <StackPanel Spacing="8">
+        <TextBlock Classes="m3-group-label" Margin="4,0,0,0" Text="{Binding Loc.SystemBehaviorSectionTitle}" />
 
+        <Border Classes="m3-grouped-list">
+          <StackPanel>
             <Border Classes="m3-grouped-row">
               <StackPanel Spacing="4">
                 <CheckBox IsChecked="{Binding StartOnBoot}"
                           IsEnabled="{Binding IsAutostartSupported}"
                           Content="{Binding Loc.StartOnBootCheckbox}" />
                 <TextBlock Classes="m3-meta" Margin="28,0,0,0" Text="{Binding Loc.StartOnBootHint}" TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-
-            <Border Classes="m3-divider" />
-
-            <Border Classes="m3-grouped-row">
-              <StackPanel Spacing="10">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                  <CheckBox Grid.Column="0"
-                            IsChecked="{Binding NotificationsEnabled}"
-                            Content="{Binding Loc.NotificationsEnabledCheckbox}" />
-                  <Button Grid.Column="1"
-                          Classes="m3-tonal m3-compact"
-                          Content="{Binding Loc.TestNotificationButton}"
-                          Command="{Binding TestNotificationCommand}" />
-                </Grid>
-
-                <StackPanel Spacing="8" Margin="28,0,0,0" IsEnabled="{Binding NotificationsEnabled}">
-                  <CheckBox IsChecked="{Binding NotificationSoundEnabled}"
-                            Content="{Binding Loc.NotificationSoundCheckbox}" />
-                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="28,0,0,0" IsEnabled="{Binding NotificationSoundEnabled}">
-                    <TextBlock Grid.Column="0" FontSize="12.5" VerticalAlignment="Center" Classes="m3-meta" Text="{Binding Loc.NotificationSoundToneLabel}" />
-                    <ComboBox Grid.Column="1"
-                              Width="210"
-                              ItemsSource="{Binding NotificationSoundOptions}"
-                              SelectedIndex="{Binding SelectedNotificationSoundIndex}" />
-                    <Button Grid.Column="2"
-                            Classes="m3-outlined m3-compact"
-                            Content="{Binding Loc.PreviewSoundButton}"
-                            Command="{Binding PreviewNotificationSoundCommand}" />
-                  </Grid>
-                </StackPanel>
               </StackPanel>
             </Border>
 
@@ -179,9 +154,57 @@
                 </Grid>
               </StackPanel>
             </Border>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <!-- 3. Notifications -->
+      <StackPanel Spacing="8">
+        <TextBlock Classes="m3-group-label" Margin="4,0,0,0" Text="{Binding Loc.NotificationsSectionTitle}" />
+
+        <Border Classes="m3-grouped-list">
+          <StackPanel>
+            <Border Classes="m3-grouped-row">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <CheckBox Grid.Column="0"
+                          IsChecked="{Binding NotificationsEnabled}"
+                          Content="{Binding Loc.NotificationsEnabledCheckbox}" />
+                <Button Grid.Column="1"
+                        Classes="m3-tonal m3-compact"
+                        Content="{Binding Loc.TestNotificationButton}"
+                        Command="{Binding TestNotificationCommand}" />
+              </Grid>
+            </Border>
 
             <Border Classes="m3-divider" />
 
+            <Border Classes="m3-grouped-row" IsEnabled="{Binding NotificationsEnabled}">
+              <StackPanel Spacing="8">
+                <CheckBox IsChecked="{Binding NotificationSoundEnabled}"
+                          Content="{Binding Loc.NotificationSoundCheckbox}" />
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="28,0,0,0" IsEnabled="{Binding NotificationSoundEnabled}">
+                  <TextBlock Grid.Column="0" FontSize="12.5" VerticalAlignment="Center" Classes="m3-meta" Text="{Binding Loc.NotificationSoundToneLabel}" />
+                  <ComboBox Grid.Column="1"
+                            Width="210"
+                            ItemsSource="{Binding NotificationSoundOptions}"
+                            SelectedIndex="{Binding SelectedNotificationSoundIndex}" />
+                  <Button Grid.Column="2"
+                          Classes="m3-outlined m3-compact"
+                          Content="{Binding Loc.PreviewSoundButton}"
+                          Command="{Binding PreviewNotificationSoundCommand}" />
+                </Grid>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <!-- 4. Downloads & Memory -->
+      <StackPanel Spacing="8">
+        <TextBlock Classes="m3-group-label" Margin="4,0,0,0" Text="{Binding Loc.StoragePerformanceSectionTitle}" />
+
+        <Border Classes="m3-grouped-list">
+          <StackPanel>
             <Border Classes="m3-grouped-row">
               <StackPanel Spacing="8">
                 <TextBlock FontSize="13.5" FontWeight="Medium" Foreground="{DynamicResource M3OnSurface}" Text="{Binding Loc.DownloadDirectoryLabel}" TextWrapping="Wrap" />
@@ -230,7 +253,7 @@
         </Border>
       </StackPanel>
 
-      <!-- OAuth credentials and connected accounts -->
+      <!-- 5. OAuth Credentials & Connected Accounts -->
       <StackPanel Spacing="10" DragDrop.AllowDrop="True">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="4,0,0,0">
           <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
@@ -472,7 +495,7 @@
         </Border>
       </StackPanel>
 
-      <!-- Sync engine settings -->
+      <!-- 6. Sync Engine -->
       <StackPanel Spacing="8">
         <TextBlock Classes="m3-group-label" Margin="4,0,0,0" Text="{Binding Loc.SyncEngineSectionTitle}" />
 
@@ -521,7 +544,7 @@
               <StackPanel Spacing="8">
                 <TextBlock FontSize="13.5" FontWeight="Medium" Foreground="{DynamicResource M3OnSurface}" Text="{Binding Loc.IgnorePatternsLabel}" />
                 <TextBox AcceptsReturn="True"
-                         Height="120"
+                         Height="110"
                          FontFamily="monospace"
                          FontSize="12"
                          Padding="12,10"
@@ -532,7 +555,7 @@
         </Border>
       </StackPanel>
 
-      <!-- Local REST API settings -->
+      <!-- 7. Local REST API -->
       <StackPanel Spacing="8">
         <TextBlock Classes="m3-group-label" Margin="4,0,0,0" Text="{Binding Loc.LocalApiSectionTitle}" />
 
@@ -562,7 +585,7 @@
             <Border Classes="m3-divider" />
 
             <Border Classes="m3-grouped-row">
-              <StackPanel Spacing="12">
+              <StackPanel Spacing="10">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                   <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                     <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurface}" Text="{Binding Loc.CurrentApiStatusLabel}" />
@@ -579,86 +602,60 @@
                   </StackPanel>
                 </Grid>
 
-                <WrapPanel Orientation="Horizontal">
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/status" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/openapi.json" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/sync/trigger" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/files/search" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/files/list" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/files/trash" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/folders" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/files/upload" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/files/download" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/files/{id}/move" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/files/{id}/trash" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/files/{id}/restore" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="DELETE /api/v1/files/{id}" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/transfers" />
-                  </Border>
-                  <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,0,6">
-                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/logs" />
-                  </Border>
-                </WrapPanel>
+                <Expander Header="{Binding Loc.ApiEndpointsExpanderTitle}"
+                          HorizontalAlignment="Stretch"
+                          IsExpanded="False">
+                  <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/status" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/openapi.json" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/sync/trigger" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/files/search" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/files/list" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/files/trash" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/folders" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/files/upload" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/files/download" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/files/{id}/move" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/files/{id}/trash" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="POST /api/v1/files/{id}/restore" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="DELETE /api/v1/files/{id}" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,6,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/transfers" />
+                    </Border>
+                    <Border Background="{DynamicResource M3SurfaceContainerHigh}" CornerRadius="10" Padding="10,5" Margin="0,0,0,6">
+                      <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="11.5" Text="GET /api/v1/logs" />
+                    </Border>
+                  </WrapPanel>
+                </Expander>
               </StackPanel>
             </Border>
           </StackPanel>
-        </Border>
-      </StackPanel>
-
-      <!-- Project repository summary -->
-      <StackPanel Spacing="8">
-        <TextBlock Classes="m3-group-label" Margin="4,0,0,0" Text="{Binding Loc.AboutSectionTitle}" />
-
-        <Border Classes="m3-grouped-list">
-          <Border Classes="m3-grouped-row" Padding="16,14">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-              <TextBlock Grid.Column="0"
-                         Classes="m3-subtitle"
-                         FontSize="13"
-                         VerticalAlignment="Center"
-                         Text="{Binding Loc.AboutDescription}"
-                         TextWrapping="Wrap" />
-
-              <Button Grid.Column="1"
-                      Classes="m3-outlined"
-                      VerticalAlignment="Center"
-                      Command="{Binding OpenRepositoryCommand}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <PathIcon Width="15" Height="15"
-                            Foreground="{DynamicResource M3OnSurface}"
-                            Data="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-                  <TextBlock Text="GitHub: TundraLab/Custodia" VerticalAlignment="Center" />
-                </StackPanel>
-              </Button>
-            </Grid>
-          </Border>
         </Border>
       </StackPanel>
     </StackPanel>
