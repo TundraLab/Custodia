@@ -92,6 +92,22 @@ public sealed class HeadlessUiAndFeatureTests
             view.Arrange(new Rect(0, 0, 860, 700));
         }
 
+        // Verify SettingsView ScrollViewer includes the full inner StackPanel height (with bottom margin) in Extent
+        var settingsWindow = new Window
+        {
+            Width = 860,
+            Height = 700,
+            Content = views.OfType<SettingsView>().Single()
+        };
+        settingsWindow.Show();
+        var scrollViewer = (ScrollViewer)((SettingsView)settingsWindow.Content).Content!;
+        var innerPanel = (StackPanel)scrollViewer.Content!;
+        scrollViewer.Offset = new Vector(0, scrollViewer.ScrollBarMaximum.Y);
+        settingsWindow.UpdateLayout();
+        Assert.True(scrollViewer.Extent.Height >= innerPanel.Bounds.Height + innerPanel.Margin.Top + innerPanel.Margin.Bottom - 1);
+        Assert.True(scrollViewer.ScrollBarMaximum.Y > 0);
+        settingsWindow.Close();
+
         ThemeAccentService.ApplyAccent(ThemeAccentService.EmeraldAccentId);
         Assert.True(Application.Current!.Resources.TryGetValue("M3Primary", out var emeraldObj));
         Assert.Equal(Color.Parse("#6DD58C"), ((ISolidColorBrush)emeraldObj!).Color);

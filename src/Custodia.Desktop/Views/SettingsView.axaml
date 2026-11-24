@@ -5,11 +5,14 @@
              x:DataType="vm:SettingsViewModel">
 
   <!-- Settings tab organized into focused GNOME/M3 inset grouped lists -->
-  <ScrollViewer Padding="24"
-                HorizontalScrollBarVisibility="Disabled"
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                 VerticalScrollBarVisibility="Auto"
                 AllowAutoHide="False">
-    <StackPanel Spacing="22" MaxWidth="920" HorizontalAlignment="Stretch">
+    <StackPanel Margin="24,24,24,32"
+                Spacing="22"
+                MaxWidth="920"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Top">
       <!-- Compact header toolbar -->
       <Grid MinHeight="48" ColumnDefinitions="*,Auto" ColumnSpacing="12">
         <TextBlock Grid.Column="0" Classes="m3-page-title" VerticalAlignment="Center" Text="{Binding Loc.SettingsTitle}" />
