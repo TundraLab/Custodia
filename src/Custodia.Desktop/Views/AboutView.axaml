@@ -71,6 +71,29 @@
               </Grid>
             </Border>
           </Grid>
+
+          <WrapPanel Orientation="Horizontal">
+            <Button Classes="SecondaryAction"
+                    Margin="0,0,8,4"
+                    Padding="12,7"
+                    Content="{Binding Loc.LegalPrivacyButton}"
+                    Command="{Binding OpenPrivacyPolicyCommand}" />
+            <Button Classes="SecondaryAction"
+                    Margin="0,0,8,4"
+                    Padding="12,7"
+                    Content="{Binding Loc.LegalTermsButton}"
+                    Command="{Binding OpenTermsOfUseCommand}" />
+            <Button Classes="SecondaryAction"
+                    Margin="0,0,8,4"
+                    Padding="12,7"
+                    Content="{Binding Loc.LegalGooglePolicyButton}"
+                    Command="{Binding OpenGoogleApiPolicyCommand}" />
+            <Button Classes="SecondaryAction"
+                    Margin="0,0,0,4"
+                    Padding="12,7"
+                    Content="{Binding Loc.LegalReviewButton}"
+                    Command="{Binding ReviewLegalTermsCommand}" />
+          </WrapPanel>
         </StackPanel>
       </Border>
 

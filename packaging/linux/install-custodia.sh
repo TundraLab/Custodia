@@ -168,6 +168,49 @@ step_err() {
   echo -e "${RED}[✗]${RESET} $1" >&2
 }
 
+LEGAL_ACCEPTED_IN_SESSION=0
+
+confirm_legal_terms() {
+  if [[ "${LEGAL_ACCEPTED_IN_SESSION}" == "1" ]]; then
+    return 0
+  fi
+
+  echo ""
+  echo -e "${BLUE}╭──────────────────────────────────────────────────────────────────────────╮${RESET}"
+  echo -e "${BLUE}│${RESET} ${BOLD}Termos de Uso, Privacidade e Conformidade Google OAuth${RESET}                   ${BLUE}│${RESET}"
+  echo -e "${BLUE}├──────────────────────────────────────────────────────────────────────────┤${RESET}"
+  echo -e "${BLUE}│${RESET} • ${BOLD}Escopo Google Drive:${RESET} solicita ${CYAN}https://www.googleapis.com/auth/drive${RESET}    ${BLUE}│${RESET}"
+  echo -e "${BLUE}│${RESET}   (escopo sensível) via credenciais próprias OAuth 2.0 (uso pessoal).    ${BLUE}│${RESET}"
+  echo -e "${BLUE}│${RESET} • ${BOLD}Dados locais:${RESET} arquivos, hashes e tokens (${DIM}0600${RESET}) ficam apenas neste PC;  ${BLUE}│${RESET}"
+  echo -e "${BLUE}│${RESET}   nenhum arquivo ou token é enviado para servidores da TundraLab.        ${BLUE}│${RESET}"
+  echo -e "${BLUE}│${RESET} • ${BOLD}E-mails opcionais (${DIM}contato.tundralab@gmail.com${RESET}): envia apenas e-mail e  ${BLUE}│${RESET}"
+  echo -e "${BLUE}│${RESET}   nome ao conectar/revogar se habilitado (pode recusar/desativar no app).${BLUE}│${RESET}"
+  echo -e "${BLUE}│${RESET} • ${BOLD}Licença proprietária:${RESET} All Rights Reserved (consulte LICENSE).          ${BLUE}│${RESET}"
+  echo -e "${BLUE}│${RESET} • ${BOLD}Privacidade:${RESET} https://github.com/${REPO_SLUG}/blob/main/PRIVACY.md   ${BLUE}│${RESET}"
+  echo -e "${BLUE}│${RESET} • ${BOLD}Termos:${RESET}      https://github.com/${REPO_SLUG}/blob/main/TERMS.md     ${BLUE}│${RESET}"
+  echo -e "${BLUE}│${RESET} • ${BOLD}Google Policy:${RESET} https://developers.google.com/terms/api-services-user-data-policy ${BLUE}│${RESET}"
+  echo -e "${BLUE}╰──────────────────────────────────────────────────────────────────────────╯${RESET}"
+
+  if [[ "${AUTO_ACCEPT_TERMS:-0}" == "1" ]]; then
+    LEGAL_ACCEPTED_IN_SESSION=1
+    step_info "Termos de Uso e Política de Privacidade aceitos via --yes / CUSTODIA_ACCEPT_TERMS."
+    return 0
+  fi
+
+  if [[ ! -t 0 ]]; then
+    step_err "Aceite dos Termos de Uso e Política de Privacidade obrigatório (use --yes em modo não interativo)."
+    return 1
+  fi
+
+  if prompt_yes_no "Li e concordo com os Termos de Uso e a Política de Privacidade. Deseja continuar? [S/n]:" "S"; then
+    LEGAL_ACCEPTED_IN_SESSION=1
+    return 0
+  fi
+
+  step_warn "Operação cancelada: os Termos de Uso e a Política de Privacidade não foram aceitos."
+  return 1
+}
+
 ACTIVE_BG_PID=""
 ACTIVE_TMP_STAGE=""
 cleanup_ui() {
@@ -628,6 +671,7 @@ offer_launch_app() {
 
 install_rpm_flow() {
   local interactive="${1:-0}"
+  confirm_legal_terms || return 1
   echo ""
   local stage_dir
   stage_dir="$(mktemp -d /tmp/tundra-stage.XXXXXX)"
@@ -697,6 +741,7 @@ install_rpm_flow() {
 
 install_appimage_flow() {
   local interactive="${1:-0}"
+  confirm_legal_terms || return 1
   echo ""
   local stage_dir
   stage_dir="$(mktemp -d /tmp/tundra-stage.XXXXXX)"
@@ -806,6 +851,7 @@ uninstall_flow() {
 }
 
 download_menu() {
+  confirm_legal_terms || return 1
   echo ""
   echo -e "${BOLD}Baixar arquivos oficiais para ${WHITE}${DOWNLOAD_DIR}${RESET}:"
   echo -e "  ${CYAN}1)${RESET} Somente ${RPM_ASSET} (Fedora / RHEL / openSUSE)"
@@ -851,7 +897,7 @@ update_flow() {
 
 show_help() {
   print_header 0
-  echo "Uso: ./install-custodia.sh [OPÇÃO]"
+  echo "Uso: ./install-custodia.sh [OPÇÃO] [--yes|-y]"
   echo ""
   echo "Opções:"
   echo "  (sem argumentos)    Abre o menu interativo do instalador"
@@ -863,10 +909,25 @@ show_help() {
   echo "  --download-only     Baixa ambos (.rpm e .AppImage) no diretório atual"
   echo "  --uninstall         Remove a instalação mantendo suas configurações"
   echo "  --build-all         Compila .AppImage e .rpm localmente (requer SDK .NET 10)"
+  echo "  --yes, -y           Aceita automaticamente os Termos de Uso e Política de Privacidade"
   echo "  --help              Exibe esta ajuda"
 }
 
-MODE="${1:---menu}"
+AUTO_ACCEPT_TERMS="${CUSTODIA_ACCEPT_TERMS:-0}"
+MODE=""
+for arg in "$@"; do
+  case "${arg}" in
+    --yes|-y|--accept-terms)
+      AUTO_ACCEPT_TERMS=1
+      ;;
+    *)
+      if [[ -z "${MODE}" ]]; then
+        MODE="${arg}"
+      fi
+      ;;
+  esac
+done
+MODE="${MODE:---menu}"
 
 case "${MODE}" in
   --help|-h)
@@ -875,21 +936,22 @@ case "${MODE}" in
     ;;
   --update)
     print_header 0
-    update_flow 0
+    update_flow 0 || exit 1
     exit 0
     ;;
   --rpm)
     print_header 0
-    install_rpm_flow 0
+    install_rpm_flow 0 || exit 1
     exit 0
     ;;
   --appimage)
     print_header 0
-    install_appimage_flow 0
+    install_appimage_flow 0 || exit 1
     exit 0
     ;;
   --download-rpm)
     print_header 0
+    confirm_legal_terms || exit 1
     p="$(resolve_or_fetch_rpm)"
     verify_sha256_if_available "${p}"
     step_ok "Salvo em: ${p}"
@@ -897,6 +959,7 @@ case "${MODE}" in
     ;;
   --download-appimage)
     print_header 0
+    confirm_legal_terms || exit 1
     p="$(resolve_or_fetch_appimage)"
     verify_sha256_if_available "${p}"
     step_ok "Salvo em: ${p}"
@@ -904,6 +967,7 @@ case "${MODE}" in
     ;;
   --download-only)
     print_header 0
+    confirm_legal_terms || exit 1
     download_release_asset "${SUMS_ASSET}" "${DOWNLOAD_DIR}" >/dev/null 2>&1 || true
     r="$(resolve_or_fetch_rpm)"; verify_sha256_if_available "${r}"
     a="$(resolve_or_fetch_appimage)"; verify_sha256_if_available "${a}"

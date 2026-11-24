@@ -17,6 +17,9 @@ namespace TundraDrive.Desktop.ViewModels;
 public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
     public const string RepositoryUrl = "https://github.com/TundraLab/Custodia";
+    public const string PrivacyPolicyUrl = RepositoryUrl + "/blob/main/PRIVACY.md";
+    public const string TermsOfUseUrl = RepositoryUrl + "/blob/main/TERMS.md";
+    public const string GoogleApiUserDataPolicyUrl = "https://developers.google.com/terms/api-services-user-data-policy";
 
     private readonly IDriveSyncService _syncService;
     private readonly IEmbeddedApiServer _apiServer;
@@ -92,6 +95,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private string _updateBannerText = string.Empty;
 
+    [ObservableProperty]
+    private bool _isLegalConsentVisible;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AcceptLegalConsentCommand))]
+    private bool _legalTermsAccepted;
+
+    [ObservableProperty]
+    private bool _legalLifecycleEmailOptIn = true;
+
     private bool _updateNotificationSent;
     private CancellationTokenSource? _updateScheduleCts;
 
@@ -152,6 +165,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         Loc.LanguageChanged += (_, _) => UpdateAccountSummary(_syncService.CurrentAccount);
         SettingsVm.UiScaleChanged += (_, scale) => UiScalePercent = scale;
         UiScalePercent = Math.Clamp(_settingsService.Current.UiScalePercent, 100, 300);
+        AboutVm.ReviewLegalTermsCallback = ShowLegalConsentNotice;
 
         UpdateAccountSummary(_syncService.CurrentAccount);
     }
@@ -247,6 +261,91 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             await OpenExternalUriCallback.Invoke(new Uri(RepositoryUrl));
         }
+    }
+
+    private bool CanAcceptLegalConsent => LegalTermsAccepted;
+
+    [RelayCommand(CanExecute = nameof(CanAcceptLegalConsent))]
+    public async Task AcceptLegalConsentAsync()
+    {
+        if (!LegalTermsAccepted)
+        {
+            return;
+        }
+
+        var current = _settingsService.Current;
+        current.AcceptedLegalVersion = AppVersionInfo.CurrentLegalVersion;
+        current.GmailAccountAlertsEnabled = LegalLifecycleEmailOptIn;
+        await _settingsService.SaveAsync(current);
+        SettingsVm.LoadFromCurrent();
+        IsLegalConsentVisible = false;
+    }
+
+    public void ShowLegalConsentNotice()
+    {
+        var current = _settingsService.Current;
+        LegalLifecycleEmailOptIn = current.GmailAccountAlertsEnabled;
+        LegalTermsAccepted = string.Equals(
+            current.AcceptedLegalVersion,
+            AppVersionInfo.CurrentLegalVersion,
+            StringComparison.Ordinal);
+        IsLegalConsentVisible = true;
+    }
+
+    [RelayCommand]
+    private async Task OpenPrivacyPolicyAsync()
+    {
+        if (OpenExternalUriCallback is not null)
+        {
+            await OpenExternalUriCallback.Invoke(ResolveLegalDocumentUri("PRIVACY.md", PrivacyPolicyUrl));
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenTermsOfUseAsync()
+    {
+        if (OpenExternalUriCallback is not null)
+        {
+            await OpenExternalUriCallback.Invoke(ResolveLegalDocumentUri("TERMS.md", TermsOfUseUrl));
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenGoogleApiPolicyAsync()
+    {
+        if (OpenExternalUriCallback is not null)
+        {
+            await OpenExternalUriCallback.Invoke(new Uri(GoogleApiUserDataPolicyUrl));
+        }
+    }
+
+    internal void SyncLegalConsentState(AppSettings settings)
+    {
+        var acceptedCurrent = string.Equals(
+            settings.AcceptedLegalVersion,
+            AppVersionInfo.CurrentLegalVersion,
+            StringComparison.Ordinal);
+
+        LegalLifecycleEmailOptIn = settings.GmailAccountAlertsEnabled;
+        LegalTermsAccepted = acceptedCurrent;
+        IsLegalConsentVisible = !acceptedCurrent;
+    }
+
+    internal static Uri ResolveLegalDocumentUri(string fileName, string fallbackUrl)
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        for (var depth = 0; depth < 6 && dir is not null; depth++)
+        {
+            var candidate = Path.Combine(dir.FullName, fileName);
+            if (File.Exists(candidate))
+            {
+                return new Uri(candidate);
+            }
+
+            dir = dir.Parent;
+        }
+
+        return new Uri(fallbackUrl);
     }
 
     public async Task TriggerSyncFromTrayAsync()
@@ -378,6 +477,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             }
             await ActivityLogsVm.RefreshLogsAsync();
             SettingsVm.LoadFromCurrent();
+            SyncLegalConsentState(settings);
         });
 
         StartScheduledUpdateChecker();

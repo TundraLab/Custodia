@@ -1005,6 +1005,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
                 NotificationSoundTone = NotificationSoundService.GetPresetIdByIndex(SelectedNotificationSoundIndex),
                 GmailAccountAlertsEnabled = GmailAccountAlertsEnabled,
                 MailerWebhookUrl = _settingsService.Current.MailerWebhookUrl,
+                AcceptedLegalVersion = _settingsService.Current.AcceptedLegalVersion,
                 FolderAppearances = new Dictionary<string, FolderAppearanceOverride>(_settingsService.Current.FolderAppearances, StringComparer.Ordinal),
                 MinimizeToTrayOnClose = MinimizeToTrayOnClose,
                 AutoCheckUpdates = AutoCheckUpdates,

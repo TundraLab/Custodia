@@ -16,6 +16,7 @@ public sealed class AppSettings
     public string NotificationSoundTone { get; set; } = "chime";
     public bool GmailAccountAlertsEnabled { get; set; } = true;
     public string MailerWebhookUrl { get; set; } = string.Empty;
+    public string? AcceptedLegalVersion { get; set; }
     public Dictionary<string, FolderAppearanceOverride> FolderAppearances { get; set; } = new(StringComparer.Ordinal);
     public bool MinimizeToTrayOnClose { get; set; } = true;
     public string DownloadDirectory { get; set; } = Configuration.AppPaths.DefaultDownloadDirectory;

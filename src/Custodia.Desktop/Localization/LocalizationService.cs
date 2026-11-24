@@ -527,7 +527,20 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["AccountRemovedFoldersKeptFeedback"] = "Conta removida (configuração de pastas salva mantida para o próximo acesso).",
         ["AccountAndFoldersRemovedFeedback"] = "Conta e configurações de pastas da conta removidas.",
         ["SidebarDisconnectPromptTitle"] = "Desconectar conta?",
-        ["SidebarDeleteFoldersCheckbox"] = "Apagar pastas configuradas"
+        ["SidebarDeleteFoldersCheckbox"] = "Apagar pastas configuradas",
+
+        ["LegalConsentTitle"] = "Termos de Uso, Privacidade e Acesso ao Google Drive",
+        ["LegalConsentSubtitle"] = "Revise como o Custódia trata seus dados locais, suas credenciais OAuth 2.0 e notificações opcionais antes de começar.",
+        ["LegalConsentDriveScopeBullet"] = "Google Drive OAuth (escopo sensível drive): solicita acesso ao Drive exclusivamente para sincronizar e gerenciar seus arquivos usando suas próprias credenciais do Google Cloud Console (uso pessoal/BYO-OAuth), em conformidade com a Política de Dados do Usuário dos Serviços de API do Google (Limited Use).",
+        ["LegalConsentLocalDataBullet"] = "Privacidade local: seus arquivos, pastas, metadados, tokens (permissão 0600) e logs permanecem apenas no seu dispositivo Linux (API local em 127.0.0.1:5080). Nenhum arquivo ou token é enviado à TundraLab.",
+        ["LegalConsentEmailBullet"] = "E-mails opcionais de conta (contato.tundralab@gmail.com): nenhum escopo do Gmail é solicitado no seu projeto Google. Se você permitir abaixo, apenas seu e-mail e nome serão usados para enviar alertas transacionais ao conectar ou revogar conta.",
+        ["LegalConsentAcceptCheckbox"] = "Li e concordo com os Termos de Uso, a Licença Proprietária e a Política de Privacidade do Custódia.",
+        ["LegalConsentEmailOptInCheckbox"] = "Aceito receber e-mails opcionais de boas-vindas e revogação enviados por contato.tundralab@gmail.com (envia apenas e-mail e nome; zero arquivos ou tokens).",
+        ["LegalConsentContinueButton"] = "Aceitar e continuar",
+        ["LegalPrivacyButton"] = "Política de Privacidade",
+        ["LegalTermsButton"] = "Termos de Uso",
+        ["LegalGooglePolicyButton"] = "Google API User Data Policy",
+        ["LegalReviewButton"] = "Rever termo inicial"
     };
 
     private static readonly IReadOnlyDictionary<string, string> EnUs = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -1051,7 +1064,20 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["AccountRemovedFoldersKeptFeedback"] = "Account removed (saved folder configurations kept for next sign-in).",
         ["AccountAndFoldersRemovedFeedback"] = "Account and its saved folder configurations removed.",
         ["SidebarDisconnectPromptTitle"] = "Disconnect account?",
-        ["SidebarDeleteFoldersCheckbox"] = "Delete saved folder setup"
+        ["SidebarDeleteFoldersCheckbox"] = "Delete saved folder setup",
+
+        ["LegalConsentTitle"] = "Terms of Use, Privacy & Google Drive Access",
+        ["LegalConsentSubtitle"] = "Review how Custódia handles local data, your OAuth 2.0 credentials, and optional notifications before continuing.",
+        ["LegalConsentDriveScopeBullet"] = "Google Drive OAuth (sensitive drive scope): requests Drive access solely to sync and manage your files using your own Google Cloud Console credentials (personal BYO-OAuth use), in compliance with the Google API Services User Data Policy (Limited Use).",
+        ["LegalConsentLocalDataBullet"] = "Local privacy: your files, folders, metadata, tokens (0600 permissions), and logs remain solely on your Linux device (local API on 127.0.0.1:5080). Zero files or tokens are sent to TundraLab.",
+        ["LegalConsentEmailBullet"] = "Optional account emails (contato.tundralab@gmail.com): no Gmail scope is requested on your Google project. If allowed below, only your email and name are used to send transactional connect or revoke alerts.",
+        ["LegalConsentAcceptCheckbox"] = "I have read and agree to the Terms of Use, Proprietary License, and Privacy Policy of Custódia.",
+        ["LegalConsentEmailOptInCheckbox"] = "I agree to receive optional welcome and revocation emails sent from contato.tundralab@gmail.com (sends only email and name; zero files or tokens).",
+        ["LegalConsentContinueButton"] = "Accept and continue",
+        ["LegalPrivacyButton"] = "Privacy Policy",
+        ["LegalTermsButton"] = "Terms of Use",
+        ["LegalGooglePolicyButton"] = "Google API User Data Policy",
+        ["LegalReviewButton"] = "Review initial notice"
     };
 
     public string CurrentLanguage { get; private set; } = "pt-BR";
@@ -1350,6 +1376,19 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string ConfirmRemoveAccountButton => Text("ConfirmRemoveAccountButton");
     public string SidebarDisconnectPromptTitle => Text("SidebarDisconnectPromptTitle");
     public string SidebarDeleteFoldersCheckbox => Text("SidebarDeleteFoldersCheckbox");
+
+    public string LegalConsentTitle => Text("LegalConsentTitle");
+    public string LegalConsentSubtitle => Text("LegalConsentSubtitle");
+    public string LegalConsentDriveScopeBullet => Text("LegalConsentDriveScopeBullet");
+    public string LegalConsentLocalDataBullet => Text("LegalConsentLocalDataBullet");
+    public string LegalConsentEmailBullet => Text("LegalConsentEmailBullet");
+    public string LegalConsentAcceptCheckbox => Text("LegalConsentAcceptCheckbox");
+    public string LegalConsentEmailOptInCheckbox => Text("LegalConsentEmailOptInCheckbox");
+    public string LegalConsentContinueButton => Text("LegalConsentContinueButton");
+    public string LegalPrivacyButton => Text("LegalPrivacyButton");
+    public string LegalTermsButton => Text("LegalTermsButton");
+    public string LegalGooglePolicyButton => Text("LegalGooglePolicyButton");
+    public string LegalReviewButton => Text("LegalReviewButton");
 
     public string TransferDetailLocalPath => Text("TransferDetailLocalPath");
     public string TransferDetailRelativePath => Text("TransferDetailRelativePath");

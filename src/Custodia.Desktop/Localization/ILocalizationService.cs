@@ -258,4 +258,17 @@ public interface ILocalizationService : INotifyPropertyChanged
     string ConfirmRemoveAccountButton { get; }
     string SidebarDisconnectPromptTitle { get; }
     string SidebarDeleteFoldersCheckbox { get; }
+
+    string LegalConsentTitle { get; }
+    string LegalConsentSubtitle { get; }
+    string LegalConsentDriveScopeBullet { get; }
+    string LegalConsentLocalDataBullet { get; }
+    string LegalConsentEmailBullet { get; }
+    string LegalConsentAcceptCheckbox { get; }
+    string LegalConsentEmailOptInCheckbox { get; }
+    string LegalConsentContinueButton { get; }
+    string LegalPrivacyButton { get; }
+    string LegalTermsButton { get; }
+    string LegalGooglePolicyButton { get; }
+    string LegalReviewButton { get; }
 }

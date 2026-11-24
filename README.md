@@ -5,7 +5,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-TundraLab%2FCustodia-181717?logo=github)](https://github.com/TundraLab/Custodia)
 [![Autor Único](https://img.shields.io/badge/Autor%20e%20Dev%20Único-%40GustaHerin-181717?logo=github)](https://github.com/GustaHerin)
 [![Release](https://img.shields.io/badge/Release-v2.9.2-2563EB?logo=github)](https://github.com/TundraLab/Custodia/releases)
-[![Testes xUnit](https://img.shields.io/badge/Testes%20xUnit-53%20aprovados-16A34A)](tests/Custodia.Tests)
+[![Testes xUnit](https://img.shields.io/badge/Testes%20xUnit-56%20aprovados-16A34A)](tests/Custodia.Tests)
 [![Fedora](https://img.shields.io/badge/Fedora-Workstation%20%2F%20KDE-51A2DA?logo=fedora&logoColor=white)](#sistemas-e-formatos)
 [![Pop!_OS](https://img.shields.io/badge/Pop!__OS-GNOME%20%2F%20COSMIC-48B9C7?logo=popos&logoColor=white)](#sistemas-e-formatos)
 [![KDE Plasma](https://img.shields.io/badge/KDE%20Plasma-5%20%2F%206-1D99F3?logo=kdeplasma&logoColor=white)](#sistemas-e-formatos)
@@ -13,6 +13,8 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Avalonia UI](https://img.shields.io/badge/Avalonia%20UI-11.3.8-8B44AC)](https://avaloniaui.net/)
 [![Licença](https://img.shields.io/badge/License-All%20Rights%20Reserved-red)](LICENSE)
+[![Privacidade](https://img.shields.io/badge/Política%20de-Privacidade-0F766E)](PRIVACY.md)
+[![Termos de Uso](https://img.shields.io/badge/Termos%20de-Uso-1D4ED8)](TERMS.md)
 
 > **Em desenvolvimento desde:** 2026  
 > **Status:** estável, com releases oficiais ([GitHub Releases](https://github.com/TundraLab/Custodia/releases))  
@@ -24,7 +26,7 @@
 ## Qualidade
 
 - **Build e distribuição:** compilação limpa em `.NET 10.0` para Linux `x86_64` com empacotamento nativo `.rpm` e `.AppImage` verificado por SHA-256
-- **Suíte de testes:** **53 testes unitários xUnit aprovados (`0` falhas)** cobrindo motor de sincronização, fila de transferências, persistência SQLite, isolamento de contas OAuth2, atualizador, sanitização de suporte e e-mails de ciclo de vida
+- **Suíte de testes:** **56 testes unitários xUnit aprovados (`0` falhas)** cobrindo motor de sincronização, fila de transferências, persistência SQLite, isolamento de contas OAuth2, atualizador, sanitização de suporte, aceite de termos/privacidade e e-mails de ciclo de vida
 - **Plataforma principal:** Linux `x86_64` (Fedora Workstation/KDE, Pop!_OS GNOME/COSMIC e KDE Plasma 5/6)
 - **Documentação técnica:** OpenAPI `3.0.3` em tempo real (`GET /api/v1/openapi.json`), guia [docs/API.md](docs/API.md), [Custodia-API.pdf](Custodia-API.pdf) e histórico completo em [CHANGELOG.md](CHANGELOG.md)
 
@@ -247,6 +249,15 @@ Enquanto o aplicativo estiver em modo **Testando** (*Testing*), o Google bloquei
   ./install-custodia.sh --uninstall
   rm -rf ~/.config/custodia ~/.local/share/custodia ~/.cache/custodia
   ```
+
+## Privacidade, Conformidade Google OAuth e Termos de Uso
+
+Documentos oficiais disponíveis no repositório: **[Política de Privacidade](PRIVACY.md)** | **[Termos de Uso](TERMS.md)** | **[Licença Proprietária](LICENSE)**.
+
+- **Classificação do escopo e modelo BYO-OAuth:** o Custódia solicita o escopo `https://www.googleapis.com/auth/drive` (classificado como **escopo sensível** pela [documentação oficial do Google](https://developers.google.com/identity/protocols/oauth2/scopes)). Na configuração atual, cada usuário cria e utiliza suas próprias credenciais OAuth no Google Cloud Console estritamente para **uso pessoal/individual** — isso **não** dispensa o processo formal de [Verificação OAuth do Google](https://support.google.com/cloud/answer/9110914) caso um Client ID compartilhado venha a ser distribuído publicamente pela TundraLab.
+- **Uso Limitado (Limited Use):** o uso de dados obtidos das APIs do Google segue a [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy). Seus arquivos do Drive, pastas, metadados, hashes e tokens OAuth permanecem exclusivamente na sua máquina e nunca são enviados a servidores da TundraLab.
+- **E-mails opcionais de ciclo de vida (`contato.tundralab@gmail.com`):** nenhum escopo do Gmail é solicitado no seu projeto Google Cloud. Caso você mantenha os alertas de conta habilitados no Custódia, apenas `recipientEmail`, `recipientName`, `eventType` (`connect` ou `revoke`), `appName`, `appVersion`, `language` e `timestampUtc` são enviados ao serviço de disparo oficial da TundraLab exclusivamente para notificar conexão ou revogação da conta — recurso opcional que pode ser recusado logo na primeira execução ou alterado a qualquer momento em **Sobre -> Rever termo inicial**.
+- **Aviso ao baixar/instalar e na primeira execução:** tanto o instalador de terminal (`install-custodia.sh`) quanto o aplicativo desktop exibem o resumo da Política de Privacidade e dos Termos de Uso com aceite explícito antes do primeiro uso.
 
 ## API REST Local (`127.0.0.1:5080`) e Agentes de IA
 

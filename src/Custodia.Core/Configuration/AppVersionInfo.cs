@@ -7,6 +7,7 @@ public static class AppVersionInfo
     public const string FallbackVersion = "2.9.2";
     public const string RepositoryOwner = "TundraLab";
     public const string RepositoryName = "Custodia";
+    public const string CurrentLegalVersion = "2026-11-24";
 
     public static string CurrentVersion { get; } = ResolveCurrentVersion();
 

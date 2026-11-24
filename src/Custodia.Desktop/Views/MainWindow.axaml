@@ -12,7 +12,8 @@
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource TundraWindowBg}">
 
-  <LayoutTransformControl x:Name="RootLayoutTransform"
+  <Grid>
+    <LayoutTransformControl x:Name="RootLayoutTransform"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch">
     <LayoutTransformControl.LayoutTransform>
@@ -527,4 +528,83 @@
       </Grid>
     </Grid>
   </LayoutTransformControl>
+
+    <!-- First-run Privacy and Terms acceptance modal -->
+    <Border IsVisible="{Binding IsLegalConsentVisible}"
+            Background="#CC020617"
+            Padding="24"
+            ZIndex="100">
+      <Border MaxWidth="680"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              CornerRadius="12"
+              Padding="22"
+              Background="{StaticResource TundraWindowBg}"
+              BorderBrush="{StaticResource TundraBorderBrush}"
+              BorderThickness="1">
+        <ScrollViewer MaxHeight="580"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="14">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Image Source="avares://Custodia/Assets/custodia-icon.png" Width="28" Height="28" />
+              <StackPanel Spacing="2" VerticalAlignment="Center">
+                <TextBlock FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding Loc.LegalConsentTitle}" />
+                <TextBlock Classes="MutedMeta" FontSize="12.5" TextWrapping="Wrap" Text="{Binding Loc.LegalConsentSubtitle}" />
+              </StackPanel>
+            </StackPanel>
+
+            <Border Classes="FlatRow" Padding="12,10">
+              <StackPanel Spacing="8">
+                <TextBlock FontSize="12.5" TextWrapping="Wrap" Text="{Binding Loc.LegalConsentDriveScopeBullet}" />
+                <TextBlock FontSize="12.5" TextWrapping="Wrap" Text="{Binding Loc.LegalConsentLocalDataBullet}" />
+                <TextBlock FontSize="12.5" TextWrapping="Wrap" Text="{Binding Loc.LegalConsentEmailBullet}" />
+              </StackPanel>
+            </Border>
+
+            <WrapPanel Orientation="Horizontal">
+              <Button Classes="SecondaryAction"
+                      Margin="0,0,8,4"
+                      Padding="11,6"
+                      Content="{Binding Loc.LegalPrivacyButton}"
+                      Command="{Binding OpenPrivacyPolicyCommand}" />
+              <Button Classes="SecondaryAction"
+                      Margin="0,0,8,4"
+                      Padding="11,6"
+                      Content="{Binding Loc.LegalTermsButton}"
+                      Command="{Binding OpenTermsOfUseCommand}" />
+              <Button Classes="SecondaryAction"
+                      Margin="0,0,0,4"
+                      Padding="11,6"
+                      Content="{Binding Loc.LegalGooglePolicyButton}"
+                      Command="{Binding OpenGoogleApiPolicyCommand}" />
+            </WrapPanel>
+
+            <StackPanel Spacing="8">
+              <CheckBox IsChecked="{Binding LegalTermsAccepted, Mode=TwoWay}">
+                <TextBlock FontSize="12.5" FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding Loc.LegalConsentAcceptCheckbox}" />
+              </CheckBox>
+
+              <CheckBox IsChecked="{Binding LegalLifecycleEmailOptIn, Mode=TwoWay}">
+                <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TundraTextSecondary}" Text="{Binding Loc.LegalConsentEmailOptInCheckbox}" />
+              </CheckBox>
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+              <TextBlock Grid.Column="0"
+                         Classes="MutedMeta"
+                         FontSize="11.5"
+                         VerticalAlignment="Center"
+                         Text="TundraLab • contato.tundralab@gmail.com" />
+              <Button Grid.Column="1"
+                      Classes="PrimaryAction"
+                      Padding="18,9"
+                      Content="{Binding Loc.LegalConsentContinueButton}"
+                      Command="{Binding AcceptLegalConsentCommand}" />
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Border>
+  </Grid>
 </Window>

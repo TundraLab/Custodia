@@ -37,6 +37,7 @@ public sealed partial class AboutViewModel : ViewModelBase
     public Func<Uri, Task>? OpenExternalUriCallback { get; set; }
     public Func<string, Task>? CopyTextCallback { get; set; }
     public Action? RequestAppShutdownCallback { get; set; }
+    public Action? ReviewLegalTermsCallback { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CheckUpdatesButtonText))]
@@ -255,6 +256,41 @@ public sealed partial class AboutViewModel : ViewModelBase
         {
             await OpenExternalUriCallback.Invoke(new Uri(RepositoryUrl));
         }
+    }
+
+    [RelayCommand]
+    private async Task OpenPrivacyPolicyAsync()
+    {
+        if (OpenExternalUriCallback is not null)
+        {
+            await OpenExternalUriCallback.Invoke(
+                MainWindowViewModel.ResolveLegalDocumentUri("PRIVACY.md", MainWindowViewModel.PrivacyPolicyUrl));
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenTermsOfUseAsync()
+    {
+        if (OpenExternalUriCallback is not null)
+        {
+            await OpenExternalUriCallback.Invoke(
+                MainWindowViewModel.ResolveLegalDocumentUri("TERMS.md", MainWindowViewModel.TermsOfUseUrl));
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenGoogleApiPolicyAsync()
+    {
+        if (OpenExternalUriCallback is not null)
+        {
+            await OpenExternalUriCallback.Invoke(new Uri(MainWindowViewModel.GoogleApiUserDataPolicyUrl));
+        }
+    }
+
+    [RelayCommand]
+    private void ReviewLegalTerms()
+    {
+        ReviewLegalTermsCallback?.Invoke();
     }
 
     [RelayCommand]

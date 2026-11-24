@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using TundraDrive.Api;
@@ -893,5 +894,96 @@ public sealed class Release290FeatureTests
         Assert.Equal("Projetos Ativos", saved!.Alias);
         Assert.Equal("#10B981", saved.ColorHex);
         Assert.Equal("star", saved.IconKey);
+    }
+
+    [Fact]
+    public async Task LegalConsent_RequiresTermsAcceptance_AndPersistsEmailPreference()
+    {
+        var loc = new LocalizationService();
+        loc.SetLanguage("pt-BR");
+        var settings = new TempAppSettingsService();
+        var apiProxy = DispatchProxy.Create<IEmbeddedApiServer, StubBasicProxy>();
+        var autostartProxy = DispatchProxy.Create<IAutostartManager, StubBasicProxy>();
+        var syncProxy = DispatchProxy.Create<IDriveSyncService, StubDriveSyncProxy>();
+        var notify = new RecordingNotificationService();
+        var auth = new AuthCredentialManager(NullLogger<AuthCredentialManager>.Instance);
+        using var cleaner = new MemoryCleanerService(settings, NullLogger<MemoryCleanerService>.Instance);
+
+        var settingsVm = new SettingsViewModel(settings, apiProxy, autostartProxy, loc, notify, auth, syncProxy, cleaner);
+
+        var mainVm = (MainWindowViewModel)RuntimeHelpers.GetUninitializedObject(typeof(MainWindowViewModel));
+        typeof(MainWindowViewModel).GetField("_settingsService", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(mainVm, settings);
+        typeof(MainWindowViewModel).GetField("<Loc>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(mainVm, loc);
+        typeof(MainWindowViewModel).GetField("<SettingsVm>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(mainVm, settingsVm);
+
+        mainVm.SyncLegalConsentState(settings.Current);
+        Assert.True(mainVm.IsLegalConsentVisible);
+        Assert.False(mainVm.LegalTermsAccepted);
+        Assert.True(mainVm.LegalLifecycleEmailOptIn);
+        Assert.False(mainVm.AcceptLegalConsentCommand.CanExecute(null));
+
+        mainVm.LegalTermsAccepted = true;
+        mainVm.LegalLifecycleEmailOptIn = false;
+        Assert.True(mainVm.AcceptLegalConsentCommand.CanExecute(null));
+
+        await mainVm.AcceptLegalConsentCommand.ExecuteAsync(null);
+        Assert.False(mainVm.IsLegalConsentVisible);
+        Assert.Equal(AppVersionInfo.CurrentLegalVersion, settings.Current.AcceptedLegalVersion);
+        Assert.False(settings.Current.GmailAccountAlertsEnabled);
+        Assert.False(settingsVm.GmailAccountAlertsEnabled);
+
+        await settingsVm.SaveSettingsCommand.ExecuteAsync(null);
+        Assert.Equal(AppVersionInfo.CurrentLegalVersion, settings.Current.AcceptedLegalVersion);
+
+        mainVm.ShowLegalConsentNotice();
+        Assert.True(mainVm.IsLegalConsentVisible);
+        Assert.True(mainVm.LegalTermsAccepted);
+        Assert.False(mainVm.LegalLifecycleEmailOptIn);
+    }
+
+    [Fact]
+    public void LocalizationService_ExposesPtBrAndEnUsLegalStrings()
+    {
+        var loc = new LocalizationService();
+        loc.SetLanguage("pt-BR");
+        var ptTitle = loc.LegalConsentTitle;
+        Assert.False(string.IsNullOrWhiteSpace(ptTitle));
+        Assert.False(string.IsNullOrWhiteSpace(loc.LegalConsentDriveScopeBullet));
+        Assert.False(string.IsNullOrWhiteSpace(loc.LegalConsentEmailOptInCheckbox));
+        Assert.False(string.IsNullOrWhiteSpace(loc.LegalPrivacyButton));
+        Assert.False(string.IsNullOrWhiteSpace(loc.LegalTermsButton));
+
+        loc.SetLanguage("en-US");
+        Assert.NotEqual(ptTitle, loc.LegalConsentTitle);
+        Assert.False(string.IsNullOrWhiteSpace(loc.LegalConsentDriveScopeBullet));
+        Assert.False(string.IsNullOrWhiteSpace(loc.LegalConsentEmailOptInCheckbox));
+        Assert.False(string.IsNullOrWhiteSpace(loc.LegalPrivacyButton));
+        Assert.False(string.IsNullOrWhiteSpace(loc.LegalTermsButton));
+    }
+
+    [Fact]
+    public void LegalDocumentationFiles_ExistAndAreLinkedInReadme()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        string? repoRoot = null;
+        for (var i = 0; i < 8 && dir is not null; i++)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "Custodia.sln")))
+            {
+                repoRoot = dir.FullName;
+                break;
+            }
+            dir = dir.Parent;
+        }
+
+        Assert.NotNull(repoRoot);
+        Assert.True(File.Exists(Path.Combine(repoRoot!, "PRIVACY.md")));
+        Assert.True(File.Exists(Path.Combine(repoRoot!, "TERMS.md")));
+        Assert.True(File.Exists(Path.Combine(repoRoot!, "LICENSE")));
+
+        var readme = File.ReadAllText(Path.Combine(repoRoot!, "README.md"));
+        Assert.Contains("PRIVACY.md", readme, StringComparison.Ordinal);
+        Assert.Contains("TERMS.md", readme, StringComparison.Ordinal);
+        Assert.Contains("api-services-user-data-policy", readme, StringComparison.Ordinal);
     }
 }
