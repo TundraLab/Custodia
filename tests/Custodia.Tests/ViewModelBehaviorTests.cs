@@ -204,6 +204,19 @@ public sealed class ViewModelBehaviorTests
         await fileHubVm.DownloadSelectedCommand.ExecuteAsync(null);
         Assert.Equal(["r1", "r2"], stubSync.DownloadedIds);
         Assert.Equal("2 arquivo(s) baixado(s).", fileHubVm.StatusSummary);
+
+        fileHubVm.NewFolderName = "antigo";
+        fileHubVm.OpenCreateFolderCommand.Execute(null);
+        Assert.True(fileHubVm.IsCreateFolderOpen);
+        Assert.Equal(string.Empty, fileHubVm.NewFolderName);
+
+        // Executing again keeps the inline bar open cleanly for context-menu invocations
+        fileHubVm.OpenCreateFolderCommand.Execute(null);
+        Assert.True(fileHubVm.IsCreateFolderOpen);
+
+        fileHubVm.SelectedSourceFilterIndex = 2; // Lixeira
+        fileHubVm.OpenCreateFolderCommand.Execute(null);
+        Assert.False(fileHubVm.IsCreateFolderOpen);
     }
 
     [Fact]

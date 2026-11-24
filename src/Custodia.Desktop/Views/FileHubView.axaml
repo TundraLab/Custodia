@@ -166,9 +166,11 @@
               Padding="10,8"
               IsVisible="{Binding IsCreateFolderOpen}">
         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-          <TextBox Grid.Column="0"
+          <TextBox x:Name="NewFolderTextBox"
+                   Grid.Column="0"
                    Watermark="{Binding Loc.NewFolderPlaceholder}"
-                   Text="{Binding NewFolderName}" />
+                   Text="{Binding NewFolderName}"
+                   KeyDown="OnNewFolderKeyDown" />
           <Button Grid.Column="1"
                   Classes="PrimaryAction"
                   Padding="12,5"
@@ -383,34 +385,33 @@
             <ListBox x:Name="ListFilesListBox"
                      Grid.Row="1"
                      Classes="FlatRowList"
+                     Background="Transparent"
                      SelectionMode="Multiple"
                      ItemsSource="{Binding ActiveListFiles}"
                      SelectedItem="{Binding SelectedItem}"
                      SelectionChanged="OnFileSelectionChanged"
-                     PointerPressed="OnFileListPointerPressed"
                      DoubleTapped="OnListDoubleTapped">
               <ListBox.ContextMenu>
                 <ContextMenu>
-                  <MenuItem Header="{Binding SelectedItem.PreviewLabel}"
+                  <MenuItem Header="{Binding SelectedItem.PreviewLabel, FallbackValue=''}"
                             IsVisible="{Binding CanPreviewSelected}"
-                            Command="{Binding SelectedItem.PreviewCommand}" />
+                            Command="{Binding PreviewSelectedCommand}" />
                   <MenuItem Header="{Binding Loc.DownloadButton}"
                             IsVisible="{Binding CanDownloadSelected}"
                             Command="{Binding DownloadSelectedCommand}" />
-                  <MenuItem Header="{Binding SelectedItem.ActionLabel}"
+                  <MenuItem Header="{Binding SelectedItem.ActionLabel, FallbackValue=''}"
                             IsVisible="{Binding SelectedItem.CanOpenNormal, FallbackValue=False}"
                             Command="{Binding SelectedItem.OpenActionCommand}" />
-                  <MenuItem Header="{Binding SelectedItem.OpenInDriveLabel}"
+                  <MenuItem Header="{Binding SelectedItem.OpenInDriveLabel, FallbackValue=''}"
                             IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
                             Command="{Binding SelectedItem.OpenInDriveCommand}" />
                   <Separator IsVisible="{Binding SelectedItem.CanOpenNormal, FallbackValue=False}" />
-                  <MenuItem Header="{Binding SelectedItem.CopyNameLabel}"
+                  <MenuItem Header="{Binding SelectedItem.CopyNameLabel, FallbackValue=''}"
                             IsVisible="{Binding HasSelectedItem}"
                             Command="{Binding SelectedItem.CopyNameCommand}" />
-                  <MenuItem Header="{Binding SelectedItem.CopyLinkLabel}"
+                  <MenuItem Header="{Binding SelectedItem.CopyLinkLabel, FallbackValue=''}"
                             IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
                             Command="{Binding SelectedItem.CopyDriveLinkCommand}" />
-                  <Separator IsVisible="{Binding CanTrashSelected}" />
                   <MenuItem Header="{Binding Loc.MoveToTrashButton}"
                             IsVisible="{Binding CanTrashSelected}"
                             Command="{Binding TrashSelectedCommand}" />
@@ -420,6 +421,28 @@
                   <MenuItem Header="{Binding Loc.DeletePermanentlyButton}"
                             IsVisible="{Binding CanDeleteSelectedPermanently}"
                             Command="{Binding DeleteSelectedPermanentlyCommand}" />
+                  <Separator IsVisible="{Binding HasSelectedItem}" />
+                  <MenuItem Header="{Binding Loc.NewFolderButton}"
+                            IsVisible="{Binding !IsTrashView}"
+                            Command="{Binding OpenCreateFolderCommand}" />
+                  <MenuItem Header="{Binding Loc.UploadFileButton}"
+                            IsVisible="{Binding !IsTrashView}"
+                            Command="{Binding UploadFileCommand}" />
+                  <MenuItem Header="{Binding Loc.RefreshButton}"
+                            Command="{Binding RefreshCommand}" />
+                  <MenuItem Header="{Binding Loc.BackButton}"
+                            IsVisible="{Binding CanNavigateBack}"
+                            Command="{Binding NavigateBackCommand}" />
+                  <Separator IsVisible="{Binding !IsFolderEmpty}" />
+                  <MenuItem Header="{Binding Loc.SelectAllButton}"
+                            IsVisible="{Binding !IsFolderEmpty}"
+                            Click="OnSelectAllClick" />
+                  <MenuItem Header="{Binding Loc.ClearSelectionButton}"
+                            IsVisible="{Binding HasSelectedItem}"
+                            Click="OnClearSelectionClick" />
+                  <MenuItem Header="{Binding Loc.EmptyTrashButton}"
+                            IsVisible="{Binding CanEmptyTrash}"
+                            Command="{Binding RequestEmptyTrashCommand}" />
                 </ContextMenu>
               </ListBox.ContextMenu>
               <ListBox.ItemTemplate>
@@ -461,6 +484,7 @@
           <!-- Layout em grade leve (paginado com menu de contexto compartilhado) -->
           <ListBox x:Name="GridFilesListBox"
                    Classes="FileGridList"
+                   Background="Transparent"
                    SelectionMode="Multiple"
                    IsVisible="{Binding IsGridLayout}"
                    Padding="14"
@@ -469,30 +493,28 @@
                    ItemsSource="{Binding ActiveGridFiles}"
                    SelectedItem="{Binding SelectedItem}"
                    SelectionChanged="OnFileSelectionChanged"
-                   PointerPressed="OnFileListPointerPressed"
                    DoubleTapped="OnListDoubleTapped">
             <ListBox.ContextMenu>
               <ContextMenu>
-                <MenuItem Header="{Binding SelectedItem.PreviewLabel}"
+                <MenuItem Header="{Binding SelectedItem.PreviewLabel, FallbackValue=''}"
                           IsVisible="{Binding CanPreviewSelected}"
-                          Command="{Binding SelectedItem.PreviewCommand}" />
+                          Command="{Binding PreviewSelectedCommand}" />
                 <MenuItem Header="{Binding Loc.DownloadButton}"
                           IsVisible="{Binding CanDownloadSelected}"
                           Command="{Binding DownloadSelectedCommand}" />
-                <MenuItem Header="{Binding SelectedItem.ActionLabel}"
+                <MenuItem Header="{Binding SelectedItem.ActionLabel, FallbackValue=''}"
                           IsVisible="{Binding SelectedItem.CanOpenNormal, FallbackValue=False}"
                           Command="{Binding SelectedItem.OpenActionCommand}" />
-                <MenuItem Header="{Binding SelectedItem.OpenInDriveLabel}"
+                <MenuItem Header="{Binding SelectedItem.OpenInDriveLabel, FallbackValue=''}"
                           IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
                           Command="{Binding SelectedItem.OpenInDriveCommand}" />
                 <Separator IsVisible="{Binding SelectedItem.CanOpenNormal, FallbackValue=False}" />
-                <MenuItem Header="{Binding SelectedItem.CopyNameLabel}"
+                <MenuItem Header="{Binding SelectedItem.CopyNameLabel, FallbackValue=''}"
                           IsVisible="{Binding HasSelectedItem}"
                           Command="{Binding SelectedItem.CopyNameCommand}" />
-                <MenuItem Header="{Binding SelectedItem.CopyLinkLabel}"
+                <MenuItem Header="{Binding SelectedItem.CopyLinkLabel, FallbackValue=''}"
                           IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
                           Command="{Binding SelectedItem.CopyDriveLinkCommand}" />
-                <Separator IsVisible="{Binding CanTrashSelected}" />
                 <MenuItem Header="{Binding Loc.MoveToTrashButton}"
                           IsVisible="{Binding CanTrashSelected}"
                           Command="{Binding TrashSelectedCommand}" />
@@ -502,6 +524,28 @@
                 <MenuItem Header="{Binding Loc.DeletePermanentlyButton}"
                           IsVisible="{Binding CanDeleteSelectedPermanently}"
                           Command="{Binding DeleteSelectedPermanentlyCommand}" />
+                <Separator IsVisible="{Binding HasSelectedItem}" />
+                <MenuItem Header="{Binding Loc.NewFolderButton}"
+                          IsVisible="{Binding !IsTrashView}"
+                          Command="{Binding OpenCreateFolderCommand}" />
+                <MenuItem Header="{Binding Loc.UploadFileButton}"
+                          IsVisible="{Binding !IsTrashView}"
+                          Command="{Binding UploadFileCommand}" />
+                <MenuItem Header="{Binding Loc.RefreshButton}"
+                          Command="{Binding RefreshCommand}" />
+                <MenuItem Header="{Binding Loc.BackButton}"
+                          IsVisible="{Binding CanNavigateBack}"
+                          Command="{Binding NavigateBackCommand}" />
+                <Separator IsVisible="{Binding !IsFolderEmpty}" />
+                <MenuItem Header="{Binding Loc.SelectAllButton}"
+                          IsVisible="{Binding !IsFolderEmpty}"
+                          Click="OnSelectAllClick" />
+                <MenuItem Header="{Binding Loc.ClearSelectionButton}"
+                          IsVisible="{Binding HasSelectedItem}"
+                          Click="OnClearSelectionClick" />
+                <MenuItem Header="{Binding Loc.EmptyTrashButton}"
+                          IsVisible="{Binding CanEmptyTrash}"
+                          Command="{Binding RequestEmptyTrashCommand}" />
               </ContextMenu>
             </ListBox.ContextMenu>
             <ListBox.ItemsPanel>
@@ -571,11 +615,13 @@
           <ProgressBar VerticalAlignment="Top"
                        Height="2"
                        IsIndeterminate="True"
+                       IsHitTestVisible="False"
                        IsVisible="{Binding IsLoading}" />
 
           <TextBlock VerticalAlignment="Center"
                      HorizontalAlignment="Center"
                      Classes="Subtitle"
+                     IsHitTestVisible="False"
                      Text="{Binding EmptyStateText}"
                      IsVisible="{Binding IsFolderEmpty}" />
         </Grid>

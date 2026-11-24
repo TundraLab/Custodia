@@ -1582,7 +1582,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private void DismissTransferErrorBanner() => TransferErrorBannerText = string.Empty;
 
     [RelayCommand]
-    private void ToggleCreateFolder()
+    public void OpenCreateFolder()
     {
         if (IsTrashView)
         {
@@ -1597,11 +1597,20 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        IsCreateFolderOpen = !IsCreateFolderOpen;
+        NewFolderName = string.Empty;
+        IsCreateFolderOpen = true;
+    }
+
+    [RelayCommand]
+    private void ToggleCreateFolder()
+    {
         if (IsCreateFolderOpen)
         {
-            NewFolderName = string.Empty;
+            IsCreateFolderOpen = false;
+            return;
         }
+
+        OpenCreateFolder();
     }
 
     [RelayCommand]
