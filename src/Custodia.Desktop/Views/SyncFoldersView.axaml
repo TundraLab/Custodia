@@ -135,6 +135,13 @@
                   IsEnabled="{Binding HasSelectedFolder}"
                   Content="{Binding Loc.OpenLocalFolderMenu}"
                   Command="{Binding OpenSelectedFolderCommand}" />
+          <Button Classes="SecondaryAction"
+                  Margin="0,0,6,0"
+                  Padding="10,5"
+                  FontSize="12"
+                  IsEnabled="{Binding HasSelectedFolder}"
+                  Content="{Binding Loc.CustomizeFolderButton}"
+                  Command="{Binding CustomizeSelectedFolderCommand}" />
           <Button Classes="DangerAction"
                   Padding="10,5"
                   FontSize="12"
@@ -163,6 +170,7 @@
                     <MenuItem Header="{Binding PauseButtonLabel}" Command="{Binding TogglePauseCommand}" />
                     <MenuItem Header="{Binding ModeToggleButtonLabel}" Command="{Binding ToggleModeCommand}" />
                     <MenuItem Header="{Binding Loc.OpenLocalFolderMenu}" Command="{Binding OpenLocalFolderCommand}" />
+                    <MenuItem Header="{Binding Loc.CustomizeFolderButton}" Command="{Binding ToggleCustomizeCommand}" />
                     <Separator />
                     <MenuItem Header="{Binding Loc.RemoveButton}" Command="{Binding RemoveCommand}" />
                   </ContextMenu>
@@ -178,11 +186,17 @@
                       <!-- Origem Local (PC) -->
                       <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                          <PathIcon Width="13" Height="13"
-                                    Foreground="#60A5FA"
-                                    Data="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z" />
+                          <PathIcon Width="15" Height="15"
+                                    Foreground="{Binding CustomColorBrush}"
+                                    Data="{Binding CustomIconGeometry}" />
                           <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#93C5FD" Text="{Binding Loc.SyncOriginLocalLabel}" />
                         </StackPanel>
+                        <TextBlock FontSize="13.5"
+                                   FontWeight="SemiBold"
+                                   Foreground="{Binding CustomColorBrush}"
+                                   IsVisible="{Binding HasCustomAlias}"
+                                   Text="{Binding DisplayTitle}"
+                                   TextWrapping="Wrap" />
                         <TextBlock FontSize="13" FontWeight="SemiBold" FontFamily="monospace" Text="{Binding LocalPath}" TextWrapping="Wrap" />
                       </StackPanel>
 
@@ -260,6 +274,99 @@
                       <ProgressBar Height="3"
                                    IsIndeterminate="True"
                                    IsVisible="{Binding IsSyncing}" />
+                    </StackPanel>
+                  </Border>
+
+                  <!-- Inline folder customization panel -->
+                  <Border Background="#13171F"
+                          BorderBrush="#334155"
+                          BorderThickness="1"
+                          CornerRadius="6"
+                          Padding="12"
+                          IsVisible="{Binding IsCustomizing}">
+                    <StackPanel Spacing="10">
+                      <StackPanel Spacing="4">
+                        <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding Loc.CustomizeAliasLabel}" />
+                        <TextBox Watermark="{Binding Loc.CustomizeAliasWatermark}" Text="{Binding EditAlias}" />
+                      </StackPanel>
+
+                      <StackPanel Spacing="5">
+                        <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding Loc.CustomizeColorLabel}" />
+                        <ItemsControl ItemsSource="{Binding ColorChoices}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                              <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FolderColorChoice">
+                              <Button Padding="2"
+                                      Margin="0,0,6,4"
+                                      Background="Transparent"
+                                      BorderThickness="0"
+                                      Command="{Binding SelectCommand}">
+                                <Border Width="22"
+                                        Height="22"
+                                        CornerRadius="11"
+                                        Background="{Binding Brush}"
+                                        BorderBrush="{Binding SelectionBorderBrush}"
+                                        BorderThickness="2" />
+                              </Button>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+
+                      <StackPanel Spacing="5">
+                        <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding Loc.CustomizeIconLabel}" />
+                        <ItemsControl ItemsSource="{Binding IconChoices}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                              <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FolderIconChoice">
+                              <Button Padding="8,4"
+                                      Margin="0,0,6,4"
+                                      Background="#1B2230"
+                                      BorderBrush="{Binding SelectionBorderBrush}"
+                                      BorderThickness="1"
+                                      CornerRadius="6"
+                                      Command="{Binding SelectCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                  <PathIcon Width="13" Height="13"
+                                            Foreground="{StaticResource TundraTextPrimary}"
+                                            Data="{Binding Geometry}" />
+                                  <TextBlock FontSize="11.5"
+                                             VerticalAlignment="Center"
+                                             Text="{Binding Label}" />
+                                </StackPanel>
+                              </Button>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+
+                      <WrapPanel Orientation="Horizontal">
+                        <Button Classes="PrimaryAction"
+                                Margin="0,0,8,0"
+                                Padding="10,5"
+                                FontSize="12"
+                                Content="{Binding Loc.SaveCustomizationButton}"
+                                Command="{Binding SaveCustomizationCommand}" />
+                        <Button Classes="SecondaryAction"
+                                Margin="0,0,8,0"
+                                Padding="10,5"
+                                FontSize="12"
+                                Content="{Binding Loc.ResetCustomizationButton}"
+                                Command="{Binding ResetCustomizationCommand}" />
+                        <Button Classes="SecondaryAction"
+                                Padding="10,5"
+                                FontSize="12"
+                                Content="{Binding Loc.CancelButton}"
+                                Command="{Binding ToggleCustomizeCommand}" />
+                      </WrapPanel>
                     </StackPanel>
                   </Border>
                 </StackPanel>

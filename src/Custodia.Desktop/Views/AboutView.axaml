@@ -82,6 +82,7 @@
               <TextBlock Classes="SectionTitle" Text="{Binding Loc.UpdatesSectionTitle}" />
               <TextBlock Classes="MutedMeta" FontSize="12.5" Text="{Binding InstalledModeSummary}" />
               <TextBlock Classes="MutedMeta" FontSize="11.5" Text="{Binding LastCheckSummary}" />
+              <TextBlock Classes="MutedMeta" FontSize="11.5" Foreground="#93C5FD" Text="{Binding UpdateScheduleSummary}" />
             </StackPanel>
 
             <Button Grid.Column="1"
@@ -106,7 +107,7 @@
                      FontWeight="Medium"
                      TextWrapping="Wrap"
                      IsVisible="{Binding UpdateStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                     Foreground="{StaticResource TundraTextPrimary}"
+                     Foreground="{Binding UpdateStatusBrush}"
                      Text="{Binding UpdateStatusText}" />
 
           <ProgressBar Height="5"
@@ -152,6 +153,98 @@
                          Text="{Binding LatestReleaseNotes}" />
             </ScrollViewer>
           </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Suporte e Feedback -->
+      <Border Classes="SurfaceCard" Padding="18">
+        <StackPanel Spacing="12">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+              <TextBlock Classes="SectionTitle" Text="{Binding Loc.SupportSectionTitle}" />
+              <TextBlock Classes="MutedMeta" FontSize="12" Text="{Binding Loc.SupportSectionSubtitle}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+              <Button Classes="SecondaryAction"
+                      Margin="0,0,8,4"
+                      Content="{Binding Loc.ReportBugButton}"
+                      Command="{Binding ToggleBugReportCommand}" />
+              <Button Classes="PrimaryAction"
+                      Margin="0,0,0,4"
+                      Content="{Binding Loc.SubmitSuggestionButton}"
+                      Command="{Binding ToggleSuggestionCommand}" />
+            </WrapPanel>
+          </Grid>
+
+          <!-- Formulário: Reportar erro -->
+          <Border Classes="FlatRow"
+                  Background="#13171F"
+                  Padding="14"
+                  IsVisible="{Binding IsBugReportOpen}">
+            <StackPanel Spacing="10">
+              <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding Loc.BugTitleLabel}" />
+              <TextBox Watermark="{Binding Loc.BugTitleWatermark}" Text="{Binding BugTitle}" />
+              <TextBlock FontSize="12.5" FontWeight="Medium" Text="{Binding Loc.BugDescriptionLabel}" />
+              <TextBox AcceptsReturn="True"
+                       Height="86"
+                       TextWrapping="Wrap"
+                       Watermark="{Binding Loc.BugDescriptionWatermark}"
+                       Text="{Binding BugDescription}" />
+              <CheckBox IsChecked="{Binding IncludeDiagnostics}"
+                        Content="{Binding Loc.BugIncludeDiagnosticsCheckbox}" />
+              <WrapPanel Orientation="Horizontal">
+                <Button Classes="PrimaryAction"
+                        Margin="0,0,8,4"
+                        Content="{Binding Loc.OpenGitHubIssueButton}"
+                        Command="{Binding SubmitBugReportGitHubCommand}" />
+                <Button Classes="SecondaryAction"
+                        Margin="0,0,0,4"
+                        Content="{Binding Loc.CopyReportButton}"
+                        Command="{Binding CopyBugReportCommand}" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- Formulário: Enviar sugestão futura -->
+          <Border Classes="FlatRow"
+                  Background="#13171F"
+                  Padding="14"
+                  IsVisible="{Binding IsSuggestionOpen}">
+            <StackPanel Spacing="10">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock Grid.Column="0" FontSize="12.5" FontWeight="Medium" VerticalAlignment="Center" Text="{Binding Loc.SuggestionCategoryLabel}" />
+                <ComboBox Grid.Column="1"
+                          Width="240"
+                          ItemsSource="{Binding SuggestionCategories}"
+                          SelectedIndex="{Binding SelectedSuggestionCategoryIndex}" />
+              </Grid>
+              <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding Loc.SuggestionTitleLabel}" />
+              <TextBox Watermark="{Binding Loc.SuggestionTitleWatermark}" Text="{Binding SuggestionTitle}" />
+              <TextBlock FontSize="12.5" FontWeight="Medium" Text="{Binding Loc.SuggestionDescriptionLabel}" />
+              <TextBox AcceptsReturn="True"
+                       Height="86"
+                       TextWrapping="Wrap"
+                       Watermark="{Binding Loc.SuggestionDescriptionWatermark}"
+                       Text="{Binding SuggestionDescription}" />
+              <WrapPanel Orientation="Horizontal">
+                <Button Classes="PrimaryAction"
+                        Margin="0,0,8,4"
+                        Content="{Binding Loc.OpenGitHubIssueButton}"
+                        Command="{Binding SubmitSuggestionGitHubCommand}" />
+                <Button Classes="SecondaryAction"
+                        Margin="0,0,0,4"
+                        Content="{Binding Loc.CopyReportButton}"
+                        Command="{Binding CopySuggestionCommand}" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+
+          <TextBlock Classes="MutedMeta"
+                     Foreground="#93C5FD"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding FeedbackStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Text="{Binding FeedbackStatusMessage}" />
         </StackPanel>
       </Border>
     </StackPanel>

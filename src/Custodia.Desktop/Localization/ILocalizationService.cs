@@ -207,4 +207,40 @@ public interface ILocalizationService : INotifyPropertyChanged
     string UpdateInstallNowButton { get; }
     string UpdateOpenReleaseButton { get; }
     string UpdateBannerActionButton { get; }
+
+    string SupportSectionTitle { get; }
+    string SupportSectionSubtitle { get; }
+    string ReportBugButton { get; }
+    string SubmitSuggestionButton { get; }
+    string BugTitleLabel { get; }
+    string BugTitleWatermark { get; }
+    string BugDescriptionLabel { get; }
+    string BugDescriptionWatermark { get; }
+    string BugIncludeDiagnosticsCheckbox { get; }
+    string OpenGitHubIssueButton { get; }
+    string CopyReportButton { get; }
+    string SuggestionCategoryLabel { get; }
+    string SuggestionTitleLabel { get; }
+    string SuggestionTitleWatermark { get; }
+    string SuggestionDescriptionLabel { get; }
+    string SuggestionDescriptionWatermark { get; }
+
+    string NotificationSoundCheckbox { get; }
+    string NotificationSoundToneLabel { get; }
+    string PreviewSoundButton { get; }
+    string GmailAccountAlertsCheckbox { get; }
+    string GmailAccountAlertsHint { get; }
+
+    string NewFolderButton { get; }
+    string SyncLocalIntoHereButton { get; }
+    string NewFolderPlaceholder { get; }
+    string CreateFolderConfirmButton { get; }
+
+    string CustomizeFolderButton { get; }
+    string CustomizeAliasLabel { get; }
+    string CustomizeAliasWatermark { get; }
+    string CustomizeColorLabel { get; }
+    string CustomizeIconLabel { get; }
+    string SaveCustomizationButton { get; }
+    string ResetCustomizationButton { get; }
 }

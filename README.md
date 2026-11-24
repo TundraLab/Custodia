@@ -1,4 +1,4 @@
-# Custódia v2.8.0
+# Custódia v2.9.0
 
 ![Custódia by TundraLab - Seus arquivos. Sempre seguros.](docs/images/custodia-promo.jpg)
 
@@ -23,7 +23,7 @@
 
 | Tela | Prévia |
 | :--- | :--- |
-| **Meu Driver** | ![Meu Driver](docs/images/preview-01-meu-driver.png) |
+| **Meus Arquivos** | ![Meus Arquivos](docs/images/preview-01-meu-driver.png) |
 | **Pastas de Sincronização** | ![Pastas de Sincronização](docs/images/preview-02-pastas.png) |
 | **Fila de Transferências** | ![Fila de Transferências](docs/images/preview-03-transferencias.png) |
 | **Logs de Atividade** | ![Logs de Atividade](docs/images/preview-04-logs.png) |
@@ -39,15 +39,16 @@
 
 ## O que o aplicativo faz
 
-- Navegação em **Meu Driver** pelas pastas do Google Drive, pelas pastas sincronizadas localmente e pela **Lixeira**, em modo Lista ou Grade com miniaturas.
+- Navegação em **Meus Arquivos** pelas pastas do Google Drive, pelas pastas sincronizadas localmente e pela **Lixeira**, em modo Lista ou Grade com miniaturas e botão direto para criar novas pastas.
 - Seleção múltipla de arquivos (por caixas de seleção, `Ctrl + Clique`, `Shift + Clique` e `Ctrl + A`) para baixar, mover para Lixeira, restaurar ou excluir em lote, além de upload por arrastar e soltar ou seleção de vários arquivos.
 - Pré-visualização de imagens, vídeos (miniatura, duração e player), áudios (forma de onda e reprodução interna), PDFs com troca de página, documentos Office (`DOCX`, `XLSX`, `PPTX`, `ODT`, `ODS`, `ODP`), Documentos Google e arquivos de código ou texto.
-- Fila de transferências e barra lateral com animações distintas para upload (azul), download (verde) e exclusão (vermelho), além de detalhes expansíveis ao clicar em cada item (caminho completo, ID no Drive, duração, velocidade média e ações).
-- Sincronização bidirecional (`PC <-> Drive`) ou backup unidirecional (`PC -> Drive`) por pasta, com verificação MD5/SHA256, resolução de conflitos, padrões ignorados e monitoramento em tempo real via `FileSystemWatcher`.
+- Fila de transferências sem limite de 200 itens, com histórico expandido, mensagens detalhadas e banners animados em falhas de upload/download, barra lateral e ícone dinâmico na bandeja do sistema para upload (azul), download (verde), exclusão (vermelho), sincronização e erro.
+- Sincronização bidirecional (`PC <-> Drive`) ou backup unidirecional (`PC -> Drive`) por pasta (incluindo mapeamento múltiplo automático de pastas e subpastas vazias sem precisar nomear manualmente), verificação MD5/SHA256, resolução de conflitos, padrões ignorados, monitoramento em tempo real via `FileSystemWatcher` e personalização de apelido, cor e ícone por pasta.
 - Exclusões em pastas sincronizadas movem o item para a Lixeira do Google Drive (ou para a Lixeira do sistema no formato FreeDesktop compatível com GNOME Files e KDE Dolphin); exclusões definitivas só acontecem manualmente na aba Lixeira.
-- Suporte a várias contas Google na barra lateral com alternância rápida, gráfico de cota por categoria (Drive, Gmail/Fotos e Lixeira) e revogação individual do `credentials.json` ou de cada conta.
+- Suporte a várias contas Google na barra lateral com alternância rápida, gráfico de cota por categoria (Drive, Gmail/Fotos e Lixeira), revogação individual do `credentials.json` ou de cada conta e aviso opcional por e-mail (Gmail API) ao conectar ou desconectar uma conta.
 - Limpador periódico de RAM (configurável em minutos ou acionado manualmente em Configurações).
-- Tradução em Português (Brasil) e English (US), zoom da interface de 100% a 300% (`Ctrl++`, `Ctrl+-`, `Ctrl+0`), notificações nativas via D-Bus (`org.freedesktop.Notifications`, filtradas para evitar avisos sem alterações) e ícone na bandeja do sistema.
+- Tradução em Português (Brasil) e English (US), zoom da interface de 100% a 300% (`Ctrl++`, `Ctrl+-`, `Ctrl+0`), notificações nativas via D-Bus (`org.freedesktop.Notifications`) com notificação dedicada na sincronização inicial de novas pastas e 6 variações de toques simples (ou modo silencioso).
+- Aba **Sobre** com exibição do agendamento e próxima verificação automática de atualizações, tratamento imediato quando estiver offline e área integrada para reportar erros ou enviar sugestões futuras.
 - Credenciais OAuth2 e tokens salvos localmente em `~/.config/custodia/` e `~/.local/share/custodia/tokens` com permissão `0600`.
 
 ## Modos de sincronização
@@ -80,14 +81,14 @@ chmod +x install-custodia.sh
 
 - **AppImage (`x86_64`, roda direto sem instalar):**
   ```bash
-  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-2.8.0-x86_64.AppImage
-  chmod +x Custodia-2.8.0-x86_64.AppImage
-  ./Custodia-2.8.0-x86_64.AppImage
+  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-2.9.0-x86_64.AppImage
+  chmod +x Custodia-2.9.0-x86_64.AppImage
+  ./Custodia-2.9.0-x86_64.AppImage
   ```
 - **Fedora / RHEL / openSUSE (`.rpm`):**
   ```bash
-  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-2.8.0-1.x86_64.rpm
-  sudo dnf install -y ./Custodia-2.8.0-1.x86_64.rpm
+  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-2.9.0-1.x86_64.rpm
+  sudo dnf install -y ./Custodia-2.9.0-1.x86_64.rpm
   ```
 
 <details>
@@ -99,7 +100,7 @@ chmod +x install-custodia.sh
   - `./install-custodia.sh --appimage`: baixa, valida `SHA-256` e instala o `.AppImage` integrado ao usuário.
   - `./install-custodia.sh --download-only`: baixa `.rpm`, `.AppImage` e `SHA256SUMS.txt` na pasta atual.
   - `./install-custodia.sh --uninstall`: remove a instalação local ou `.rpm` mantendo suas configurações.
-- **AppImage sem FUSE:** `./Custodia-2.8.0-x86_64.AppImage --appimage-extract-and-run`
+- **AppImage sem FUSE:** `./Custodia-2.9.0-x86_64.AppImage --appimage-extract-and-run`
 - **Pacotes opcionais para pré-visualização completa (PDF, Office, áudio e vídeo):**
   - Fedora: `sudo dnf install poppler-utils ghostscript ffmpeg libreoffice ImageMagick`
   - Pop!_OS / Ubuntu: `sudo apt install poppler-utils ghostscript ffmpeg libreoffice imagemagick`
@@ -116,10 +117,11 @@ chmod +x install-custodia.sh
 
 Para conectar sua conta sem passar por servidores externos, crie suas credenciais OAuth2 Desktop no Google Cloud Console.
 
-### Passo 1: Ativar a Google Drive API
+### Passo 1: Ativar a Google Drive API *(e opcionalmente a Gmail API)*
 1. Abra o [Google Cloud Console (Google Drive API)](https://console.cloud.google.com/apis/library/drive.googleapis.com).
 2. Crie ou selecione um projeto no topo da página.
-3. Clique em **Ativar** (*Enable*). Depois de ativa, a tela mostra **API ativada** e o botão **Gerenciar**:
+3. Clique em **Ativar** (*Enable*). Depois de ativa, a tela mostra **API ativada** e o botão **Gerenciar**.
+4. *(Opcional)* Para receber e-mails automáticos no Gmail ao conectar ou desconectar sua conta, ative também a [Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com) no mesmo projeto.
 
 ![Google Drive API ativada](docs/images/01-google-drive-api.png)
 
@@ -194,7 +196,7 @@ Enquanto o aplicativo estiver em modo **Testando** (*Testing*), o Google bloquei
 
 ![Confirmar permissões do Custódia no Google Drive](docs/images/11-google-confirmar-permissoes.png)
 
-4. Depois de autorizar, use **Meu Driver** para navegar pelos arquivos e **Pastas de Sincronização** para vincular pastas do PC ao Drive.
+4. Depois de autorizar, use **Meus Arquivos** para navegar pelos arquivos, criar pastas diretamente no cliente e usar **Pastas de Sincronização** para vincular e personalizar pastas do PC ao Drive.
 
 Em **Configurações**, você pode trocar o idioma (PT-BR / EN-US), ajustar o zoom (100% a 300%), ligar inicialização com o sistema (`~/.config/autostart/custodia.desktop`), ativar bandeja/notificações, configurar o limpador de RAM, gerenciar o arquivo `credentials.json` e contas, ajustar intervalo de sincronização, conflitos, padrões ignorados e porta da API local.
 

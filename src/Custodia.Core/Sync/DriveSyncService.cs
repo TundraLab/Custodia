@@ -22,12 +22,16 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _folderSyncCancellations = new();
     private readonly ConcurrentDictionary<string, TransferQueueItem> _transfers = new();
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _transferCancellations = new();
+    private readonly ConcurrentDictionary<string, byte> _pendingInitialSyncFolders = new();
     private readonly object _suppressionLock = new();
     private readonly HashSet<string> _suppressedWatcherFolders = new();
 
     private PeriodicTimer? _periodicTimer;
     private CancellationTokenSource? _lifecycleCts;
     private int _activeSyncCount;
+    private int _prunedCompletedCount;
+    private int _prunedFailedCount;
+    private int _prunedCancelledCount;
     private int _isOnlineFlag = 1;
     private int _probeInFlight;
     private static readonly HttpClient ConnectivityProbeClient = new()
@@ -212,6 +216,12 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         await LogAsync(ActivitySeverity.Success, "AccountConnect",
             $"Conta Google conectada: {account.EmailAddress}.", null, null, cancellationToken);
 
+        if (_settingsService.Current.GmailAccountAlertsEnabled &&
+            !string.IsNullOrWhiteSpace(account.EmailAddress))
+        {
+            _ = TrySendGmailAccountAlertAsync(account.EmailAddress, isConnected: true);
+        }
+
         if (folders.Any(f => !f.IsPaused))
         {
             _ = Task.Run(() => TriggerSyncAllAsync(), CancellationToken.None);
@@ -266,6 +276,12 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
         CancelAllActiveOperations();
         _watcherService.UpdateWatchers([]);
+
+        if (_settingsService.Current.GmailAccountAlertsEnabled &&
+            !string.IsNullOrWhiteSpace(disconnectedEmail))
+        {
+            await TrySendGmailAccountAlertAsync(disconnectedEmail, isConnected: false, cancellationToken);
+        }
 
         await _driveClient.DisconnectAsync(targetId, cancellationToken);
         await _repository.DeleteAccountAsync(targetId, cancellationToken);
@@ -436,13 +452,14 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             AccountId = CurrentAccount.Id,
             LocalPath = fullLocalPath,
             RemoteFolderId = string.IsNullOrWhiteSpace(remoteFolderId) ? "root" : remoteFolderId,
-            RemoteFolderName = string.IsNullOrWhiteSpace(remoteFolderName) ? "Meu Drive" : remoteFolderName,
+            RemoteFolderName = string.IsNullOrWhiteSpace(remoteFolderName) ? "Meus Arquivos" : remoteFolderName,
             Mode = mode,
             State = FolderSyncState.Idle,
             IsPaused = false
         };
 
         await _repository.UpsertSyncFolderAsync(folder, cancellationToken);
+        _pendingInitialSyncFolders[folder.Id] = 1;
         var allFolders = await GetSyncFoldersAsync(cancellationToken);
         _watcherService.UpdateWatchers(allFolders);
         SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
@@ -457,6 +474,31 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         }
 
         return folder;
+    }
+
+    public async Task UpdateFolderCustomizationAsync(
+        string folderId,
+        string? customAlias,
+        string? customColorHex,
+        string? customIconKey,
+        CancellationToken cancellationToken = default)
+    {
+        var folder = await _repository.GetSyncFolderByIdAsync(folderId, cancellationToken);
+        if (folder is null)
+        {
+            return;
+        }
+
+        folder.CustomAlias = string.IsNullOrWhiteSpace(customAlias) ? null : customAlias.Trim();
+        folder.CustomColorHex = FolderCustomizationPresets.NormalizeColorHex(customColorHex);
+        folder.CustomIconKey = string.IsNullOrWhiteSpace(customIconKey) ? null : customIconKey.Trim();
+
+        await _repository.UpsertSyncFolderAsync(folder, cancellationToken);
+        SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
+
+        await LogAsync(ActivitySeverity.Info, "FolderCustomized",
+            $"Personalização salva para {folder.EffectiveDisplayName}.",
+            folder.Id, folder.LocalPath, cancellationToken);
     }
 
     public async Task UpdateSyncModeAsync(
@@ -529,6 +571,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             return;
         }
 
+        _pendingInitialSyncFolders.TryRemove(folderId, out _);
         await _repository.DeleteSyncFolderAsync(folderId, cancellationToken);
         var folders = await GetSyncFoldersAsync(cancellationToken);
         _watcherService.UpdateWatchers(folders);
@@ -577,6 +620,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         _folderSyncCancellations[folderId] = folderCts;
 
         Interlocked.Increment(ref _activeSyncCount);
+        var syncFailed = false;
         try
         {
             var folder = await _repository.GetSyncFolderByIdAsync(folderId, folderCts.Token);
@@ -601,14 +645,23 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             latestFolder.LastSyncedAtUtc = DateTimeOffset.UtcNow;
             latestFolder.LastErrorMessage = null;
             await _repository.UpsertSyncFolderAsync(latestFolder, CancellationToken.None);
-            SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
 
-            var completionMessage = changesCount > 0
-                ? $"Sincronização concluída: {latestFolder.LocalPath} ({changesCount} alteração(ões))."
-                : $"Sincronização concluída: {latestFolder.LocalPath} (sem alterações).";
-            await LogAsync(ActivitySeverity.Success, "SyncCompleted",
-                completionMessage,
-                latestFolder.Id, latestFolder.LocalPath, CancellationToken.None);
+            var isInitialSync = _pendingInitialSyncFolders.TryRemove(folderId, out _);
+            if (isInitialSync)
+            {
+                await LogAsync(ActivitySeverity.Success, "InitialFolderSyncCompleted",
+                    $"Sincronização inicial concluída: {latestFolder.EffectiveDisplayName} ({latestFolder.TrackedFileCount} arquivo(s) sincronizado(s)).",
+                    latestFolder.Id, latestFolder.LocalPath, CancellationToken.None);
+            }
+            else
+            {
+                var completionMessage = changesCount > 0
+                    ? $"Sincronização concluída: {latestFolder.LocalPath} ({changesCount} alteração(ões))."
+                    : $"Sincronização concluída: {latestFolder.LocalPath} (sem alterações).";
+                await LogAsync(ActivitySeverity.Success, "SyncCompleted",
+                    completionMessage,
+                    latestFolder.Id, latestFolder.LocalPath, CancellationToken.None);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -617,11 +670,11 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             {
                 latestFolder.State = latestFolder.IsPaused ? FolderSyncState.Paused : FolderSyncState.Idle;
                 await _repository.UpsertSyncFolderAsync(latestFolder, CancellationToken.None);
-                SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
             }
         }
         catch (Exception ex)
         {
+            syncFailed = true;
             _logger.LogError(ex, "Sync failed for folder '{FolderId}'.", folderId);
             var folder = await _repository.GetSyncFolderByIdAsync(folderId, CancellationToken.None);
             if (folder is not null)
@@ -629,7 +682,6 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                 folder.State = folder.IsPaused ? FolderSyncState.Paused : FolderSyncState.Error;
                 folder.LastErrorMessage = ex.Message;
                 await _repository.UpsertSyncFolderAsync(folder, CancellationToken.None);
-                SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
             }
 
             await LogAsync(ActivitySeverity.Error, "SyncError",
@@ -637,9 +689,25 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         }
         finally
         {
+            foreach (var stuck in _transfers.Values)
+            {
+                if (string.Equals(stuck.SyncFolderId, folderId, StringComparison.Ordinal) &&
+                    stuck.Status is TransferStatus.Queued or TransferStatus.InProgress)
+                {
+                    stuck.Status = syncFailed ? TransferStatus.Failed : TransferStatus.Cancelled;
+                    stuck.CompletedAtUtc = DateTimeOffset.UtcNow;
+                    if (syncFailed && string.IsNullOrWhiteSpace(stuck.ErrorMessage))
+                    {
+                        stuck.ErrorMessage = "Sync ended with error.";
+                    }
+                    PublishTransfer(stuck);
+                }
+            }
+
             _folderSyncCancellations.TryRemove(folderId, out _);
             Interlocked.Decrement(ref _activeSyncCount);
             folderLock.Release();
+            SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -1004,6 +1072,36 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             .Select(CloneTransfer)
             .ToList();
 
+    public TransferQueueStats GetTransferQueueStats()
+    {
+        var active = 0;
+        var completed = Volatile.Read(ref _prunedCompletedCount);
+        var failed = Volatile.Read(ref _prunedFailedCount);
+        var cancelled = Volatile.Read(ref _prunedCancelledCount);
+
+        foreach (var item in _transfers.Values)
+        {
+            switch (item.Status)
+            {
+                case TransferStatus.Queued:
+                case TransferStatus.InProgress:
+                    active++;
+                    break;
+                case TransferStatus.Completed:
+                    completed++;
+                    break;
+                case TransferStatus.Failed:
+                    failed++;
+                    break;
+                case TransferStatus.Cancelled:
+                    cancelled++;
+                    break;
+            }
+        }
+
+        return new TransferQueueStats(active, completed, failed, cancelled, active + completed + failed + cancelled);
+    }
+
     public void CancelTransfer(string transferId)
     {
         if (_transferCancellations.TryGetValue(transferId, out var cts))
@@ -1021,6 +1119,10 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                 _transfers.TryRemove(id, out _);
             }
         }
+
+        Interlocked.Exchange(ref _prunedCompletedCount, 0);
+        Interlocked.Exchange(ref _prunedFailedCount, 0);
+        Interlocked.Exchange(ref _prunedCancelledCount, 0);
     }
 
     private async Task<int> SyncFolderInternalAsync(LocalSyncFolder folder, CancellationToken cancellationToken)
@@ -1112,20 +1214,38 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                     deleteQueueItem.Status = TransferStatus.InProgress;
                     PublishTransfer(deleteQueueItem);
 
-                    SuppressWatcherForFolder(folder.Id);
                     try
                     {
-                        MoveLocalFileToSystemTrash(localFile.FullName);
-                    }
-                    finally
-                    {
-                        ReleaseWatcherSuppressionDelayed(folder.Id);
-                    }
+                        SuppressWatcherForFolder(folder.Id);
+                        try
+                        {
+                            MoveLocalFileToSystemTrash(localFile.FullName);
+                        }
+                        finally
+                        {
+                            ReleaseWatcherSuppressionDelayed(folder.Id);
+                        }
 
-                    deleteQueueItem.TransferredBytes = localFile.Length;
-                    deleteQueueItem.Status = TransferStatus.Completed;
-                    deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
-                    PublishTransfer(deleteQueueItem);
+                        deleteQueueItem.TransferredBytes = localFile.Length;
+                        deleteQueueItem.Status = TransferStatus.Completed;
+                        deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
+                        PublishTransfer(deleteQueueItem);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        deleteQueueItem.Status = TransferStatus.Cancelled;
+                        deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
+                        PublishTransfer(deleteQueueItem);
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        deleteQueueItem.Status = TransferStatus.Failed;
+                        deleteQueueItem.ErrorMessage = ex.Message;
+                        deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
+                        PublishTransfer(deleteQueueItem);
+                        throw;
+                    }
 
                     await _repository.DeleteTrackedFileAsync(tracked.Id, cancellationToken);
                     changesCount++;
@@ -1181,13 +1301,31 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                 deleteQueueItem.Status = TransferStatus.InProgress;
                 PublishTransfer(deleteQueueItem);
 
-                // Safe deletion: move to Drive Trash (Trashed = true)
-                await _driveClient.TrashFileAsync(remoteFile.Id, cancellationToken);
+                try
+                {
+                    // Safe deletion: move to Drive Trash (Trashed = true)
+                    await _driveClient.TrashFileAsync(remoteFile.Id, cancellationToken);
 
-                deleteQueueItem.TransferredBytes = remoteFile.SizeBytes;
-                deleteQueueItem.Status = TransferStatus.Completed;
-                deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
-                PublishTransfer(deleteQueueItem);
+                    deleteQueueItem.TransferredBytes = remoteFile.SizeBytes;
+                    deleteQueueItem.Status = TransferStatus.Completed;
+                    deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
+                    PublishTransfer(deleteQueueItem);
+                }
+                catch (OperationCanceledException)
+                {
+                    deleteQueueItem.Status = TransferStatus.Cancelled;
+                    deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
+                    PublishTransfer(deleteQueueItem);
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    deleteQueueItem.Status = TransferStatus.Failed;
+                    deleteQueueItem.ErrorMessage = ex.Message;
+                    deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
+                    PublishTransfer(deleteQueueItem);
+                    throw;
+                }
 
                 trashedAny = true;
                 changesCount++;
@@ -1221,6 +1359,18 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
                 var targetLocalPath = ResolveSafeLocalPath(folder.LocalPath, relPath);
                 await DownloadAndTrackAsync(folder, relPath, targetLocalPath, remoteFile, cancellationToken);
+                changesCount++;
+            }
+        }
+
+        // Ensure empty local subdirectories also exist in Drive.
+        var localDirs = ScanLocalDirectories(folder.LocalPath, ignorePatterns);
+        foreach (var relDir in localDirs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!remoteFoldersByRelPath.ContainsKey(relDir))
+            {
+                await EnsureRemoteParentFolderAsync(folder.RemoteFolderId, $"{relDir}/.dir-placeholder", remoteFoldersByRelPath, cancellationToken);
                 changesCount++;
             }
         }
@@ -1337,6 +1487,9 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             queueItem.ErrorMessage = ex.Message;
             queueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
             PublishTransfer(queueItem);
+            await LogAsync(ActivitySeverity.Error, "UploadFailed",
+                $"Falha ao enviar {localFile.Name}: {ex.Message}",
+                folder.Id, localFile.FullName, CancellationToken.None);
             throw;
         }
         finally
@@ -1419,6 +1572,9 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             queueItem.ErrorMessage = ex.Message;
             queueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
             PublishTransfer(queueItem);
+            await LogAsync(ActivitySeverity.Error, "DownloadFailed",
+                $"Falha ao baixar {remoteFile.Name}: {ex.Message}",
+                folder.Id, targetLocalPath, CancellationToken.None);
             throw;
         }
         finally
@@ -1595,6 +1751,38 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         return result;
     }
 
+    private static List<string> ScanLocalDirectories(
+        string rootLocalPath,
+        IReadOnlyList<string> ignorePatterns)
+    {
+        var result = new List<string>();
+        var rootInfo = new DirectoryInfo(rootLocalPath);
+        if (!rootInfo.Exists)
+        {
+            return result;
+        }
+
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            AttributesToSkip = FileAttributes.ReparsePoint
+        };
+
+        foreach (var dir in rootInfo.EnumerateDirectories("*", options))
+        {
+            var relPath = Path.GetRelativePath(rootLocalPath, dir.FullName).Replace('\\', '/').Trim('/');
+            if (string.IsNullOrWhiteSpace(relPath) || SyncIgnoreMatcher.IsIgnored(relPath + "/", ignorePatterns))
+            {
+                continue;
+            }
+
+            result.Add(relPath);
+        }
+
+        return result;
+    }
+
     private static string BuildConflictCopyPath(string originalPath)
     {
         var dir = Path.GetDirectoryName(originalPath) ?? string.Empty;
@@ -1679,7 +1867,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
     private void PruneOldCompletedTransfers()
     {
-        const int maxRetained = 200;
+        const int maxRetained = 2000;
         if (_transfers.Count <= maxRetained)
         {
             return;
@@ -1690,12 +1878,68 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             .Where(t => t.Status is TransferStatus.Completed or TransferStatus.Cancelled or TransferStatus.Failed)
             .OrderBy(t => t.CreatedAtUtc)
             .Take(overflow)
-            .Select(t => t.Id)
             .ToList();
 
-        foreach (var id in candidates)
+        foreach (var item in candidates)
         {
-            _transfers.TryRemove(id, out _);
+            if (_transfers.TryRemove(item.Id, out var removed))
+            {
+                switch (removed.Status)
+                {
+                    case TransferStatus.Completed:
+                        Interlocked.Increment(ref _prunedCompletedCount);
+                        break;
+                    case TransferStatus.Failed:
+                        Interlocked.Increment(ref _prunedFailedCount);
+                        break;
+                    case TransferStatus.Cancelled:
+                        Interlocked.Increment(ref _prunedCancelledCount);
+                        break;
+                }
+            }
+        }
+    }
+
+    private async Task TrySendGmailAccountAlertAsync(
+        string recipientEmail,
+        bool isConnected,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var subject = isConnected
+                ? "Custódia: Conta Google conectada com sucesso"
+                : "Custódia: Conta Google desconectada com sucesso";
+            var actionText = isConnected ? "conectada" : "desconectada";
+            var timestamp = DateTimeOffset.Now.ToString("dd/MM/yyyy HH:mm");
+            var safeEmail = System.Net.WebUtility.HtmlEncode(recipientEmail);
+            var safeHost = System.Net.WebUtility.HtmlEncode(Environment.MachineName);
+            var body = $"""
+                <div style="font-family:Inter,Arial,sans-serif;background:#0f172a;color:#e2e8f0;padding:24px;border-radius:10px;">
+                  <h2 style="color:#38bdf8;margin-top:0;">Custódia by TundraLab</h2>
+                  <p>Sua conta Google (<strong>{safeEmail}</strong>) foi <strong>{actionText} com sucesso</strong> no aplicativo Custódia para Linux.</p>
+                  <p style="color:#94a3b8;font-size:13px;">Dispositivo: {safeHost} • Horário: {timestamp}</p>
+                  <p style="color:#94a3b8;font-size:12px;">Seus arquivos. Sempre seguros.</p>
+                </div>
+                """;
+
+            var sent = await _driveClient.TrySendGmailAlertAsync(recipientEmail, subject, body, cancellationToken);
+            if (sent)
+            {
+                await LogAsync(ActivitySeverity.Info, "GmailAlertSent",
+                    $"Aviso enviado por Gmail para {recipientEmail} ({actionText}).",
+                    null, recipientEmail, CancellationToken.None);
+            }
+            else
+            {
+                await LogAsync(ActivitySeverity.Info, "GmailAlertSkipped",
+                    $"Aviso por Gmail não enviado para {recipientEmail} (Gmail API desativada ou escopo pendente).",
+                    null, recipientEmail, CancellationToken.None);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Gmail account alert did not complete for '{Email}'.", recipientEmail);
         }
     }
 

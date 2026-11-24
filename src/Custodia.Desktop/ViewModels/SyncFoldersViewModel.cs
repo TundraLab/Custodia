@@ -10,12 +10,57 @@ using TundraDrive.Desktop.Localization;
 
 namespace TundraDrive.Desktop.ViewModels;
 
+public sealed record FolderColorChoice(
+    string Hex,
+    IBrush Brush,
+    bool IsSelected,
+    IBrush SelectionBorderBrush,
+    IRelayCommand SelectCommand);
+
+public sealed record FolderIconChoice(
+    string Key,
+    Geometry Geometry,
+    string Label,
+    bool IsSelected,
+    IBrush SelectionBorderBrush,
+    IRelayCommand SelectCommand);
+
 public sealed partial class SyncFolderItemViewModel : ViewModelBase
 {
     private readonly SyncFoldersViewModel _parent;
 
     public ILocalizationService Loc { get; }
     public string Id { get; }
+
+    [ObservableProperty]
+    private bool _isCustomizing;
+
+    [ObservableProperty]
+    private string _editAlias = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EditColorPreviewBrush))]
+    private string _editColorHex = FolderCustomizationPresets.DefaultColorHex;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EditIconPreviewGeometry))]
+    private string _editIconKey = FolderCustomizationPresets.DefaultIconKey;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCustomAlias))]
+    [NotifyPropertyChangedFor(nameof(DisplayTitle))]
+    private string? _customAlias;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CustomColorBrush))]
+    private string? _customColorHex;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CustomIconGeometry))]
+    private string? _customIconKey;
+
+    public ObservableCollection<FolderColorChoice> ColorChoices { get; } = [];
+    public ObservableCollection<FolderIconChoice> IconChoices { get; } = [];
     public string LocalPath { get; }
     public string RemoteFolderId { get; }
     public string RemoteFolderName { get; }
@@ -55,6 +100,13 @@ public sealed partial class SyncFolderItemViewModel : ViewModelBase
         _lastSyncedAtUtc = model.LastSyncedAtUtc;
         _lastErrorMessage = model.LastErrorMessage;
         _trackedFileCount = model.TrackedFileCount;
+        _customAlias = model.CustomAlias;
+        _customColorHex = model.CustomColorHex;
+        _customIconKey = model.CustomIconKey;
+        _editAlias = model.CustomAlias ?? string.Empty;
+        _editColorHex = FolderCustomizationPresets.NormalizeColorHex(model.CustomColorHex) ?? FolderCustomizationPresets.DefaultColorHex;
+        _editIconKey = string.IsNullOrWhiteSpace(model.CustomIconKey) ? FolderCustomizationPresets.DefaultIconKey : model.CustomIconKey;
+        RebuildCustomizationOptions();
     }
 
     public void UpdateFrom(LocalSyncFolder model)
@@ -65,6 +117,16 @@ public sealed partial class SyncFolderItemViewModel : ViewModelBase
         LastSyncedAtUtc = model.LastSyncedAtUtc;
         LastErrorMessage = model.LastErrorMessage;
         TrackedFileCount = model.TrackedFileCount;
+        CustomAlias = model.CustomAlias;
+        CustomColorHex = model.CustomColorHex;
+        CustomIconKey = model.CustomIconKey;
+        if (!IsCustomizing)
+        {
+            EditAlias = model.CustomAlias ?? string.Empty;
+            EditColorHex = FolderCustomizationPresets.NormalizeColorHex(model.CustomColorHex) ?? FolderCustomizationPresets.DefaultColorHex;
+            EditIconKey = string.IsNullOrWhiteSpace(model.CustomIconKey) ? FolderCustomizationPresets.DefaultIconKey : model.CustomIconKey;
+            RebuildCustomizationOptions();
+        }
         RefreshLocalizedProperties();
         OnPropertyChanged(nameof(IsSyncing));
         OnPropertyChanged(nameof(IsTwoWayMode));
@@ -82,6 +144,71 @@ public sealed partial class SyncFolderItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(PauseButtonLabel));
         OnPropertyChanged(nameof(LastSyncedDisplay));
         OnPropertyChanged(nameof(StateDisplay));
+        OnPropertyChanged(nameof(DisplayTitle));
+        OnPropertyChanged(nameof(CustomColorBrush));
+        OnPropertyChanged(nameof(CustomIconGeometry));
+        RebuildCustomizationOptions();
+    }
+
+    public bool HasCustomAlias => !string.IsNullOrWhiteSpace(CustomAlias);
+
+    public string DisplayTitle => !string.IsNullOrWhiteSpace(CustomAlias)
+        ? CustomAlias!
+        : Path.GetFileName(LocalPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+
+    public IBrush CustomColorBrush =>
+        SolidColorBrush.Parse(FolderCustomizationPresets.NormalizeColorHex(CustomColorHex) ?? FolderCustomizationPresets.DefaultColorHex);
+
+    public Geometry CustomIconGeometry =>
+        Geometry.Parse(FolderCustomizationPresets.ResolveIconSvg(CustomIconKey));
+
+    public IBrush EditColorPreviewBrush =>
+        SolidColorBrush.Parse(FolderCustomizationPresets.NormalizeColorHex(EditColorHex) ?? FolderCustomizationPresets.DefaultColorHex);
+
+    public Geometry EditIconPreviewGeometry =>
+        Geometry.Parse(FolderCustomizationPresets.ResolveIconSvg(EditIconKey));
+
+    private static readonly IBrush BrushChoiceSelected = SolidColorBrush.Parse("#FFFFFF");
+    private static readonly IBrush BrushChoiceDefault = SolidColorBrush.Parse("#334155");
+
+    private void RebuildCustomizationOptions()
+    {
+        var isEn = string.Equals(Loc.CurrentLanguage, "en-US", StringComparison.OrdinalIgnoreCase);
+
+        ColorChoices.Clear();
+        foreach (var preset in FolderCustomizationPresets.Colors)
+        {
+            var hex = preset.Hex;
+            var isSelected = string.Equals(EditColorHex, hex, StringComparison.OrdinalIgnoreCase);
+            ColorChoices.Add(new FolderColorChoice(
+                hex,
+                SolidColorBrush.Parse(hex),
+                isSelected,
+                isSelected ? BrushChoiceSelected : BrushChoiceDefault,
+                new RelayCommand(() =>
+                {
+                    EditColorHex = hex;
+                    RebuildCustomizationOptions();
+                })));
+        }
+
+        IconChoices.Clear();
+        foreach (var icon in FolderCustomizationPresets.Icons)
+        {
+            var key = icon.Key;
+            var isSelected = string.Equals(EditIconKey, key, StringComparison.OrdinalIgnoreCase);
+            IconChoices.Add(new FolderIconChoice(
+                key,
+                Geometry.Parse(icon.SvgData),
+                isEn ? icon.NameEn : icon.NamePt,
+                isSelected,
+                isSelected ? BrushChoiceSelected : BrushChoiceDefault,
+                new RelayCommand(() =>
+                {
+                    EditIconKey = key;
+                    RebuildCustomizationOptions();
+                })));
+        }
     }
 
     public bool IsSyncing => State == FolderSyncState.Syncing;
@@ -141,6 +268,36 @@ public sealed partial class SyncFolderItemViewModel : ViewModelBase
 
     [RelayCommand]
     private Task OpenLocalFolderAsync() => _parent.OpenLocalFolderAsync(LocalPath);
+
+    [RelayCommand]
+    private void ToggleCustomize()
+    {
+        IsCustomizing = !IsCustomizing;
+        if (IsCustomizing)
+        {
+            EditAlias = CustomAlias ?? string.Empty;
+            EditColorHex = FolderCustomizationPresets.NormalizeColorHex(CustomColorHex) ?? FolderCustomizationPresets.DefaultColorHex;
+            EditIconKey = string.IsNullOrWhiteSpace(CustomIconKey) ? FolderCustomizationPresets.DefaultIconKey : CustomIconKey;
+            RebuildCustomizationOptions();
+        }
+    }
+
+    [RelayCommand]
+    private async Task SaveCustomizationAsync()
+    {
+        await _parent.SaveFolderCustomizationAsync(Id, EditAlias, EditColorHex, EditIconKey);
+        IsCustomizing = false;
+    }
+
+    [RelayCommand]
+    private async Task ResetCustomizationAsync()
+    {
+        EditAlias = string.Empty;
+        EditColorHex = FolderCustomizationPresets.DefaultColorHex;
+        EditIconKey = FolderCustomizationPresets.DefaultIconKey;
+        await _parent.SaveFolderCustomizationAsync(Id, null, null, null);
+        IsCustomizing = false;
+    }
 
     [RelayCommand]
     private Task RemoveAsync() => _parent.RemoveFolderAsync(Id);
@@ -223,6 +380,7 @@ public sealed partial class SyncFoldersViewModel : ViewModelBase
     public RemoteBrowserViewModel RemoteBrowser { get; }
 
     public Func<Task<string?>>? PickLocalFolderCallback { get; set; }
+    public Func<Task<IReadOnlyList<string>>>? PickLocalFoldersCallback { get; set; }
     public Func<Uri, Task>? OpenExternalUriCallback { get; set; }
     public Func<string, Task>? OpenLocalFolderCallback { get; set; }
 
@@ -237,6 +395,7 @@ public sealed partial class SyncFoldersViewModel : ViewModelBase
         RemoteBrowser = remoteBrowser;
         Loc = localization;
         RemoteBrowser.RemoteFolderSelectedForSync += OnRemoteFolderSelectedAsync;
+        RemoteBrowser.RemoteParentSelectedForAutoSubfolderSync += OnRemoteParentSelectedForAutoSubfolderSyncAsync;
 
         Loc.LanguageChanged += (_, _) =>
         {
@@ -378,6 +537,12 @@ public sealed partial class SyncFoldersViewModel : ViewModelBase
         : Task.CompletedTask;
 
     [RelayCommand]
+    private void CustomizeSelectedFolder()
+    {
+        SelectedFolder?.ToggleCustomizeCommand.Execute(null);
+    }
+
+    [RelayCommand]
     private Task RemoveSelectedFolderAsync() => SelectedFolder is not null
         ? RemoveFolderAsync(SelectedFolder.Id)
         : Task.CompletedTask;
@@ -439,40 +604,75 @@ public sealed partial class SyncFoldersViewModel : ViewModelBase
     [RelayCommand]
     private async Task AddLocalFolderToRootAsync()
     {
+        await MapPickedLocalFoldersIntoRemoteParentAsync("root", Loc.Text("MyDriveLabel"));
+    }
+
+    private async Task OnRemoteParentSelectedForAutoSubfolderSyncAsync(string parentFolderId, string parentRemoteDisplay)
+    {
+        await MapPickedLocalFoldersIntoRemoteParentAsync(parentFolderId, parentRemoteDisplay);
+        IsRemoteBrowserActive = false;
+    }
+
+    private async Task MapPickedLocalFoldersIntoRemoteParentAsync(string parentFolderId, string parentRemoteDisplay)
+    {
         if (!_driveClient.IsConnected)
         {
             StatusMessage = Loc.Text("ConnectBeforeSync");
             return;
         }
 
-        if (PickLocalFolderCallback is null)
+        IReadOnlyList<string> selectedPaths;
+        if (PickLocalFoldersCallback is not null)
+        {
+            selectedPaths = await PickLocalFoldersCallback.Invoke();
+        }
+        else if (PickLocalFolderCallback is not null)
+        {
+            var single = await PickLocalFolderCallback.Invoke();
+            selectedPaths = string.IsNullOrWhiteSpace(single) ? [] : [single];
+        }
+        else
         {
             return;
         }
 
-        var localPath = await PickLocalFolderCallback.Invoke();
-        if (string.IsNullOrWhiteSpace(localPath))
+        var validPaths = selectedPaths
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (validPaths.Length == 0)
         {
             return;
         }
 
         try
         {
-            var folderName = new DirectoryInfo(localPath).Name;
-            var remoteId = "root";
-            var remoteDisplay = Loc.Text("MyDriveLabel");
+            var mappedCount = 0;
+            var lastRemoteDisplay = parentRemoteDisplay;
 
-            if (_driveClient.IsConnected && !string.IsNullOrWhiteSpace(folderName))
+            foreach (var localPath in validPaths)
             {
-                var remoteFolder = await _driveClient.FindOrCreateFolderAsync(folderName, "root");
-                remoteId = remoteFolder.Id;
-                remoteDisplay = $"{Loc.Text("MyDriveLabel")}/{remoteFolder.Name}";
+                var folderName = new DirectoryInfo(localPath).Name;
+                var targetId = parentFolderId;
+                var targetDisplay = parentRemoteDisplay;
+
+                if (_driveClient.IsConnected && !string.IsNullOrWhiteSpace(folderName))
+                {
+                    var remoteFolder = await _driveClient.FindOrCreateFolderAsync(folderName, parentFolderId);
+                    targetId = remoteFolder.Id;
+                    targetDisplay = $"{parentRemoteDisplay}/{remoteFolder.Name}";
+                }
+
+                await _syncService.AddSyncFolderAsync(localPath, targetId, targetDisplay, SyncMode.TwoWay);
+                lastRemoteDisplay = targetDisplay;
+                mappedCount++;
             }
 
-            await _syncService.AddSyncFolderAsync(localPath, remoteId, remoteDisplay, SyncMode.TwoWay);
             IsRemoteBrowserActive = false;
             await RefreshFoldersAsync();
-            StatusMessage = Loc.Format("FolderMappedFmt", localPath, remoteDisplay);
+            StatusMessage = mappedCount == 1
+                ? Loc.Format("FolderMappedFmt", validPaths[0], lastRemoteDisplay)
+                : Loc.Format("MultipleFoldersMappedFmt", mappedCount, parentRemoteDisplay);
         }
         catch (Exception ex)
         {
@@ -508,6 +708,12 @@ public sealed partial class SyncFoldersViewModel : ViewModelBase
     public async Task ChangeFolderModeAsync(string folderId, SyncMode mode)
     {
         await _syncService.UpdateSyncModeAsync(folderId, mode);
+        await RefreshFoldersAsync();
+    }
+
+    public async Task SaveFolderCustomizationAsync(string folderId, string? customAlias, string? customColorHex, string? customIconKey)
+    {
+        await _syncService.UpdateFolderCustomizationAsync(folderId, customAlias, customColorHex, customIconKey);
         await RefreshFoldersAsync();
     }
 

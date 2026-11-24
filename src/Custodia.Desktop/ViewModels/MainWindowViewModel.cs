@@ -46,6 +46,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsSidebarUploading))]
     [NotifyPropertyChangedFor(nameof(IsSidebarDownloading))]
     [NotifyPropertyChangedFor(nameof(IsSidebarDeleting))]
+    [NotifyPropertyChangedFor(nameof(IsSidebarError))]
     [NotifyPropertyChangedFor(nameof(SidebarSyncAccentBrush))]
     private bool _isSyncActive;
 
@@ -54,6 +55,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsSidebarUploading))]
     [NotifyPropertyChangedFor(nameof(IsSidebarDownloading))]
     [NotifyPropertyChangedFor(nameof(IsSidebarDeleting))]
+    [NotifyPropertyChangedFor(nameof(IsSidebarError))]
     [NotifyPropertyChangedFor(nameof(SidebarSyncAccentBrush))]
     private TransferDirection? _activeSidebarDirection;
 
@@ -64,6 +66,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     public bool IsSidebarUploading => IsSyncActive && ActiveSidebarDirection == TransferDirection.Upload;
     public bool IsSidebarDownloading => IsSyncActive && ActiveSidebarDirection == TransferDirection.Download;
     public bool IsSidebarDeleting => IsSyncActive && ActiveSidebarDirection == TransferDirection.Delete;
+    public bool IsSidebarError => !IsSyncActive && Environment.TickCount64 < _heldSidebarErrorUntilMs;
     public bool IsSidebarGenericSyncing => IsSyncActive && ActiveSidebarDirection is null;
 
     public IBrush SidebarSyncAccentBrush => ActiveSidebarDirection switch
@@ -186,6 +189,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             {
                 SettingsVm.LoadFromCurrent();
             }
+            else if (value == 5)
+            {
+                AboutVm.RefreshLastCheckSummary();
+                AboutVm.RefreshUpdateScheduleSummary();
+            }
         }
     }
 
@@ -253,8 +261,41 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     public string GetTrayAccountLine() =>
         Loc.Format("TrayAccountFmt", SidebarAccountText);
 
-    public string GetTrayStatusLine() =>
-        Loc.Format("TrayStatusFmt", SidebarSyncStatusText);
+    public TrayVisualState GetTrayVisualState()
+    {
+        if (IsSidebarError)
+        {
+            return TrayVisualState.Error;
+        }
+
+        if (!IsSyncActive)
+        {
+            return TrayVisualState.Idle;
+        }
+
+        return ActiveSidebarDirection switch
+        {
+            TransferDirection.Upload => TrayVisualState.Uploading,
+            TransferDirection.Download => TrayVisualState.Downloading,
+            TransferDirection.Delete => TrayVisualState.Deleting,
+            _ => TrayVisualState.Syncing
+        };
+    }
+
+    public string GetTrayStatusLine()
+    {
+        var prefix = GetTrayVisualState() switch
+        {
+            TrayVisualState.Uploading => "↑ ",
+            TrayVisualState.Downloading => "↓ ",
+            TrayVisualState.Deleting => "✕ ",
+            TrayVisualState.Syncing => "↻ ",
+            TrayVisualState.Error => "⚠ ",
+            _ => "✓ "
+        };
+
+        return Loc.Format("TrayStatusFmt", prefix + SidebarSyncStatusText);
+    }
 
     public string GetTrayStorageLine()
     {
@@ -487,6 +528,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private TransferDirection? _heldSidebarDirection;
     private long _sidebarHoldUntilMs;
     private long _sidebarHoldVersion;
+    private long _heldSidebarErrorUntilMs;
+    private long _sidebarErrorHoldVersion;
 
     private void OnTransferUpdated(object? sender, TransferQueueItem item)
     {
@@ -522,18 +565,43 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             if (isBrandNewActivity)
             {
+                _heldSidebarErrorUntilMs = 0;
                 _heldSidebarDirection = item.Direction;
                 _sidebarHoldUntilMs = Environment.TickCount64 + 1800;
                 var version = ++_sidebarHoldVersion;
                 _ = ReleaseSidebarDirectionHoldAsync(version, 1850);
             }
+            else if (item.Status == TransferStatus.Failed)
+            {
+                _heldSidebarErrorUntilMs = Environment.TickCount64 + 6000;
+                var errVersion = ++_sidebarErrorHoldVersion;
+                _ = ReleaseSidebarErrorHoldAsync(errVersion, 6050);
+            }
 
             TransferQueueVm.UpsertTransfer(item);
             RefreshSidebarSyncState();
-            if (prevActive != TransferQueueVm.ActiveCount || prevDirection != TransferQueueVm.ActiveDirection)
+            if (prevActive != TransferQueueVm.ActiveCount
+                || prevDirection != TransferQueueVm.ActiveDirection
+                || item.Status == TransferStatus.Failed)
             {
                 TraySummaryChanged?.Invoke(this, EventArgs.Empty);
             }
+        });
+    }
+
+    private async Task ReleaseSidebarErrorHoldAsync(long version, int delayMs)
+    {
+        await Task.Delay(delayMs);
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (version != _sidebarErrorHoldVersion)
+            {
+                return;
+            }
+
+            _heldSidebarErrorUntilMs = 0;
+            RefreshSidebarSyncState("SidebarMonitoring");
+            TraySummaryChanged?.Invoke(this, EventArgs.Empty);
         });
     }
 
@@ -667,8 +735,19 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
                 NotificationUrgency.Normal,
                 bypassThrottle: true,
                 targetPath: log.TargetPath),
-            "ManualDownloadFailed" => _notificationService.NotifyAsync(
+            "InitialFolderSyncCompleted" => _notificationService.NotifyAsync(
+                Loc.Text("NotifyInitialFolderSyncTitle"),
+                body,
+                NotificationUrgency.Normal,
+                bypassThrottle: true,
+                targetPath: log.TargetPath),
+            "ManualDownloadFailed" or "DownloadFailed" => _notificationService.NotifyAsync(
                 Loc.Text("NotifyDownloadFailedTitle"),
+                body,
+                NotificationUrgency.Critical,
+                bypassThrottle: true),
+            "UploadFailed" => _notificationService.NotifyAsync(
+                Loc.Text("NotifyUploadFailedTitle"),
                 body,
                 NotificationUrgency.Critical,
                 bypassThrottle: true),
@@ -694,6 +773,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         IsSyncActive = _syncService.IsSyncRunning || TransferQueueVm.ActiveCount > 0 || heldDirection is not null;
         ActiveSidebarDirection = effectiveDirection;
+        OnPropertyChanged(nameof(IsSidebarError));
 
         if (!account.IsConnected)
         {
@@ -716,6 +796,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
                 TransferDirection.Delete => Loc.Text("SidebarDeleting"),
                 _ => Loc.Text("SidebarSyncing")
             };
+            return;
+        }
+
+        if (IsSidebarError)
+        {
+            SidebarSyncStatusText = Loc.Text("SidebarError");
             return;
         }
 

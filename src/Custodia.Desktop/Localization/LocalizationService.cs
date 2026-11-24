@@ -11,7 +11,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["WindowTitle"] = "Custódia",
         ["BrandSubtitle"] = "Seus arquivos. Sempre seguros.",
         ["NavAccounts"] = "Contas",
-        ["NavFileHub"] = "Meu Driver",
+        ["NavFileHub"] = "Meus Arquivos",
         ["NavSyncFolders"] = "Pastas de Sincronização",
         ["NavTransferQueue"] = "Fila de Transferências",
         ["NavActivityLogs"] = "Logs de Atividade",
@@ -60,7 +60,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["TokensDirLabel"] = "Diretório de Tokens de Usuário",
         ["SafeDeletionNotice"] = "Exclusões em pastas sincronizadas movem itens para a Lixeira do Google Drive; exclusões definitivas podem ser feitas manualmente na aba Lixeira.",
 
-        ["FileHubTitle"] = "Meu Driver",
+        ["FileHubTitle"] = "Meus Arquivos",
         ["SearchFilesWatermark"] = "Buscar arquivo por nome ou caminho...",
         ["UploadFileButton"] = "Enviar Arquivo",
         ["LayoutListButton"] = "Lista",
@@ -83,7 +83,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["DownloadedToFmt"] = "Arquivo salvo em: {0}",
         ["FileHubEmptyFolder"] = "Esta pasta está vazia.",
         ["ColOrigin"] = "Origem",
-        ["FileHubFilterDrive"] = "Meu Drive",
+        ["FileHubFilterDrive"] = "Meus Arquivos",
         ["FileHubFilterLocal"] = "Sincronizados localmente",
         ["FileHubFilterTrash"] = "Lixeira",
         ["BackButton"] = "Voltar",
@@ -142,7 +142,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["EmptyFoldersHint"] = "Nenhuma pasta mapeada ainda. Clique em \"Mapear Pasta Local\" ou explore o \"Navegador Remoto do Drive\".",
         ["AllFoldersPausedHint"] = "Todas as pastas mapeadas estão pausadas. Clique em \"Retomar\" em uma pasta para sincronizar.",
 
-        ["MyDriveLabel"] = "Meu Drive",
+        ["MyDriveLabel"] = "Meus Arquivos",
         ["SearchRemoteWatermark"] = "Pesquisar pastas ou arquivos no Google Drive...",
         ["SearchButton"] = "Buscar",
         ["SyncSelectedFolderButton"] = "Sincronizar Pasta Selecionada",
@@ -191,7 +191,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["TestNotificationTitle"] = "Custódia ativo",
         ["TestNotificationBody"] = "As notificações nativas do sistema estão funcionando.",
         ["TrayOpen"] = "Abrir Custódia",
-        ["TrayOpenFileHub"] = "Abrir Meu Driver",
+        ["TrayOpenFileHub"] = "Abrir Meus Arquivos",
         ["TraySyncNow"] = "Sincronizar Tudo Agora",
         ["TrayPauseAll"] = "Pausar Todas as Pastas",
         ["TrayResumeAll"] = "Retomar Todas as Pastas",
@@ -278,7 +278,14 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["UpdateSearchPhase2Fmt"] = "Consultando versões e assinaturas SHA-256... ({0}s)",
         ["UpdateSearchPhase3Fmt"] = "Comparando com a versão instalada (v{0})... ({1}s)",
         ["UpdateLastCheckFmt"] = "Última verificação: {0}",
+        ["UpdateLastCheckWithDateFmt"] = "Última verificação: {0} ({1})",
         ["UpdateLastCheckNever"] = "Nunca verificada",
+        ["UpdateScheduleDisabled"] = "Verificação automática desativada",
+        ["UpdateScheduleStartupFmt"] = "Agendamento: {0}",
+        ["UpdateNextSoon"] = "em breve",
+        ["UpdateNextInDaysFmt"] = "{0} (em {1} dia(s))",
+        ["UpdateScheduleAutoFmt"] = "Agendamento: {0} • Próxima: {1}",
+        ["UpdateOfflineError"] = "Sem conexão com a internet. Não foi possível verificar atualizações.",
         ["UpdatesSectionTitle"] = "Atualizações",
         ["UpdateCheckButton"] = "Verificar atualizações",
         ["UpdateCheckingButton"] = "Verificando...",
@@ -426,7 +433,71 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["OneMinuteAgo"] = "Há 1 minuto",
         ["MinutesAgoFmt"] = "Há {0} minutos",
         ["OneHourAgo"] = "Há 1 hora",
-        ["HoursAgoFmt"] = "Há {0} horas"
+        ["HoursAgoFmt"] = "Há {0} horas",
+
+        ["SupportSectionTitle"] = "Suporte, Erros e Sugestões",
+        ["SupportSectionSubtitle"] = "Reporte problemas com diagnóstico opcional ou envie ideias para próximas versões do Custódia.",
+        ["ReportBugButton"] = "Reportar Erro",
+        ["SubmitSuggestionButton"] = "Enviar Sugestão",
+        ["BugTitleLabel"] = "Resumo do problema",
+        ["BugTitleWatermark"] = "Ex: erro ao sincronizar pasta específica...",
+        ["BugDescriptionLabel"] = "O que aconteceu e como reproduzir",
+        ["BugDescriptionWatermark"] = "Descreva os passos ou o comportamento observado...",
+        ["BugIncludeDiagnosticsCheckbox"] = "Incluir diagnóstico do sistema e últimos avisos/erros (sem dados pessoais)",
+        ["OpenGitHubIssueButton"] = "Abrir no GitHub Issues",
+        ["CopyReportButton"] = "Copiar texto",
+        ["SuggestionCategoryLabel"] = "Categoria",
+        ["SuggestionTitleLabel"] = "Título da sugestão",
+        ["SuggestionTitleWatermark"] = "Ex: nova opção para pastas ou atalho...",
+        ["SuggestionDescriptionLabel"] = "Detalhes da recomendação",
+        ["SuggestionDescriptionWatermark"] = "Explique como essa melhoria ajudaria no seu dia a dia...",
+        ["SuggestionCatFeature"] = "Nova funcionalidade",
+        ["SuggestionCatSync"] = "Sincronização e pastas",
+        ["SuggestionCatInterface"] = "Interface e usabilidade",
+        ["SuggestionCatIntegration"] = "Integrações Linux / API",
+        ["FeedbackValidationHint"] = "Preencha pelo menos o título ou a descrição antes de continuar.",
+        ["FeedbackCopiedStatus"] = "Texto copiado para a área de transferência.",
+        ["FeedbackOpenedStatus"] = "Formulário aberto no GitHub Issues.",
+
+        ["NotificationSoundCheckbox"] = "Reproduzir som ao exibir notificação",
+        ["NotificationSoundToneLabel"] = "Toque da notificação",
+        ["PreviewSoundButton"] = "Ouvir",
+        ["SoundToneChime"] = "Toque suave (Acorde)",
+        ["SoundTonePop"] = "Bolha curta (Pop)",
+        ["SoundToneBell"] = "Sino cristalino",
+        ["SoundToneDrop"] = "Gota d'água",
+        ["SoundTonePulse"] = "Pulso duplo",
+        ["SoundToneMinimal"] = "Clique discreto",
+
+        ["GmailAccountAlertsCheckbox"] = "Enviar aviso no Gmail ao conectar ou desconectar conta",
+        ["GmailAccountAlertsHint"] = "Envia um e-mail de confirmação pela sua própria conta (requer Gmail API habilitada ao autorizar).",
+
+        ["NewFolderButton"] = "Nova Pasta",
+        ["SyncLocalIntoHereButton"] = "Sincronizar Pasta Local Aqui",
+        ["NewFolderPlaceholder"] = "Nome da nova pasta...",
+        ["CreateFolderConfirmButton"] = "Criar Pasta",
+        ["NewFolderNameRequired"] = "Informe um nome válido para a nova pasta.",
+        ["FolderCreatedFmt"] = "Pasta '{0}' criada com sucesso.",
+        ["NewFolderLocalRootHint"] = "Abra uma pasta sincronizada antes de criar uma subpasta local.",
+
+        ["CustomizeFolderButton"] = "Personalizar",
+        ["CustomizeAliasLabel"] = "Nome personalizado da pasta (opcional)",
+        ["CustomizeAliasWatermark"] = "Ex: Documentos de Trabalho...",
+        ["CustomizeColorLabel"] = "Cor da pasta",
+        ["CustomizeIconLabel"] = "Ícone da pasta",
+        ["SaveCustomizationButton"] = "Aplicar",
+        ["ResetCustomizationButton"] = "Restaurar padrão",
+
+        ["TransferUploadErrorFmt"] = "Falha ao enviar {0}: {1}",
+        ["TransferDownloadErrorFmt"] = "Falha ao baixar {0}: {1}",
+        ["TransferSummaryWithErrorsFmt"] = "{0} em andamento • {1} concluída(s) • {2} erro(s) • {3} total",
+        ["UploadErrorBannerFmt"] = "Erro ao enviar '{0}': {1}",
+        ["DownloadErrorBannerFmt"] = "Erro ao baixar '{0}': {1}",
+        ["SidebarError"] = "Erro na transferência",
+        ["NotifyInitialFolderSyncTitle"] = "Sincronização inicial concluída",
+        ["NotifyUploadFailedTitle"] = "Erro no envio",
+        ["MapMultipleFoldersTitle"] = "Selecionar uma ou mais pastas locais",
+        ["MultipleFoldersMappedFmt"] = "{0} pasta(s) mapeada(s) em '{1}'."
     };
 
     private static readonly IReadOnlyDictionary<string, string> EnUs = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -434,7 +505,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["WindowTitle"] = "Custódia",
         ["BrandSubtitle"] = "Your files. Always safe.",
         ["NavAccounts"] = "Accounts",
-        ["NavFileHub"] = "My Drive",
+        ["NavFileHub"] = "My Files",
         ["NavSyncFolders"] = "Sync Folders",
         ["NavTransferQueue"] = "Transfer Queue",
         ["NavActivityLogs"] = "Activity Logs",
@@ -483,7 +554,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["TokensDirLabel"] = "User Token Directory",
         ["SafeDeletionNotice"] = "Deletions in synced folders move items to Google Drive Trash; permanent deletion is only performed manually from the Trash tab.",
 
-        ["FileHubTitle"] = "My Drive",
+        ["FileHubTitle"] = "My Files",
         ["SearchFilesWatermark"] = "Search files by name or path...",
         ["UploadFileButton"] = "Upload File",
         ["LayoutListButton"] = "List",
@@ -506,7 +577,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["DownloadedToFmt"] = "Saved to: {0}",
         ["FileHubEmptyFolder"] = "This folder is empty.",
         ["ColOrigin"] = "Origin",
-        ["FileHubFilterDrive"] = "My Drive",
+        ["FileHubFilterDrive"] = "My Files",
         ["FileHubFilterLocal"] = "Synced locally",
         ["FileHubFilterTrash"] = "Trash",
         ["BackButton"] = "Back",
@@ -565,7 +636,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["EmptyFoldersHint"] = "No folders mapped yet. Click \"Map Local Folder\" or explore \"Remote Drive Browser\".",
         ["AllFoldersPausedHint"] = "All mapped folders are currently paused. Click \"Resume\" on a folder to synchronize.",
 
-        ["MyDriveLabel"] = "My Drive",
+        ["MyDriveLabel"] = "My Files",
         ["SearchRemoteWatermark"] = "Search folders or files in Google Drive...",
         ["SearchButton"] = "Search",
         ["SyncSelectedFolderButton"] = "Sync Selected Folder",
@@ -614,7 +685,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["TestNotificationTitle"] = "Custódia active",
         ["TestNotificationBody"] = "Native desktop notifications are working.",
         ["TrayOpen"] = "Open Custódia",
-        ["TrayOpenFileHub"] = "Open My Drive",
+        ["TrayOpenFileHub"] = "Open My Files",
         ["TraySyncNow"] = "Sync All Now",
         ["TrayPauseAll"] = "Pause All Folders",
         ["TrayResumeAll"] = "Resume All Folders",
@@ -701,7 +772,14 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["UpdateSearchPhase2Fmt"] = "Checking latest versions and SHA-256 signatures... ({0}s)",
         ["UpdateSearchPhase3Fmt"] = "Comparing against installed version (v{0})... ({1}s)",
         ["UpdateLastCheckFmt"] = "Last checked: {0}",
+        ["UpdateLastCheckWithDateFmt"] = "Last checked: {0} ({1})",
         ["UpdateLastCheckNever"] = "Never checked",
+        ["UpdateScheduleDisabled"] = "Automatic checks disabled",
+        ["UpdateScheduleStartupFmt"] = "Schedule: {0}",
+        ["UpdateNextSoon"] = "soon",
+        ["UpdateNextInDaysFmt"] = "{0} (in {1} day(s))",
+        ["UpdateScheduleAutoFmt"] = "Schedule: {0} • Next: {1}",
+        ["UpdateOfflineError"] = "No internet connection. Unable to check for updates.",
         ["UpdatesSectionTitle"] = "Updates",
         ["UpdateCheckButton"] = "Check for updates",
         ["UpdateCheckingButton"] = "Checking...",
@@ -849,7 +927,71 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["OneMinuteAgo"] = "1 minute ago",
         ["MinutesAgoFmt"] = "{0} minutes ago",
         ["OneHourAgo"] = "1 hour ago",
-        ["HoursAgoFmt"] = "{0} hours ago"
+        ["HoursAgoFmt"] = "{0} hours ago",
+
+        ["SupportSectionTitle"] = "Support, Errors & Suggestions",
+        ["SupportSectionSubtitle"] = "Report issues with optional diagnostics or suggest improvements for future releases.",
+        ["ReportBugButton"] = "Report Error",
+        ["SubmitSuggestionButton"] = "Send Suggestion",
+        ["BugTitleLabel"] = "Issue summary",
+        ["BugTitleWatermark"] = "e.g., error syncing a specific folder...",
+        ["BugDescriptionLabel"] = "What happened and how to reproduce",
+        ["BugDescriptionWatermark"] = "Describe the steps or behavior you noticed...",
+        ["BugIncludeDiagnosticsCheckbox"] = "Include system diagnostics and recent warnings/errors (no personal files)",
+        ["OpenGitHubIssueButton"] = "Open on GitHub Issues",
+        ["CopyReportButton"] = "Copy text",
+        ["SuggestionCategoryLabel"] = "Category",
+        ["SuggestionTitleLabel"] = "Suggestion title",
+        ["SuggestionTitleWatermark"] = "e.g., new folder option or shortcut...",
+        ["SuggestionDescriptionLabel"] = "Recommendation details",
+        ["SuggestionDescriptionWatermark"] = "Describe how this improvement would help your workflow...",
+        ["SuggestionCatFeature"] = "New feature",
+        ["SuggestionCatSync"] = "Sync & folders",
+        ["SuggestionCatInterface"] = "UI & usability",
+        ["SuggestionCatIntegration"] = "Linux integrations / API",
+        ["FeedbackValidationHint"] = "Please enter at least a title or description before submitting.",
+        ["FeedbackCopiedStatus"] = "Text copied to clipboard.",
+        ["FeedbackOpenedStatus"] = "Pre-filled form opened on GitHub Issues.",
+
+        ["NotificationSoundCheckbox"] = "Play sound when showing notification",
+        ["NotificationSoundToneLabel"] = "Notification tone",
+        ["PreviewSoundButton"] = "Preview",
+        ["SoundToneChime"] = "Soft chord (Chime)",
+        ["SoundTonePop"] = "Short bubble (Pop)",
+        ["SoundToneBell"] = "Crystal bell",
+        ["SoundToneDrop"] = "Water drop",
+        ["SoundTonePulse"] = "Double pulse",
+        ["SoundToneMinimal"] = "Minimal click",
+
+        ["GmailAccountAlertsCheckbox"] = "Send Gmail alert when connecting or disconnecting account",
+        ["GmailAccountAlertsHint"] = "Sends a confirmation email via your Google account (requires Gmail API enabled on consent).",
+
+        ["NewFolderButton"] = "New Folder",
+        ["SyncLocalIntoHereButton"] = "Sync Local Folder Here",
+        ["NewFolderPlaceholder"] = "New folder name...",
+        ["CreateFolderConfirmButton"] = "Create Folder",
+        ["NewFolderNameRequired"] = "Enter a valid folder name.",
+        ["FolderCreatedFmt"] = "Folder '{0}' created successfully.",
+        ["NewFolderLocalRootHint"] = "Open one of your synced folders before creating a local subfolder.",
+
+        ["CustomizeFolderButton"] = "Customize",
+        ["CustomizeAliasLabel"] = "Custom folder label (optional)",
+        ["CustomizeAliasWatermark"] = "e.g., Work Documents...",
+        ["CustomizeColorLabel"] = "Folder color",
+        ["CustomizeIconLabel"] = "Folder icon",
+        ["SaveCustomizationButton"] = "Apply",
+        ["ResetCustomizationButton"] = "Reset default",
+
+        ["TransferUploadErrorFmt"] = "Failed to upload {0}: {1}",
+        ["TransferDownloadErrorFmt"] = "Failed to download {0}: {1}",
+        ["TransferSummaryWithErrorsFmt"] = "{0} active • {1} completed • {2} error(s) • {3} total",
+        ["UploadErrorBannerFmt"] = "Upload error for '{0}': {1}",
+        ["DownloadErrorBannerFmt"] = "Download error for '{0}': {1}",
+        ["SidebarError"] = "Transfer error",
+        ["NotifyInitialFolderSyncTitle"] = "Initial sync completed",
+        ["NotifyUploadFailedTitle"] = "Upload error",
+        ["MapMultipleFoldersTitle"] = "Select one or more local folders",
+        ["MultipleFoldersMappedFmt"] = "{0} folder(s) mapped under '{1}'."
     };
 
     public string CurrentLanguage { get; private set; } = "pt-BR";
@@ -1097,6 +1239,43 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string UpdateInstallNowButton => Text("UpdateInstallNowButton");
     public string UpdateOpenReleaseButton => Text("UpdateOpenReleaseButton");
     public string UpdateBannerActionButton => Text("UpdateBannerActionButton");
+
+    public string SupportSectionTitle => Text("SupportSectionTitle");
+    public string SupportSectionSubtitle => Text("SupportSectionSubtitle");
+    public string ReportBugButton => Text("ReportBugButton");
+    public string SubmitSuggestionButton => Text("SubmitSuggestionButton");
+    public string BugTitleLabel => Text("BugTitleLabel");
+    public string BugTitleWatermark => Text("BugTitleWatermark");
+    public string BugDescriptionLabel => Text("BugDescriptionLabel");
+    public string BugDescriptionWatermark => Text("BugDescriptionWatermark");
+    public string BugIncludeDiagnosticsCheckbox => Text("BugIncludeDiagnosticsCheckbox");
+    public string OpenGitHubIssueButton => Text("OpenGitHubIssueButton");
+    public string CopyReportButton => Text("CopyReportButton");
+    public string SuggestionCategoryLabel => Text("SuggestionCategoryLabel");
+    public string SuggestionTitleLabel => Text("SuggestionTitleLabel");
+    public string SuggestionTitleWatermark => Text("SuggestionTitleWatermark");
+    public string SuggestionDescriptionLabel => Text("SuggestionDescriptionLabel");
+    public string SuggestionDescriptionWatermark => Text("SuggestionDescriptionWatermark");
+
+    public string NotificationSoundCheckbox => Text("NotificationSoundCheckbox");
+    public string NotificationSoundToneLabel => Text("NotificationSoundToneLabel");
+    public string PreviewSoundButton => Text("PreviewSoundButton");
+    public string GmailAccountAlertsCheckbox => Text("GmailAccountAlertsCheckbox");
+    public string GmailAccountAlertsHint => Text("GmailAccountAlertsHint");
+
+    public string NewFolderButton => Text("NewFolderButton");
+    public string SyncLocalIntoHereButton => Text("SyncLocalIntoHereButton");
+    public string NewFolderPlaceholder => Text("NewFolderPlaceholder");
+    public string CreateFolderConfirmButton => Text("CreateFolderConfirmButton");
+
+    public string CustomizeFolderButton => Text("CustomizeFolderButton");
+    public string CustomizeAliasLabel => Text("CustomizeAliasLabel");
+    public string CustomizeAliasWatermark => Text("CustomizeAliasWatermark");
+    public string CustomizeColorLabel => Text("CustomizeColorLabel");
+    public string CustomizeIconLabel => Text("CustomizeIconLabel");
+    public string SaveCustomizationButton => Text("SaveCustomizationButton");
+    public string ResetCustomizationButton => Text("ResetCustomizationButton");
+
     public string TransferDetailLocalPath => Text("TransferDetailLocalPath");
     public string TransferDetailRelativePath => Text("TransferDetailRelativePath");
     public string TransferDetailRemoteId => Text("TransferDetailRemoteId");

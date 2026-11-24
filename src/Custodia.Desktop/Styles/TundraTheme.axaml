@@ -394,6 +394,52 @@
     </Style.Animations>
   </Style>
 
+  <Style Selector="PathIcon.ErrorPulse">
+    <Setter Property="RenderTransform">
+      <TranslateTransform />
+    </Setter>
+    <Style.Animations>
+      <Animation Duration="0:0:0.75" IterationCount="Infinite">
+        <KeyFrame Cue="0%">
+          <Setter Property="TranslateTransform.X" Value="0" />
+          <Setter Property="Opacity" Value="0.55" />
+        </KeyFrame>
+        <KeyFrame Cue="20%">
+          <Setter Property="TranslateTransform.X" Value="-2.5" />
+          <Setter Property="Opacity" Value="1.0" />
+        </KeyFrame>
+        <KeyFrame Cue="40%">
+          <Setter Property="TranslateTransform.X" Value="2.5" />
+          <Setter Property="Opacity" Value="1.0" />
+        </KeyFrame>
+        <KeyFrame Cue="60%">
+          <Setter Property="TranslateTransform.X" Value="-1.5" />
+          <Setter Property="Opacity" Value="0.9" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="TranslateTransform.X" Value="0" />
+          <Setter Property="Opacity" Value="0.55" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+
+  <Style Selector="Border.ErrorPulseBanner">
+    <Style.Animations>
+      <Animation Duration="0:0:1.6" IterationCount="Infinite">
+        <KeyFrame Cue="0%">
+          <Setter Property="BorderBrush" Value="#7F1D1D" />
+        </KeyFrame>
+        <KeyFrame Cue="50%">
+          <Setter Property="BorderBrush" Value="#EF4444" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="BorderBrush" Value="#7F1D1D" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+
   <Style Selector="ComboBox">
     <Setter Property="Background" Value="#141820" />
     <Setter Property="BorderBrush" Value="{StaticResource TundraBorderBrush}" />

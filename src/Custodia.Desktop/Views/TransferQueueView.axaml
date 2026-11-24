@@ -24,76 +24,126 @@
       </WrapPanel>
     </Grid>
 
-    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Spacing="10">
-        <Border Classes="SurfaceCard" IsVisible="{Binding HasNoItems}">
-          <TextBlock Classes="Subtitle" Text="{Binding Loc.NoTransfersHint}" TextWrapping="Wrap" />
-        </Border>
+    <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="10">
+      <Border Grid.Row="0"
+              Classes="ErrorPulseBanner"
+              Padding="12,10"
+              CornerRadius="8"
+              Background="#2A1215"
+              BorderBrush="#B91C1C"
+              BorderThickness="1"
+              IsVisible="{Binding HasLastErrorBanner}">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+          <PathIcon Grid.Column="0"
+                    Classes="ErrorPulse"
+                    Width="16" Height="16"
+                    Foreground="#EF4444"
+                    VerticalAlignment="Center"
+                    Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z">
+            <PathIcon.RenderTransform>
+              <TranslateTransform />
+            </PathIcon.RenderTransform>
+          </PathIcon>
+          <TextBlock Grid.Column="1"
+                     VerticalAlignment="Center"
+                     FontSize="12.5"
+                     FontWeight="SemiBold"
+                     Foreground="#FECACA"
+                     TextWrapping="Wrap"
+                     Text="{Binding LastErrorMessage}" />
+          <Button Grid.Column="2"
+                  Classes="SecondaryAction"
+                  Padding="8,4"
+                  FontSize="12"
+                  Content="✕"
+                  Command="{Binding DismissLastErrorBannerCommand}" />
+        </Grid>
+      </Border>
 
-        <ListBox Classes="CardList"
-                 ItemsSource="{Binding Items}"
-                 SelectedItem="{Binding SelectedItem}">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="vm:TransferItemViewModel">
-              <Border Padding="14,12" Background="Transparent">
-                <Border.ContextMenu>
-                  <ContextMenu>
-                    <MenuItem Header="{Binding Loc.CancelButton}"
-                              IsVisible="{Binding CanCancel}"
-                              Command="{Binding CancelCommand}" />
-                    <MenuItem Header="{Binding Loc.CopyNameMenu}"
-                              Command="{Binding CopyNameCommand}" />
-                    <MenuItem Header="{Binding Loc.CopyTargetPathMenu}"
-                              Command="{Binding CopyPathCommand}" />
-                  </ContextMenu>
-                </Border.ContextMenu>
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="8" ColumnSpacing="12">
-                  <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="10">
-                    <!-- Ícones animados durante a operação -->
-                    <PathIcon Classes="UploadPulse"
-                              Width="15" Height="15"
-                              Foreground="{StaticResource TundraAccent}"
-                              IsVisible="{Binding IsUploadingActive}"
-                              Data="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z">
-                      <PathIcon.RenderTransform>
-                        <TranslateTransform />
-                      </PathIcon.RenderTransform>
-                    </PathIcon>
-                    <PathIcon Classes="DownloadPulse"
-                              Width="15" Height="15"
-                              Foreground="#2EA043"
-                              IsVisible="{Binding IsDownloadingActive}"
-                              Data="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z">
-                      <PathIcon.RenderTransform>
-                        <TranslateTransform />
-                      </PathIcon.RenderTransform>
-                    </PathIcon>
-                    <PathIcon Classes="DeletePulse"
-                              Width="15" Height="15"
-                              Foreground="#EF4444"
-                              IsVisible="{Binding IsDeletingActive}"
-                              Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z">
-                      <PathIcon.RenderTransform>
-                        <TranslateTransform />
-                      </PathIcon.RenderTransform>
-                    </PathIcon>
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="10">
+          <Border Classes="SurfaceCard" IsVisible="{Binding HasNoItems}">
+            <TextBlock Classes="Subtitle" Text="{Binding Loc.NoTransfersHint}" TextWrapping="Wrap" />
+          </Border>
 
-                    <!-- Ícones estáticos após conclusão -->
-                    <PathIcon Width="15" Height="15"
-                              Foreground="#3B82F6"
-                              Opacity="0.78"
-                              IsVisible="{Binding IsUploadingStatic}"
-                              Data="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" />
-                    <PathIcon Width="15" Height="15"
-                              Foreground="#2EA043"
-                              Opacity="0.78"
-                              IsVisible="{Binding IsDownloadingStatic}"
-                              Data="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                    <PathIcon Width="15" Height="15"
-                              Foreground="#EF4444"
-                              Opacity="0.78"
-                              IsVisible="{Binding IsDeletingStatic}"
-                              Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+          <ListBox Classes="CardList"
+                   ItemsSource="{Binding Items}"
+                   SelectedItem="{Binding SelectedItem}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:TransferItemViewModel">
+                <Border Padding="14,12" Background="Transparent">
+                  <Border.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="{Binding Loc.CancelButton}"
+                                IsVisible="{Binding CanCancel}"
+                                Command="{Binding CancelCommand}" />
+                      <MenuItem Header="{Binding Loc.CopyNameMenu}"
+                                Command="{Binding CopyNameCommand}" />
+                      <MenuItem Header="{Binding Loc.CopyTargetPathMenu}"
+                                Command="{Binding CopyPathCommand}" />
+                    </ContextMenu>
+                  </Border.ContextMenu>
+                  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="8" ColumnSpacing="12">
+                    <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                      <!-- Ícones animados durante a operação -->
+                      <PathIcon Classes="UploadPulse"
+                                Width="15" Height="15"
+                                Foreground="{StaticResource TundraAccent}"
+                                IsVisible="{Binding IsUploadingActive}"
+                                Data="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z">
+                        <PathIcon.RenderTransform>
+                          <TranslateTransform />
+                        </PathIcon.RenderTransform>
+                      </PathIcon>
+                      <PathIcon Classes="DownloadPulse"
+                                Width="15" Height="15"
+                                Foreground="#2EA043"
+                                IsVisible="{Binding IsDownloadingActive}"
+                                Data="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z">
+                        <PathIcon.RenderTransform>
+                          <TranslateTransform />
+                        </PathIcon.RenderTransform>
+                      </PathIcon>
+                      <PathIcon Classes="DeletePulse"
+                                Width="15" Height="15"
+                                Foreground="#EF4444"
+                                IsVisible="{Binding IsDeletingActive}"
+                                Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z">
+                        <PathIcon.RenderTransform>
+                          <TranslateTransform />
+                        </PathIcon.RenderTransform>
+                      </PathIcon>
+                      <PathIcon Classes="ErrorPulse"
+                                Width="15" Height="15"
+                                Foreground="#EF4444"
+                                IsVisible="{Binding IsFailedActive}"
+                                Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z">
+                        <PathIcon.RenderTransform>
+                          <TranslateTransform />
+                        </PathIcon.RenderTransform>
+                      </PathIcon>
+
+                      <!-- Ícones estáticos após conclusão -->
+                      <PathIcon Width="15" Height="15"
+                                Foreground="#3B82F6"
+                                Opacity="0.78"
+                                IsVisible="{Binding IsUploadingStatic}"
+                                Data="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" />
+                      <PathIcon Width="15" Height="15"
+                                Foreground="#2EA043"
+                                Opacity="0.78"
+                                IsVisible="{Binding IsDownloadingStatic}"
+                                Data="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                      <PathIcon Width="15" Height="15"
+                                Foreground="#EF4444"
+                                Opacity="0.78"
+                                IsVisible="{Binding IsDeletingStatic}"
+                                Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                      <PathIcon Width="15" Height="15"
+                                Foreground="#EF4444"
+                                Opacity="0.92"
+                                IsVisible="{Binding IsFailedStatic}"
+                                Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
 
                     <StackPanel Spacing="2">
                       <TextBlock FontSize="13.5" FontWeight="SemiBold" Text="{Binding FileName}" TextWrapping="Wrap" />
@@ -118,15 +168,30 @@
                     <TextBlock Grid.Column="1" Classes="MutedMeta" Text="{Binding ProgressDisplay}" />
                   </Grid>
 
-                  <!-- Painel expansível ao clicar no card -->
-                  <Border Grid.Row="3" Grid.ColumnSpan="2"
-                          Margin="0,6,0,0"
-                          Padding="12,10"
-                          CornerRadius="6"
-                          Background="#141922"
-                          BorderBrush="{StaticResource TundraBorderBrush}"
-                          BorderThickness="1"
-                          IsVisible="{Binding IsSelected}">
+                    <!-- Mensagem de erro sempre visível em falhas de upload/download -->
+                    <Border Grid.Row="3" Grid.ColumnSpan="2"
+                            Margin="0,2,0,0"
+                            Padding="10,7"
+                            CornerRadius="6"
+                            Background="#2A1215"
+                            BorderBrush="#7F1D1D"
+                            BorderThickness="1"
+                            IsVisible="{Binding IsFailed}">
+                      <TextBlock FontSize="12"
+                                 Foreground="#FECACA"
+                                 TextWrapping="Wrap"
+                                 Text="{Binding ErrorHeadlineText}" />
+                    </Border>
+
+                    <!-- Painel expansível ao clicar no card -->
+                    <Border Grid.Row="4" Grid.ColumnSpan="2"
+                            Margin="0,6,0,0"
+                            Padding="12,10"
+                            CornerRadius="6"
+                            Background="#141922"
+                            BorderBrush="{StaticResource TundraBorderBrush}"
+                            BorderThickness="1"
+                            IsVisible="{Binding IsSelected}">
                     <StackPanel Spacing="8">
                       <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="4">
                         <TextBlock Grid.Row="0" Grid.Column="0" Classes="MutedMeta" Text="{Binding Loc.TransferDetailLocalPath}" IsVisible="{Binding HasLocalPath}" />
@@ -188,5 +253,6 @@
         </ListBox>
       </StackPanel>
     </ScrollViewer>
+    </Grid>
   </Grid>
 </UserControl>

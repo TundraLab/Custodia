@@ -2,6 +2,26 @@
 
 Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [2.9.0] - 2026-11-24
+
+### Adicionado
+- **Ícone dinâmico na bandeja do sistema e menu com status vivo:** o ícone na barra de notificações anima estados de envio, download, exclusão, sincronização e erro, com indicadores claros no menu da bandeja.
+- **Criação de pastas direta e mapeamento em lote sem nomear manualmente:** novo botão **Nova Pasta** em **Meus Arquivos** (modo remoto e local) e no **Navegador Remoto**, além de seleção múltipla de pastas locais e botão **Sincronizar Pasta Local Aqui** mantendo nomes e subpastas automaticamente (inclusive diretórios vazios).
+- **Personalização por pasta:** escolha apelido, cor e ícone personalizados em **Pastas de Sincronização**, refletidos também em **Meus Arquivos**.
+- **Mensagens e animações de erro de transferência:** alertas visuais na barra lateral, na **Fila de Transferências** (banner animado + destaque no cartão) e em **Meus Arquivos** quando ocorre falha de upload ou download.
+- **Variações de som nas notificações:** 6 toques simples sintetizados (com botão **Ouvir**) e opção para silenciar mantendo ou desativando o som das notificações.
+- **Avisos por e-mail no Gmail:** opção para enviar alerta automático para a própria conta Gmail ao conectar ou desconectar no Custódia.
+- **Agendamento de atualizações, suporte a erros e sugestões na aba Sobre:** exibição da frequência e previsão da próxima checagem, tratamento imediato de erro sem internet e formulários integrados para reportar erros ou enviar sugestões futuras.
+- **Notificação dedicada ao concluir sincronização inicial:** alerta próprio quando uma nova pasta adicionada termina sua primeira sincronização.
+
+### Alterado
+- **Renomeação oficial de Meu Driver para Meus Arquivos (`My Files` em EN-US):** aplicada na navegação, bandeja, navegador remoto, documentação e site oficial.
+
+### Corrigido
+- **Fila de transferências sem teto de 200 itens:** remoção do limite baixo que travava a contagem em 200 itens, preservando o histórico expandido e contadores exatos do serviço.
+- **Animação infinita de sincronização quando ocioso:** correção na ordem de atualização de estado em `TriggerFolderSyncAsync` e limpeza de itens órfãos para que a animação pare assim que todas as pastas terminarem.
+- **Animação infinita ao verificar atualizações sem internet:** detecção imediata de ausência de rede e encerramento seguro do loop de busca com mensagem de erro clara.
+
 ## [2.8.0] - 2026-11-20
 
 ### Alterado

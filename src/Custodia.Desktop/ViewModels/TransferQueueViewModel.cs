@@ -24,6 +24,7 @@ public sealed partial class TransferItemViewModel : ViewModelBase
     public DateTimeOffset CreatedAtUtc { get; }
 
     private long _animateUntilMs;
+    private long _errorAnimateUntilMs;
     private long _holdVersion;
 
     [ObservableProperty]
@@ -79,6 +80,16 @@ public sealed partial class TransferItemViewModel : ViewModelBase
         {
             LatchAnimationHold();
         }
+        else if (item.Status == TransferStatus.Failed)
+        {
+            var ageMs = item.CompletedAtUtc.HasValue
+                ? (DateTimeOffset.UtcNow - item.CompletedAtUtc.Value).TotalMilliseconds
+                : 0;
+            if (ageMs < 6000)
+            {
+                LatchErrorAnimationHold();
+            }
+        }
         else if (item.Status == TransferStatus.Completed && _animateUntilMs == 0 && item.CompletedAtUtc.HasValue)
         {
             var ageMs = (DateTimeOffset.UtcNow - item.CompletedAtUtc.Value).TotalMilliseconds;
@@ -98,6 +109,13 @@ public sealed partial class TransferItemViewModel : ViewModelBase
         _ = ReleaseAnimationHoldAsync(version, 1650);
     }
 
+    private void LatchErrorAnimationHold()
+    {
+        _errorAnimateUntilMs = Environment.TickCount64 + 6000;
+        var version = ++_holdVersion;
+        _ = ReleaseAnimationHoldAsync(version, 6050);
+    }
+
     private async Task ReleaseAnimationHoldAsync(long version, int delayMs)
     {
         await Task.Delay(delayMs);
@@ -115,6 +133,9 @@ public sealed partial class TransferItemViewModel : ViewModelBase
     private void RefreshActiveIndicatorProperties()
     {
         OnPropertyChanged(nameof(IsInProgress));
+        OnPropertyChanged(nameof(IsFailed));
+        OnPropertyChanged(nameof(IsFailedActive));
+        OnPropertyChanged(nameof(IsFailedStatic));
         OnPropertyChanged(nameof(IsAnimationActive));
         OnPropertyChanged(nameof(IsUploadingActive));
         OnPropertyChanged(nameof(IsDownloadingActive));
@@ -122,6 +143,7 @@ public sealed partial class TransferItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsUploadingStatic));
         OnPropertyChanged(nameof(IsDownloadingStatic));
         OnPropertyChanged(nameof(IsDeletingStatic));
+        OnPropertyChanged(nameof(ErrorHeadlineText));
     }
 
     public void RefreshLocalizedProperties()
@@ -226,16 +248,41 @@ public sealed partial class TransferItemViewModel : ViewModelBase
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
 
     public bool IsInProgress => Status == TransferStatus.InProgress;
+    public bool IsFailed => Status == TransferStatus.Failed;
+    public bool IsFailedActive => IsFailed && Environment.TickCount64 < _errorAnimateUntilMs;
+    public bool IsFailedStatic => IsFailed && !IsFailedActive;
+
+    public string ErrorHeadlineText
+    {
+        get
+        {
+            if (!IsFailed)
+            {
+                return string.Empty;
+            }
+
+            var detail = string.IsNullOrWhiteSpace(ErrorMessage)
+                ? Loc.Text("TransferFailed")
+                : ErrorMessage;
+            return Direction switch
+            {
+                TransferDirection.Upload => Loc.Format("TransferUploadErrorFmt", FileName, detail),
+                TransferDirection.Download => Loc.Format("TransferDownloadErrorFmt", FileName, detail),
+                _ => Loc.Format("TransferFailedFmt", detail)
+            };
+        }
+    }
+
     public bool IsAnimationActive => IsInProgress
         || Status == TransferStatus.Queued
         || (Status == TransferStatus.Completed && Environment.TickCount64 < _animateUntilMs);
-    public bool IsUploadingActive => IsAnimationActive && Direction == TransferDirection.Upload;
-    public bool IsDownloadingActive => IsAnimationActive && Direction == TransferDirection.Download;
-    public bool IsDeletingActive => IsAnimationActive && Direction == TransferDirection.Delete;
+    public bool IsUploadingActive => IsAnimationActive && !IsFailed && Direction == TransferDirection.Upload;
+    public bool IsDownloadingActive => IsAnimationActive && !IsFailed && Direction == TransferDirection.Download;
+    public bool IsDeletingActive => IsAnimationActive && !IsFailed && Direction == TransferDirection.Delete;
 
-    public bool IsUploadingStatic => !IsAnimationActive && Direction == TransferDirection.Upload;
-    public bool IsDownloadingStatic => !IsAnimationActive && Direction == TransferDirection.Download;
-    public bool IsDeletingStatic => !IsAnimationActive && Direction == TransferDirection.Delete;
+    public bool IsUploadingStatic => !IsAnimationActive && !IsFailed && Direction == TransferDirection.Upload;
+    public bool IsDownloadingStatic => !IsAnimationActive && !IsFailed && Direction == TransferDirection.Download;
+    public bool IsDeletingStatic => !IsAnimationActive && !IsFailed && Direction == TransferDirection.Delete;
 
     public double ProgressPercentage =>
         TotalBytes <= 0
@@ -319,7 +366,11 @@ public sealed partial class TransferItemViewModel : ViewModelBase
 
 public sealed partial class TransferQueueViewModel : ViewModelBase
 {
+    private const int MaxUiRetainedItems = 2000;
     private readonly IDriveSyncService _syncService;
+    private int _prunedUiCompletedCount;
+    private int _prunedUiFailedCount;
+    private int _prunedUiCancelledCount;
 
     public ILocalizationService Loc { get; }
 
@@ -328,6 +379,21 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
 
     [ObservableProperty]
     private int _completedCount;
+
+    [ObservableProperty]
+    private int _failedCount;
+
+    [ObservableProperty]
+    private int _totalCount;
+
+    [ObservableProperty]
+    private bool _hasFailedTransfers;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLastErrorBanner))]
+    private string _lastErrorMessage = string.Empty;
+
+    public bool HasLastErrorBanner => !string.IsNullOrWhiteSpace(LastErrorMessage);
 
     [ObservableProperty]
     private string _summaryText = string.Empty;
@@ -383,11 +449,17 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
 
     public void ReloadSnapshot()
     {
+        _prunedUiCompletedCount = 0;
+        _prunedUiFailedCount = 0;
+        _prunedUiCancelledCount = 0;
         Items.Clear();
         foreach (var item in _syncService.GetTransferQueueSnapshot())
         {
             Items.Add(new TransferItemViewModel(item, this, Loc));
         }
+
+        var firstError = Items.FirstOrDefault(i => i.IsFailed);
+        LastErrorMessage = firstError is not null ? firstError.ErrorHeadlineText : string.Empty;
 
         UpdateCounters();
     }
@@ -401,20 +473,42 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
         }
         else
         {
-            Items.Insert(0, new TransferItemViewModel(item, this, Loc));
-            while (Items.Count > 200)
+            existing = new TransferItemViewModel(item, this, Loc);
+            Items.Insert(0, existing);
+            while (Items.Count > MaxUiRetainedItems)
             {
                 var removable = Items.LastOrDefault(x => !x.CanCancel);
                 if (removable is null)
                 {
                     break;
                 }
+
+                switch (removable.Status)
+                {
+                    case TransferStatus.Completed:
+                        _prunedUiCompletedCount++;
+                        break;
+                    case TransferStatus.Failed:
+                        _prunedUiFailedCount++;
+                        break;
+                    case TransferStatus.Cancelled:
+                        _prunedUiCancelledCount++;
+                        break;
+                }
                 Items.Remove(removable);
             }
         }
 
+        if (item.Status == TransferStatus.Failed)
+        {
+            LastErrorMessage = existing.ErrorHeadlineText;
+        }
+
         UpdateCounters();
     }
+
+    [RelayCommand]
+    private void DismissLastErrorBanner() => LastErrorMessage = string.Empty;
 
     public void CancelTransfer(string transferId)
     {
@@ -453,18 +547,44 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
     [RelayCommand]
     private void ClearCompleted()
     {
+        _prunedUiCompletedCount = 0;
+        _prunedUiFailedCount = 0;
+        _prunedUiCancelledCount = 0;
+        LastErrorMessage = string.Empty;
         _syncService.ClearCompletedTransfers();
         ReloadSnapshot();
     }
 
     private void UpdateCounters()
     {
-        HasNoItems = Items.Count == 0;
-        ActiveCount = Items.Count(i => i.Status is TransferStatus.Queued or TransferStatus.InProgress);
-        CompletedCount = Items.Count(i => i.Status == TransferStatus.Completed);
-        SummaryText = Items.Count == 0
+        var uiActive = Items.Count(i => i.Status is TransferStatus.Queued or TransferStatus.InProgress);
+        var uiCompleted = Items.Count(i => i.Status == TransferStatus.Completed) + _prunedUiCompletedCount;
+        var uiFailed = Items.Count(i => i.Status == TransferStatus.Failed) + _prunedUiFailedCount;
+        var uiTotal = Items.Count + _prunedUiCompletedCount + _prunedUiFailedCount + _prunedUiCancelledCount;
+
+        var serviceStats = _syncService.GetTransferQueueStats();
+        if (serviceStats is not null && serviceStats.TotalCount > uiTotal)
+        {
+            ActiveCount = serviceStats.ActiveCount;
+            CompletedCount = serviceStats.CompletedCount;
+            FailedCount = serviceStats.FailedCount;
+            TotalCount = serviceStats.TotalCount;
+        }
+        else
+        {
+            ActiveCount = uiActive;
+            CompletedCount = uiCompleted;
+            FailedCount = uiFailed;
+            TotalCount = uiTotal;
+        }
+
+        HasFailedTransfers = FailedCount > 0;
+        HasNoItems = TotalCount == 0 && Items.Count == 0;
+        SummaryText = TotalCount == 0
             ? Loc.Text("TransferEmpty")
-            : Loc.Format("TransferSummaryFmt", ActiveCount, CompletedCount, Items.Count);
+            : FailedCount > 0
+                ? Loc.Format("TransferSummaryWithErrorsFmt", ActiveCount, CompletedCount, FailedCount, TotalCount)
+                : Loc.Format("TransferSummaryFmt", ActiveCount, CompletedCount, TotalCount);
         OnPropertyChanged(nameof(CanCancelSelected));
     }
 }

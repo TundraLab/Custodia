@@ -258,6 +258,18 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private bool _isEmptyTrashConfirmVisible;
 
     [ObservableProperty]
+    private bool _isCreateFolderOpen;
+
+    [ObservableProperty]
+    private string _newFolderName = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasTransferErrorBanner))]
+    private string _transferErrorBannerText = string.Empty;
+
+    public bool HasTransferErrorBanner => !string.IsNullOrWhiteSpace(TransferErrorBannerText);
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedFile))]
     [NotifyPropertyChangedFor(nameof(HasSelectedItem))]
     [NotifyPropertyChangedFor(nameof(HasMultipleSelected))]
@@ -568,6 +580,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        TransferErrorBannerText = string.Empty;
         var downloadedCount = 0;
         for (var i = 0; i < targets.Count; i++)
         {
@@ -585,7 +598,9 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             }
             catch (Exception ex)
             {
-                StatusSummary = Loc.Format("FileHubErrorFmt", ex.Message);
+                var err = Loc.Format("DownloadErrorBannerFmt", item.Name, ex.Message);
+                TransferErrorBannerText = err;
+                StatusSummary = err;
             }
         }
 
@@ -1318,6 +1333,11 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                     .GroupBy(t => t.RemoteFileId, StringComparer.Ordinal)
                     .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
 
+                var mappedByRemoteId = syncFolders.Values
+                    .Where(f => !string.IsNullOrWhiteSpace(f.RemoteFolderId))
+                    .GroupBy(f => f.RemoteFolderId, StringComparer.Ordinal)
+                    .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
                 IReadOnlyList<RemoteDriveNode> remoteNodes = string.IsNullOrWhiteSpace(query)
                     ? await _driveClient.ListChildrenAsync(_driveFolderId, foldersOnly: false, ct)
                     : await _driveClient.SearchRemoteFilesAsync(query, 100, ct);
@@ -1332,7 +1352,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                     var captured = node;
                     if (node.IsFolder)
                     {
-                        factories.Add(() => CreateRemoteFolderItem(captured, culture));
+                        mappedByRemoteId.TryGetValue(captured.Id, out var mappedFolder);
+                        factories.Add(() => CreateRemoteFolderItem(captured, culture, mappedFolder));
                     }
                     else
                     {
@@ -1433,13 +1454,25 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         return item;
     }
 
-    private FileHubItemViewModel CreateRemoteFolderItem(RemoteDriveNode node, CultureInfo culture)
+    private FileHubItemViewModel CreateRemoteFolderItem(
+        RemoteDriveNode node,
+        CultureInfo culture,
+        LocalSyncFolder? mappedFolder = null)
     {
         var folderId = node.Id;
         var folderName = node.Name;
+        var displayName = !string.IsNullOrWhiteSpace(mappedFolder?.CustomAlias)
+            ? mappedFolder!.CustomAlias!.Trim()
+            : node.Name;
+        var iconData = FolderCustomizationPresets.ResolveIconSvg(mappedFolder?.CustomIconKey);
+        var normalizedHex = FolderCustomizationPresets.NormalizeColorHex(mappedFolder?.CustomColorHex);
+        var iconBrush = !string.IsNullOrWhiteSpace(normalizedHex)
+            ? SolidColorBrush.Parse(normalizedHex)
+            : BrushMutedGray;
+
         return new FileHubItemViewModel
         {
-            Name = node.Name,
+            Name = displayName,
             PathDisplay = Loc.Text("FileHubStatusFolder"),
             OriginDisplay = Loc.Text("FileHubStatusFolder"),
             OriginBrush = BrushFolderBlue,
@@ -1449,14 +1482,14 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             IsFolder = true,
             HasLocalFile = false,
             RemoteFileId = folderId,
-            FileIconData = FolderIconSvg,
-            FileIconBrush = BrushMutedGray,
+            FileIconData = iconData,
+            FileIconBrush = iconBrush,
             ActionLabel = Loc.Text("FileHubOpenFolder"),
             OpenInDriveLabel = Loc.Text("OpenInDriveButton"),
             TrashLabel = Loc.Text("MoveToTrashButton"),
             CopyNameLabel = Loc.Text("CopyNameMenu"),
             CopyLinkLabel = Loc.Text("CopyDriveLinkMenu"),
-            OpenActionCommand = new AsyncRelayCommand(() => OpenRemoteFolderAsync(folderId, folderName)),
+            OpenActionCommand = new AsyncRelayCommand(() => OpenRemoteFolderAsync(folderId, displayName)),
             OpenInDriveCommand = new AsyncRelayCommand(() => OpenRemoteInDriveBrowserAsync(folderId, true)),
             TrashCommand = new AsyncRelayCommand(() => MoveToTrashAsync(folderId, folderName)),
             CopyNameCommand = new AsyncRelayCommand(() => CopyToClipboardAsync(folderName)),
@@ -1545,6 +1578,134 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             : Task.CompletedTask;
     }
 
+    [RelayCommand]
+    private void DismissTransferErrorBanner() => TransferErrorBannerText = string.Empty;
+
+    [RelayCommand]
+    private void ToggleCreateFolder()
+    {
+        if (IsTrashView)
+        {
+            IsCreateFolderOpen = false;
+            return;
+        }
+
+        if (SelectedSourceFilterIndex == 1 && string.IsNullOrWhiteSpace(_localSyncFolderId))
+        {
+            StatusSummary = Loc.Text("NewFolderLocalRootHint");
+            IsCreateFolderOpen = false;
+            return;
+        }
+
+        IsCreateFolderOpen = !IsCreateFolderOpen;
+        if (IsCreateFolderOpen)
+        {
+            NewFolderName = string.Empty;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CreateFolderAsync()
+    {
+        if (IsTrashView)
+        {
+            return;
+        }
+
+        var trimmed = (NewFolderName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(trimmed)
+            || trimmed.Contains('/')
+            || trimmed.Contains('\\')
+            || trimmed is "." or "..")
+        {
+            StatusSummary = Loc.Text("NewFolderNameRequired");
+            return;
+        }
+
+        if (SelectedSourceFilterIndex == 1)
+        {
+            if (string.IsNullOrWhiteSpace(_localSyncFolderId))
+            {
+                StatusSummary = Loc.Text("NewFolderLocalRootHint");
+                return;
+            }
+
+            IsLoading = true;
+            try
+            {
+                var syncFolder = await _repository.GetSyncFolderByIdAsync(_localSyncFolderId);
+                if (syncFolder is null)
+                {
+                    StatusSummary = Loc.Text("NewFolderLocalRootHint");
+                    return;
+                }
+
+                var fullRoot = Path.GetFullPath(syncFolder.LocalPath);
+                var baseDir = string.IsNullOrWhiteSpace(_localSubPath)
+                    ? fullRoot
+                    : Path.GetFullPath(Path.Combine(fullRoot, _localSubPath.Replace('/', Path.DirectorySeparatorChar)));
+                var targetDir = Path.GetFullPath(Path.Combine(baseDir, trimmed));
+                var rootPrefix = fullRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                if (!targetDir.StartsWith(rootPrefix, StringComparison.Ordinal))
+                {
+                    StatusSummary = Loc.Text("NewFolderNameRequired");
+                    return;
+                }
+
+                Directory.CreateDirectory(targetDir);
+                IsCreateFolderOpen = false;
+                NewFolderName = string.Empty;
+
+                if (_driveClient.IsConnected && _syncService.IsOnline)
+                {
+                    _ = Task.Run(() => _syncService.TriggerFolderSyncAsync(syncFolder.Id));
+                }
+
+                await RefreshAsync();
+                StatusSummary = Loc.Format("FolderCreatedFmt", trimmed);
+            }
+            catch (Exception ex)
+            {
+                StatusSummary = Loc.Format("FileHubErrorFmt", ex.Message);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+            return;
+        }
+
+        if (!_driveClient.IsConnected)
+        {
+            StatusSummary = Loc.Text("ConnectBeforeSync");
+            return;
+        }
+
+        if (!_syncService.IsOnline)
+        {
+            StatusSummary = Loc.Text("OfflineModeNotice");
+            return;
+        }
+
+        IsLoading = true;
+        try
+        {
+            var created = await _driveClient.CreateFolderAsync(trimmed, _driveFolderId);
+            IsCreateFolderOpen = false;
+            NewFolderName = string.Empty;
+            await RefreshAsync();
+            StatusSummary = Loc.Format("FolderCreatedFmt", created.Name);
+        }
+        catch (Exception ex)
+        {
+            StatusSummary = Loc.Format("FileHubErrorFmt", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
     public async Task UploadDroppedFilesAsync(IEnumerable<string> localPaths)
     {
         if (!_driveClient.IsConnected)
@@ -1553,6 +1714,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        TransferErrorBannerText = string.Empty;
         var targetFolder = SelectedSourceFilterIndex == 0 ? CurrentFolderId : "root";
         var uploadedCount = 0;
 
@@ -1568,18 +1730,23 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
 
                 var fileName = Path.GetFileName(path);
                 StatusSummary = Loc.Format("FileHubUploadingFmt", fileName);
-                await _syncService.UploadSingleFileAsync(path, targetFolder);
-                uploadedCount++;
+                try
+                {
+                    await _syncService.UploadSingleFileAsync(path, targetFolder);
+                    uploadedCount++;
+                }
+                catch (Exception ex)
+                {
+                    var err = Loc.Format("UploadErrorBannerFmt", fileName, ex.Message);
+                    TransferErrorBannerText = err;
+                    StatusSummary = err;
+                }
             }
 
             if (uploadedCount > 0)
             {
                 await RefreshAsync();
             }
-        }
-        catch (Exception ex)
-        {
-            StatusSummary = Loc.Format("FileHubErrorFmt", ex.Message);
         }
         finally
         {
@@ -1994,6 +2161,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        TransferErrorBannerText = string.Empty;
         StatusSummary = Loc.Format("DownloadingFileFmt", fileName);
         try
         {
@@ -2007,12 +2175,19 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            StatusSummary = Loc.Format("FileHubErrorFmt", ex.Message);
+            var err = Loc.Format("DownloadErrorBannerFmt", fileName, ex.Message);
+            TransferErrorBannerText = err;
+            StatusSummary = err;
         }
     }
 
     private static string GetSyncFolderDisplayName(LocalSyncFolder folder)
     {
+        if (!string.IsNullOrWhiteSpace(folder.CustomAlias))
+        {
+            return folder.CustomAlias.Trim();
+        }
+
         var trimmed = folder.LocalPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         var name = Path.GetFileName(trimmed);
         return string.IsNullOrWhiteSpace(name) ? folder.RemoteFolderName : name;
@@ -2088,7 +2263,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                     capturedFolder.LocalPath,
                     capturedFolder.RemoteFolderId,
                     modified,
-                    culture));
+                    culture,
+                    capturedFolder));
             }
 
             return;
@@ -2224,10 +2400,17 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         string localFullPath,
         string remoteFolderId,
         DateTimeOffset modifiedUtc,
-        CultureInfo culture)
+        CultureInfo culture,
+        LocalSyncFolder? customizedFolder = null)
     {
         var isConnected = _driveClient.IsConnected;
         var hasRemote = isConnected && !string.IsNullOrWhiteSpace(remoteFolderId);
+        var iconData = FolderCustomizationPresets.ResolveIconSvg(customizedFolder?.CustomIconKey);
+        var normalizedHex = FolderCustomizationPresets.NormalizeColorHex(customizedFolder?.CustomColorHex);
+        var iconBrush = !string.IsNullOrWhiteSpace(normalizedHex)
+            ? SolidColorBrush.Parse(normalizedHex)
+            : BrushMutedGray;
+
         return new FileHubItemViewModel
         {
             Name = displayName,
@@ -2240,8 +2423,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             HasLocalFile = Directory.Exists(localFullPath),
             LocalFullPath = localFullPath,
             RemoteFileId = hasRemote ? remoteFolderId : string.Empty,
-            FileIconData = FolderIconSvg,
-            FileIconBrush = BrushMutedGray,
+            FileIconData = iconData,
+            FileIconBrush = iconBrush,
             ActionLabel = Loc.Text("FileHubOpenFolder"),
             OpenInDriveLabel = Loc.Text("OpenInDriveButton"),
             CopyNameLabel = Loc.Text("CopyNameMenu"),

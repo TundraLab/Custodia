@@ -30,6 +30,7 @@ public interface IDriveSyncService
     Task<IReadOnlyList<LocalSyncFolder>> GetSyncFoldersAsync(CancellationToken cancellationToken = default);
     Task<LocalSyncFolder> AddSyncFolderAsync(string localPath, string remoteFolderId, string remoteFolderName, SyncMode mode, CancellationToken cancellationToken = default);
     Task UpdateSyncModeAsync(string folderId, SyncMode mode, CancellationToken cancellationToken = default);
+    Task UpdateFolderCustomizationAsync(string folderId, string? customAlias, string? customColorHex, string? customIconKey, CancellationToken cancellationToken = default);
     Task SetFolderPausedAsync(string folderId, bool isPaused, CancellationToken cancellationToken = default);
     Task RemoveSyncFolderAsync(string folderId, CancellationToken cancellationToken = default);
 
@@ -43,6 +44,7 @@ public interface IDriveSyncService
     Task EmptyRemoteTrashAsync(CancellationToken cancellationToken = default);
 
     IReadOnlyList<TransferQueueItem> GetTransferQueueSnapshot();
+    TransferQueueStats GetTransferQueueStats();
     void CancelTransfer(string transferId);
     void ClearCompletedTransfers();
 }

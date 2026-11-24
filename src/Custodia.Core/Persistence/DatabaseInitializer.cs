@@ -96,7 +96,10 @@ public static class DatabaseInitializer
                 sync_state INTEGER NOT NULL DEFAULT 0,
                 is_paused INTEGER NOT NULL DEFAULT 0,
                 last_synced_at_utc TEXT NULL,
-                last_error_message TEXT NULL
+                last_error_message TEXT NULL,
+                custom_alias TEXT NULL,
+                custom_color_hex TEXT NULL,
+                custom_icon_key TEXT NULL
             );
 
             CREATE TABLE IF NOT EXISTS tracked_file_entries (
@@ -140,5 +143,27 @@ public static class DatabaseInitializer
             """;
 
         await connection.ExecuteAsync(new CommandDefinition(schemaSql, cancellationToken: cancellationToken));
+
+        await EnsureFolderCustomizationColumnsAsync(connection, cancellationToken);
+    }
+
+    private static async Task EnsureFolderCustomizationColumnsAsync(
+        System.Data.Common.DbConnection connection,
+        CancellationToken cancellationToken)
+    {
+        var existingCols = (await connection.QueryAsync<string>(
+                new CommandDefinition("SELECT name FROM pragma_table_info('local_sync_folders');", cancellationToken: cancellationToken)))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        string[] requiredCols = ["custom_alias", "custom_color_hex", "custom_icon_key"];
+        foreach (var col in requiredCols)
+        {
+            if (!existingCols.Contains(col))
+            {
+                await connection.ExecuteAsync(new CommandDefinition(
+                    $"ALTER TABLE local_sync_folders ADD COLUMN {col} TEXT NULL;",
+                    cancellationToken: cancellationToken));
+            }
+        }
     }
 }

@@ -27,7 +27,23 @@ public static class UpdateSchedulePolicy
 
         return (utcNow - settings.LastUpdateCheckUtc.Value) >= TimeSpan.FromDays(intervalDays);
     }
+
+    public static DateTimeOffset? GetNextScheduledCheckUtc(AppSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        if (!settings.AutoCheckUpdates || settings.UpdateCheckIntervalDays <= 0)
+        {
+            return null;
+        }
+
+        var intervalDays = Math.Clamp(settings.UpdateCheckIntervalDays, 1, 365);
+        var baseline = settings.LastUpdateCheckUtc ?? DateTimeOffset.UtcNow;
+        return baseline.AddDays(intervalDays);
+    }
 }
+
+public sealed class UpdateOfflineException(string message, Exception? inner = null)
+    : Exception(message, inner);
 
 public enum AppInstallKind
 {

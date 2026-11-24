@@ -122,6 +122,29 @@
                     Command="{Binding TestNotificationCommand}" />
           </Grid>
 
+          <StackPanel Spacing="8" Margin="28,0,0,0" IsEnabled="{Binding NotificationsEnabled}">
+            <CheckBox IsChecked="{Binding NotificationSoundEnabled}"
+                      Content="{Binding Loc.NotificationSoundCheckbox}" />
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="28,0,0,0" IsEnabled="{Binding NotificationSoundEnabled}">
+              <TextBlock Grid.Column="0" FontSize="12.5" VerticalAlignment="Center" Classes="MutedMeta" Text="{Binding Loc.NotificationSoundToneLabel}" />
+              <ComboBox Grid.Column="1"
+                        Width="210"
+                        ItemsSource="{Binding NotificationSoundOptions}"
+                        SelectedIndex="{Binding SelectedNotificationSoundIndex}" />
+              <Button Grid.Column="2"
+                      Classes="SecondaryAction"
+                      Padding="10,5"
+                      Content="{Binding Loc.PreviewSoundButton}"
+                      Command="{Binding PreviewNotificationSoundCommand}" />
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Spacing="4">
+            <CheckBox IsChecked="{Binding GmailAccountAlertsEnabled}"
+                      Content="{Binding Loc.GmailAccountAlertsCheckbox}" />
+            <TextBlock Classes="MutedMeta" Margin="28,0,0,0" Text="{Binding Loc.GmailAccountAlertsHint}" TextWrapping="Wrap" />
+          </StackPanel>
+
           <CheckBox IsChecked="{Binding MinimizeToTrayOnClose}"
                     Content="{Binding Loc.MinimizeToTrayCheckbox}" />
 

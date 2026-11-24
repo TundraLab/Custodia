@@ -8,7 +8,11 @@ namespace TundraDrive.Core.Security;
 
 public sealed class AuthCredentialManager : IAuthCredentialManager
 {
-    private static readonly string[] DriveScopes = [DriveService.Scope.Drive];
+    private static readonly string[] DriveScopes =
+    [
+        DriveService.Scope.Drive,
+        "https://www.googleapis.com/auth/gmail.send"
+    ];
     private readonly ILogger<AuthCredentialManager> _logger;
     private readonly SecureFileDataStore _tokenStore;
 

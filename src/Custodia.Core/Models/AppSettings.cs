@@ -7,6 +7,9 @@ public sealed class AppSettings
     public int UiScalePercent { get; set; } = 100;
     public bool StartOnBoot { get; set; }
     public bool NotificationsEnabled { get; set; } = true;
+    public bool NotificationSoundEnabled { get; set; } = true;
+    public string NotificationSoundTone { get; set; } = "chime";
+    public bool GmailAccountAlertsEnabled { get; set; } = true;
     public bool MinimizeToTrayOnClose { get; set; } = true;
     public string DownloadDirectory { get; set; } = Configuration.AppPaths.DefaultDownloadDirectory;
     public int SyncIntervalSeconds { get; set; } = 120;

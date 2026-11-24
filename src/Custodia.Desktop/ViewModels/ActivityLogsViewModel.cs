@@ -113,9 +113,17 @@ public sealed class ActivityLogItemViewModel
                 ? $"Local API upload failed ({apiFile}): {apiErr}"
                 : $"Local API upload failed: {ExtractAfterColon(msg)}",
             "ManualDownload" => $"Downloaded to {target ?? ExtractTrailingValue(msg, "Baixado para ")}.",
-            "ManualDownloadFailed" => TrySplitPair(ExtractTrailingValue(msg, "Falha ao baixar "), ": ", out var dlFile, out var dlErr)
+            "ManualDownloadFailed" or "DownloadFailed" => TrySplitPair(ExtractTrailingValue(msg, "Falha ao baixar "), ": ", out var dlFile, out var dlErr)
                 ? $"Failed to download {dlFile}: {dlErr}"
                 : $"Download failed: {ExtractAfterColon(msg)}",
+            "UploadFailed" => TrySplitPair(ExtractTrailingValue(msg, "Falha ao enviar "), ": ", out var ulFile, out var ulErr)
+                ? $"Failed to upload {ulFile}: {ulErr}"
+                : $"Upload failed: {ExtractAfterColon(msg)}",
+            "InitialFolderSyncCompleted" => $"Initial sync completed for {target ?? ExtractAfterColon(msg)}.",
+            "FolderCustomized" => $"Customization saved for {ExtractTrailingValue(msg, "Personalização salva para ")}.",
+            "FolderCreated" => $"Folder created: {target ?? ExtractAfterColon(msg)}.",
+            "GmailAlertSent" => $"Gmail account alert sent to {ExtractTrailingValue(msg, "Aviso enviado por Gmail para ")}.",
+            "GmailAlertSkipped" => $"Gmail account alert skipped for {target ?? "account"} (Gmail API disabled or scope missing).",
             "LocalTrashed" => $"Moved local file to Trash after remote deletion: {target ?? ExtractTrailingValue(msg, "exclusão remota: ")}.",
             "RemoteTrashed" => $"Moved to Google Drive Trash: {target ?? ExtractInsideParens(msg)}.",
             "RemoteRestored" => $"Restored from Google Drive Trash: {target ?? ExtractAfterColon(msg)}.",

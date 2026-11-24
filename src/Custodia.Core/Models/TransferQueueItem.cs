@@ -21,3 +21,10 @@ public sealed class TransferQueueItem
             ? (Status == TransferStatus.Completed ? 100.0 : 0.0)
             : Math.Clamp((double)TransferredBytes / TotalBytes * 100.0, 0.0, 100.0);
 }
+
+public sealed record TransferQueueStats(
+    int ActiveCount,
+    int CompletedCount,
+    int FailedCount,
+    int CancelledCount,
+    int TotalCount);

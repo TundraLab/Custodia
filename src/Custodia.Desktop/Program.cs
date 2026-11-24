@@ -99,6 +99,7 @@ internal static class Program
         services.AddSingleton<IAutostartManager, LinuxAutostartManager>();
         services.AddSingleton<IAuthCredentialManager, AuthCredentialManager>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
+        services.AddSingleton<NotificationSoundService>();
         services.AddSingleton<IDesktopNotificationService, LinuxNotificationService>();
         services.AddSingleton<FilePreviewService>();
         services.AddSingleton<MemoryCleanerService>();

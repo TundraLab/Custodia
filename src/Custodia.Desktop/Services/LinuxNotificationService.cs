@@ -16,6 +16,7 @@ public sealed class LinuxNotificationService : IDesktopNotificationService, IDis
     private readonly IAppSettingsService _settingsService;
     private readonly ILocalizationService _localization;
     private readonly ILogger<LinuxNotificationService> _logger;
+    private readonly NotificationSoundService? _soundService;
     private readonly object _throttleLock = new();
     private readonly SemaphoreSlim _dbusLock = new(1, 1);
     private readonly ConcurrentDictionary<uint, string> _pendingActionTargets = new();
@@ -30,11 +31,13 @@ public sealed class LinuxNotificationService : IDesktopNotificationService, IDis
     public LinuxNotificationService(
         IAppSettingsService settingsService,
         ILocalizationService localization,
-        ILogger<LinuxNotificationService> logger)
+        ILogger<LinuxNotificationService> logger,
+        NotificationSoundService? soundService = null)
     {
         _settingsService = settingsService;
         _localization = localization;
         _logger = logger;
+        _soundService = soundService;
     }
 
     public async Task NotifyAsync(
@@ -63,6 +66,13 @@ public sealed class LinuxNotificationService : IDesktopNotificationService, IDis
                 _lastKey = title;
                 _lastNotificationUtc = now;
             }
+        }
+
+        if (_settingsService.Current.NotificationSoundEnabled && _soundService is not null)
+        {
+            _ = _soundService.PlayToneAsync(
+                _settingsService.Current.NotificationSoundTone,
+                isError: urgency == NotificationUrgency.Critical);
         }
 
         var iconPath = LinuxDesktopIntegrationHelper.InstalledPngIconPath;
@@ -239,7 +249,8 @@ public sealed class LinuxNotificationService : IDesktopNotificationService, IDis
             writer.WriteDictionary(new Dictionary<string, VariantValue>
             {
                 ["urgency"] = VariantValue.Byte(urgencyByte),
-                ["desktop-entry"] = VariantValue.String("custodia")
+                ["desktop-entry"] = VariantValue.String("custodia"),
+                ["suppress-sound"] = VariantValue.Bool(true)
             });
             writer.WriteInt32(-1);
             return writer.CreateMessage();

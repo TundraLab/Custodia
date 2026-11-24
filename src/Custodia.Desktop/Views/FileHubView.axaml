@@ -5,7 +5,7 @@
              x:DataType="vm:FileHubViewModel"
              DragDrop.AllowDrop="True">
 
-  <!-- Aba meu driver -->
+  <!-- Aba meus arquivos -->
   <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="24" RowSpacing="12">
     <!-- Cabeçalho + Barra de armazenamento segmentada -->
     <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="16">
@@ -129,7 +129,7 @@
 
     <!-- Busca + Ações contextuais + Lixeira -->
     <StackPanel Grid.Row="2" Spacing="8">
-      <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
         <TextBox Grid.Column="0"
                  Watermark="{Binding Loc.SearchFilesWatermark}"
                  Text="{Binding SearchText}"
@@ -147,12 +147,75 @@
                 IsEnabled="{Binding !IsLoading}" />
 
         <Button Grid.Column="3"
+                Classes="SecondaryAction"
+                IsVisible="{Binding !IsTrashView}"
+                Content="{Binding Loc.NewFolderButton}"
+                Command="{Binding ToggleCreateFolderCommand}"
+                IsEnabled="{Binding !IsLoading}" />
+
+        <Button Grid.Column="4"
                 Classes="PrimaryAction"
                 IsVisible="{Binding !IsTrashView}"
                 Content="{Binding Loc.UploadFileButton}"
                 Command="{Binding UploadFileCommand}"
                 IsEnabled="{Binding !IsLoading}" />
       </Grid>
+
+      <!-- Barra inline de criação de pasta -->
+      <Border Classes="SurfaceCard"
+              Padding="10,8"
+              IsVisible="{Binding IsCreateFolderOpen}">
+        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+          <TextBox Grid.Column="0"
+                   Watermark="{Binding Loc.NewFolderPlaceholder}"
+                   Text="{Binding NewFolderName}" />
+          <Button Grid.Column="1"
+                  Classes="PrimaryAction"
+                  Padding="12,5"
+                  Content="{Binding Loc.CreateFolderConfirmButton}"
+                  Command="{Binding CreateFolderCommand}" />
+          <Button Grid.Column="2"
+                  Classes="SecondaryAction"
+                  Padding="10,5"
+                  Content="{Binding Loc.CancelButton}"
+                  Command="{Binding ToggleCreateFolderCommand}" />
+        </Grid>
+      </Border>
+
+      <!-- Banner animado de erro de upload/download -->
+      <Border Classes="ErrorPulseBanner"
+              Padding="12,9"
+              CornerRadius="8"
+              Background="#2A1215"
+              BorderBrush="#B91C1C"
+              BorderThickness="1"
+              IsVisible="{Binding HasTransferErrorBanner}">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+          <PathIcon Grid.Column="0"
+                    Classes="ErrorPulse"
+                    Width="15" Height="15"
+                    Foreground="#EF4444"
+                    VerticalAlignment="Center"
+                    Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z">
+            <PathIcon.RenderTransform>
+              <TranslateTransform />
+            </PathIcon.RenderTransform>
+          </PathIcon>
+          <TextBlock Grid.Column="1"
+                     VerticalAlignment="Center"
+                     FontSize="12.5"
+                     FontWeight="SemiBold"
+                     Foreground="#FECACA"
+                     TextWrapping="Wrap"
+                     Text="{Binding TransferErrorBannerText}" />
+          <Button Grid.Column="2"
+                  Classes="SecondaryAction"
+                  Padding="8,4"
+                  FontSize="12"
+                  Content="✕"
+                  Command="{Binding DismissTransferErrorBannerCommand}" />
+        </Grid>
+      </Border>
 
       <!-- Barra de ações contextuais para arquivos normais -->
       <Border Classes="FlatRow"

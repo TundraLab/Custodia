@@ -34,6 +34,10 @@ internal class StubDriveSyncProxy : DispatchProxy
             return Account;
         if (targetMethod?.Name == $"get_{nameof(IDriveSyncService.SavedAccounts)}")
             return Array.Empty<DriveAccount>();
+        if (targetMethod?.Name == $"get_{nameof(IDriveSyncService.IsOnline)}")
+            return true;
+        if (targetMethod?.Name == $"get_{nameof(IDriveSyncService.IsSyncRunning)}")
+            return false;
         if (targetMethod?.Name == nameof(IDriveSyncService.ConnectAccountAsync))
         {
             ConnectCalls.Add(((bool)args![0]!, (string?)args[1]));
@@ -41,6 +45,12 @@ internal class StubDriveSyncProxy : DispatchProxy
         }
         if (targetMethod?.Name == nameof(IDriveSyncService.GetTransferQueueSnapshot))
             return Array.Empty<TransferQueueItem>();
+        if (targetMethod?.Name == nameof(IDriveSyncService.GetTransferQueueStats))
+            return new TransferQueueStats(0, 0, 0, 0, 0);
+        if (targetMethod?.Name == nameof(IDriveSyncService.GetSyncFoldersAsync))
+            return Task.FromResult<IReadOnlyList<LocalSyncFolder>>(Array.Empty<LocalSyncFolder>());
+        if (targetMethod?.Name == nameof(IDriveSyncService.UpdateFolderCustomizationAsync))
+            return Task.CompletedTask;
         if (targetMethod?.Name == nameof(IDriveSyncService.DownloadRemoteFileAsync))
         {
             DownloadedIds.Add((string)args![0]!);
@@ -63,6 +73,8 @@ internal class StubDriveClientProxy : DispatchProxy
     {
         if (targetMethod?.Name == "get_IsConnected")
             return true;
+        if (targetMethod?.Name == nameof(TundraDrive.Core.Drive.IGoogleDriveClient.TrySendGmailAlertAsync))
+            return Task.FromResult(true);
         return null;
     }
 }

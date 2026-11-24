@@ -84,6 +84,12 @@ public sealed partial class RemoteBrowserViewModel : ViewModelBase
     public bool CanOpenSelectedFolder => SelectedNode is { IsFolder: true };
     public bool CanDownloadSelectedFile => SelectedNode is { IsFolder: false };
 
+    [ObservableProperty]
+    private bool _isCreateFolderOpen;
+
+    [ObservableProperty]
+    private string _newFolderName = string.Empty;
+
     public Func<Uri, Task>? OpenExternalUriCallback { get; set; }
     public Func<string, Task>? CopyTextCallback { get; set; }
 
@@ -91,6 +97,7 @@ public sealed partial class RemoteBrowserViewModel : ViewModelBase
     public ObservableCollection<RemoteNodeItemViewModel> Nodes { get; } = [];
 
     public event Func<string, string, Task>? RemoteFolderSelectedForSync;
+    public event Func<string, string, Task>? RemoteParentSelectedForAutoSubfolderSync;
 
     public RemoteBrowserViewModel(
         IGoogleDriveClient driveClient,
@@ -304,6 +311,71 @@ public sealed partial class RemoteBrowserViewModel : ViewModelBase
         if (RemoteFolderSelectedForSync is not null)
         {
             await RemoteFolderSelectedForSync.Invoke(targetId, targetName);
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleCreateFolder()
+    {
+        if (!_driveClient.IsConnected || !_syncService.IsOnline)
+        {
+            return;
+        }
+
+        IsCreateFolderOpen = !IsCreateFolderOpen;
+        if (IsCreateFolderOpen)
+        {
+            NewFolderName = string.Empty;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CreateFolderAsync()
+    {
+        if (!_driveClient.IsConnected || !_syncService.IsOnline)
+        {
+            return;
+        }
+
+        var trimmed = (NewFolderName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            StatusMessage = Loc.Text("NewFolderNameRequired");
+            return;
+        }
+
+        IsLoading = true;
+        try
+        {
+            var created = await _driveClient.CreateFolderAsync(trimmed, CurrentFolderId);
+            IsCreateFolderOpen = false;
+            NewFolderName = string.Empty;
+            await LoadCurrentFolderInternalAsync();
+            StatusMessage = Loc.Format("FolderCreatedFmt", created.Name);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = Loc.Format("FileHubErrorFmt", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SyncLocalFoldersIntoCurrentAsync()
+    {
+        var targetId = SelectedNode is { IsFolder: true }
+            ? SelectedNode.Id
+            : CurrentFolderId;
+        var targetPath = SelectedNode is { IsFolder: true }
+            ? BuildBreadcrumbRemotePath(SelectedNode.Name)
+            : BuildBreadcrumbRemotePath(null);
+
+        if (RemoteParentSelectedForAutoSubfolderSync is not null)
+        {
+            await RemoteParentSelectedForAutoSubfolderSync.Invoke(targetId, targetPath);
         }
     }
 

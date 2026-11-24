@@ -1,8 +1,16 @@
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
+using System.Net.Http;
+using System.Text;
+using System.Text.RegularExpressions;
+using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TundraDrive.Core.Configuration;
+using TundraDrive.Core.Models;
+using TundraDrive.Core.Persistence;
 using TundraDrive.Core.Updates;
 using TundraDrive.Desktop.Localization;
 
@@ -10,8 +18,12 @@ namespace TundraDrive.Desktop.ViewModels;
 
 public sealed partial class AboutViewModel : ViewModelBase
 {
+    private static readonly IBrush BrushPrimary = SolidColorBrush.Parse("#F0F4F8");
+    private static readonly IBrush BrushError = SolidColorBrush.Parse("#FCA5A5");
+
     private readonly IAppUpdateService? _updateService;
     private readonly IAppSettingsService? _settingsService;
+    private readonly ISyncStateRepository? _repository;
     private AppUpdateCheckResult? _latestCheckResult;
 
     public TimeSpan MinimumCheckAnimationDuration { get; set; } = TimeSpan.FromSeconds(5);
@@ -22,6 +34,7 @@ public sealed partial class AboutViewModel : ViewModelBase
     public string DeveloperName => "Gustavo Henrique Novaes Gomes";
     public string RepositoryUrl => MainWindowViewModel.RepositoryUrl;
     public Func<Uri, Task>? OpenExternalUriCallback { get; set; }
+    public Func<string, Task>? CopyTextCallback { get; set; }
     public Action? RequestAppShutdownCallback { get; set; }
 
     [ObservableProperty]
@@ -50,13 +63,48 @@ public sealed partial class AboutViewModel : ViewModelBase
     private string _lastCheckSummary = string.Empty;
 
     [ObservableProperty]
+    private string _updateScheduleSummary = string.Empty;
+
+    [ObservableProperty]
     private string _updateStatusText = string.Empty;
 
     [ObservableProperty]
     private string _installedModeSummary = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateStatusBrush))]
     private bool _isUpdateError;
+
+    public IBrush UpdateStatusBrush => IsUpdateError ? BrushError : BrushPrimary;
+
+    [ObservableProperty]
+    private bool _isBugReportOpen;
+
+    [ObservableProperty]
+    private string _bugTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _bugDescription = string.Empty;
+
+    [ObservableProperty]
+    private bool _includeDiagnostics = true;
+
+    [ObservableProperty]
+    private bool _isSuggestionOpen;
+
+    [ObservableProperty]
+    private string _suggestionTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _suggestionDescription = string.Empty;
+
+    [ObservableProperty]
+    private int _selectedSuggestionCategoryIndex;
+
+    [ObservableProperty]
+    private string _feedbackStatusMessage = string.Empty;
+
+    public ObservableCollection<string> SuggestionCategories { get; } = [];
 
     [ObservableProperty]
     private string _latestReleaseUrl = MainWindowViewModel.RepositoryUrl + "/releases/latest";
@@ -79,18 +127,44 @@ public sealed partial class AboutViewModel : ViewModelBase
     public AboutViewModel(
         ILocalizationService localization,
         IAppUpdateService? updateService = null,
-        IAppSettingsService? settingsService = null)
+        IAppSettingsService? settingsService = null,
+        ISyncStateRepository? repository = null)
     {
         Loc = localization;
         _updateService = updateService;
         _settingsService = settingsService;
+        _repository = repository;
+        RebuildSuggestionCategories();
         RefreshInstalledModeSummary();
         RefreshLastCheckSummary();
+        RefreshUpdateScheduleSummary();
+
+        if (_settingsService is not null)
+        {
+            _settingsService.SettingsChanged += (_, _) =>
+            {
+                if (Dispatcher.UIThread.CheckAccess())
+                {
+                    RefreshLastCheckSummary();
+                    RefreshUpdateScheduleSummary();
+                }
+                else
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        RefreshLastCheckSummary();
+                        RefreshUpdateScheduleSummary();
+                    });
+                }
+            };
+        }
 
         Loc.LanguageChanged += (_, _) =>
         {
+            RebuildSuggestionCategories();
             RefreshInstalledModeSummary();
             RefreshLastCheckSummary();
+            RefreshUpdateScheduleSummary();
             OnPropertyChanged(nameof(CheckUpdatesButtonText));
             RefreshLocalizedStatusFromCache();
         };
@@ -99,10 +173,49 @@ public sealed partial class AboutViewModel : ViewModelBase
     public void RefreshLastCheckSummary()
     {
         var lastUtc = _settingsService?.Current.LastUpdateCheckUtc;
-        var relative = lastUtc.HasValue
-            ? Loc.FormatRelativeTimestamp(lastUtc)
-            : Loc.Text("UpdateLastCheckNever");
-        LastCheckSummary = Loc.Format("UpdateLastCheckFmt", relative);
+        if (!lastUtc.HasValue)
+        {
+            LastCheckSummary = Loc.Format("UpdateLastCheckFmt", Loc.Text("UpdateLastCheckNever"));
+            return;
+        }
+
+        var relative = Loc.FormatRelativeTimestamp(lastUtc);
+        var formattedDate = lastUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm", CultureInfo.GetCultureInfo(Loc.CurrentLanguage));
+        LastCheckSummary = Loc.Format("UpdateLastCheckWithDateFmt", relative, formattedDate);
+    }
+
+    public void RefreshUpdateScheduleSummary()
+    {
+        var settings = _settingsService?.Current;
+        if (settings is null || !settings.AutoCheckUpdates)
+        {
+            UpdateScheduleSummary = Loc.Text("UpdateScheduleDisabled");
+            return;
+        }
+
+        var freqLabel = settings.UpdateCheckIntervalDays switch
+        {
+            0 => Loc.Text("UpdateFrequencyOnStartup"),
+            7 => Loc.Text("UpdateFrequencyWeekly"),
+            15 => Loc.Text("UpdateFrequencyBiweekly"),
+            _ => Loc.Text("UpdateFrequencyMonthly")
+        };
+
+        var nextUtc = UpdateSchedulePolicy.GetNextScheduledCheckUtc(settings);
+        if (!nextUtc.HasValue)
+        {
+            UpdateScheduleSummary = Loc.Format("UpdateScheduleStartupFmt", freqLabel);
+            return;
+        }
+
+        var remaining = nextUtc.Value - DateTimeOffset.UtcNow;
+        var daysLeft = Math.Max(0, (int)Math.Ceiling(remaining.TotalDays));
+        var nextDate = nextUtc.Value.ToLocalTime().ToString("dd/MM/yyyy", CultureInfo.GetCultureInfo(Loc.CurrentLanguage));
+        var nextCountdown = daysLeft <= 0
+            ? Loc.Text("UpdateNextSoon")
+            : Loc.Format("UpdateNextInDaysFmt", nextDate, daysLeft);
+
+        UpdateScheduleSummary = Loc.Format("UpdateScheduleAutoFmt", freqLabel, nextCountdown);
     }
 
     public void RefreshInstalledModeSummary()
@@ -155,19 +268,38 @@ public sealed partial class AboutViewModel : ViewModelBase
         IsUpdateError = false;
         UpdateCheckProgress = 0;
 
+        using var checkCts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
         try
         {
-            var checkTask = _updateService.CheckForUpdatesAsync();
+            var checkTask = _updateService.CheckForUpdatesAsync(checkCts.Token);
 
             if (useSearchAnimation && MinimumCheckAnimationDuration > TimeSpan.Zero)
             {
-                await RunSearchAnimationAsync(checkTask, MinimumCheckAnimationDuration);
+                await RunSearchAnimationAsync(checkTask, MinimumCheckAnimationDuration, checkCts.Token);
             }
 
             var result = await checkTask;
             await RecordLastCheckTimestampAsync();
             ApplyCheckResult(result);
             return result;
+        }
+        catch (UpdateOfflineException)
+        {
+            IsUpdateError = true;
+            UpdateStatusText = Loc.Text("UpdateOfflineError");
+            return null;
+        }
+        catch (HttpRequestException)
+        {
+            IsUpdateError = true;
+            UpdateStatusText = Loc.Text("UpdateOfflineError");
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            IsUpdateError = true;
+            UpdateStatusText = Loc.Text("UpdateOfflineError");
+            return null;
         }
         catch (Exception ex)
         {
@@ -179,16 +311,23 @@ public sealed partial class AboutViewModel : ViewModelBase
         {
             UpdateCheckProgress = 0;
             IsCheckingUpdates = false;
+            RefreshLastCheckSummary();
+            RefreshUpdateScheduleSummary();
         }
     }
 
-    private async Task RunSearchAnimationAsync(Task checkTask, TimeSpan duration)
+    private async Task RunSearchAnimationAsync(Task checkTask, TimeSpan duration, CancellationToken ct)
     {
         var totalMs = Math.Max(100.0, duration.TotalMilliseconds);
         var sw = Stopwatch.StartNew();
 
         while (sw.Elapsed < duration || !checkTask.IsCompleted)
         {
+            if (checkTask.IsFaulted || checkTask.IsCanceled || ct.IsCancellationRequested)
+            {
+                break;
+            }
+
             var elapsedMs = sw.Elapsed.TotalMilliseconds;
             var pct = Math.Clamp((elapsedMs / totalMs) * 100.0, 2.0, 99.0);
             var remainingSeconds = Math.Max(1, (int)Math.Ceiling((totalMs - elapsedMs) / 1000.0));
@@ -203,10 +342,17 @@ public sealed partial class AboutViewModel : ViewModelBase
             UpdateStatusText = phaseText;
 
             var nextTickDelay = elapsedMs >= totalMs ? 80 : 100;
-            await Task.Delay(nextTickDelay);
+            try
+            {
+                await Task.Delay(nextTickDelay, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
 
-        UpdateCheckProgress = 100;
+        UpdateCheckProgress = checkTask.IsFaulted || checkTask.IsCanceled ? 0 : 100;
     }
 
     private async Task RecordLastCheckTimestampAsync()
@@ -356,5 +502,195 @@ public sealed partial class AboutViewModel : ViewModelBase
         UpdateStatusText = _latestCheckResult.IsUpdateAvailable
             ? Loc.Format("UpdateAvailableFmt", _latestCheckResult.LatestVersion)
             : Loc.Format("UpdateUpToDateFmt", _latestCheckResult.CurrentVersion);
+    }
+
+    private void RebuildSuggestionCategories()
+    {
+        var prevIndex = Math.Max(0, SelectedSuggestionCategoryIndex);
+        SuggestionCategories.Clear();
+        SuggestionCategories.Add(Loc.Text("SuggestionCatFeature"));
+        SuggestionCategories.Add(Loc.Text("SuggestionCatSync"));
+        SuggestionCategories.Add(Loc.Text("SuggestionCatInterface"));
+        SuggestionCategories.Add(Loc.Text("SuggestionCatIntegration"));
+        SelectedSuggestionCategoryIndex = Math.Clamp(prevIndex, 0, SuggestionCategories.Count - 1);
+    }
+
+    [RelayCommand]
+    private void ToggleBugReport()
+    {
+        IsBugReportOpen = !IsBugReportOpen;
+        if (IsBugReportOpen)
+        {
+            IsSuggestionOpen = false;
+        }
+        FeedbackStatusMessage = string.Empty;
+    }
+
+    [RelayCommand]
+    private void ToggleSuggestion()
+    {
+        IsSuggestionOpen = !IsSuggestionOpen;
+        if (IsSuggestionOpen)
+        {
+            IsBugReportOpen = false;
+        }
+        FeedbackStatusMessage = string.Empty;
+    }
+
+    [RelayCommand]
+    private async Task SubmitBugReportGitHubAsync()
+    {
+        if (string.IsNullOrWhiteSpace(BugTitle) && string.IsNullOrWhiteSpace(BugDescription))
+        {
+            FeedbackStatusMessage = Loc.Text("FeedbackValidationHint");
+            return;
+        }
+
+        var title = string.IsNullOrWhiteSpace(BugTitle) ? "[Bug] Custódia" : $"[Bug] {BugTitle.Trim()}";
+        var body = await BuildBugReportMarkdownAsync();
+        await OpenGitHubIssueAsync(title, body, "bug");
+    }
+
+    [RelayCommand]
+    private async Task CopyBugReportAsync()
+    {
+        if (string.IsNullOrWhiteSpace(BugTitle) && string.IsNullOrWhiteSpace(BugDescription))
+        {
+            FeedbackStatusMessage = Loc.Text("FeedbackValidationHint");
+            return;
+        }
+
+        var title = string.IsNullOrWhiteSpace(BugTitle) ? "[Bug] Custódia" : $"[Bug] {BugTitle.Trim()}";
+        var body = $"# {title}\n\n{await BuildBugReportMarkdownAsync()}";
+        if (CopyTextCallback is not null)
+        {
+            await CopyTextCallback.Invoke(body);
+            FeedbackStatusMessage = Loc.Text("FeedbackCopiedStatus");
+        }
+    }
+
+    [RelayCommand]
+    private async Task SubmitSuggestionGitHubAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SuggestionTitle) && string.IsNullOrWhiteSpace(SuggestionDescription))
+        {
+            FeedbackStatusMessage = Loc.Text("FeedbackValidationHint");
+            return;
+        }
+
+        var category = SelectedSuggestionCategoryIndex >= 0 && SelectedSuggestionCategoryIndex < SuggestionCategories.Count
+            ? SuggestionCategories[SelectedSuggestionCategoryIndex]
+            : Loc.Text("SuggestionCatFeature");
+        var title = string.IsNullOrWhiteSpace(SuggestionTitle)
+            ? $"[Sugestão] {category}"
+            : $"[Sugestão] {SuggestionTitle.Trim()}";
+        var body = BuildSuggestionMarkdown(category);
+        await OpenGitHubIssueAsync(title, body, "enhancement");
+    }
+
+    [RelayCommand]
+    private async Task CopySuggestionAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SuggestionTitle) && string.IsNullOrWhiteSpace(SuggestionDescription))
+        {
+            FeedbackStatusMessage = Loc.Text("FeedbackValidationHint");
+            return;
+        }
+
+        var category = SelectedSuggestionCategoryIndex >= 0 && SelectedSuggestionCategoryIndex < SuggestionCategories.Count
+            ? SuggestionCategories[SelectedSuggestionCategoryIndex]
+            : Loc.Text("SuggestionCatFeature");
+        var title = string.IsNullOrWhiteSpace(SuggestionTitle)
+            ? $"[Sugestão] {category}"
+            : $"[Sugestão] {SuggestionTitle.Trim()}";
+        var body = $"# {title}\n\n{BuildSuggestionMarkdown(category)}";
+        if (CopyTextCallback is not null)
+        {
+            await CopyTextCallback.Invoke(body);
+            FeedbackStatusMessage = Loc.Text("FeedbackCopiedStatus");
+        }
+    }
+
+    private string BuildSuggestionMarkdown(string category)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"**Categoria:** {category}");
+        sb.AppendLine($"**Versão:** Custódia v{AppVersionInfo.CurrentVersion}");
+        sb.AppendLine();
+        sb.AppendLine("## Descrição da sugestão");
+        sb.AppendLine(string.IsNullOrWhiteSpace(SuggestionDescription) ? "(sem detalhes)" : SuggestionDescription.Trim());
+        return sb.ToString();
+    }
+
+    private async Task<string> BuildBugReportMarkdownAsync()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("## O que aconteceu");
+        sb.AppendLine(string.IsNullOrWhiteSpace(BugDescription) ? "(descreva o comportamento observado)" : BugDescription.Trim());
+        sb.AppendLine();
+
+        if (IncludeDiagnostics)
+        {
+            var installKind = _updateService?.DetectInstallKind(out _) ?? AppInstallKind.Standalone;
+            var desktop = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? "Linux";
+            var session = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") ?? "unknown";
+            sb.AppendLine("## Ambiente");
+            sb.AppendLine($"- Aplicativo: Custódia v{AppVersionInfo.CurrentVersion} ({installKind})");
+            sb.AppendLine($"- Sistema: {Environment.OSVersion}");
+            sb.AppendLine($"- Desktop: {desktop} ({session})");
+
+            if (_repository is not null)
+            {
+                try
+                {
+                    var recentErrors = await _repository.GetActivityLogsAsync(ActivitySeverity.Warning, null, 10);
+                    if (recentErrors.Count > 0)
+                    {
+                        sb.AppendLine();
+                        sb.AppendLine("## Registros recentes de aviso/erro");
+                        foreach (var log in recentErrors.Take(10))
+                        {
+                            var safeMsg = RedactUserHome(log.Message);
+                            sb.AppendLine($"- [{log.CreatedAtUtc:yyyy-MM-dd HH:mm}] {log.Action}: {safeMsg}");
+                        }
+                    }
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private static string RedactUserHome(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text;
+        }
+
+        var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrWhiteSpace(userHome))
+        {
+            text = text.Replace(userHome, "~", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return Regex.Replace(text, @"/home/[^/\s]+", "~", RegexOptions.CultureInvariant);
+    }
+
+    private async Task OpenGitHubIssueAsync(string title, string body, string label)
+    {
+        if (OpenExternalUriCallback is null)
+        {
+            return;
+        }
+
+        const int maxBodyLen = 3200;
+        var truncatedBody = body.Length > maxBodyLen ? body[..maxBodyLen] + "\n..." : body;
+        var url = $"{RepositoryUrl}/issues/new?labels={Uri.EscapeDataString(label)}&title={Uri.EscapeDataString(title)}&body={Uri.EscapeDataString(truncatedBody)}";
+        await OpenExternalUriCallback.Invoke(new Uri(url));
+        FeedbackStatusMessage = Loc.Text("FeedbackOpenedStatus");
     }
 }

@@ -395,6 +395,15 @@
                         <TranslateTransform />
                       </PathIcon.RenderTransform>
                     </PathIcon>
+                    <PathIcon Classes="ErrorPulse"
+                              Width="12" Height="12"
+                              Foreground="#EF4444"
+                              IsVisible="{Binding IsSidebarError}"
+                              Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z">
+                      <PathIcon.RenderTransform>
+                        <TranslateTransform />
+                      </PathIcon.RenderTransform>
+                    </PathIcon>
                     <TextBlock Classes="MutedMeta" FontSize="11" Text="{Binding SidebarSyncStatusText}" TextTrimming="CharacterEllipsis" />
                   </StackPanel>
                   <ProgressBar Height="2"

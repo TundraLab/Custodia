@@ -143,6 +143,9 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
                 f.is_paused AS IsPaused,
                 f.last_synced_at_utc AS LastSyncedAtUtc,
                 f.last_error_message AS LastErrorMessage,
+                f.custom_alias AS CustomAlias,
+                f.custom_color_hex AS CustomColorHex,
+                f.custom_icon_key AS CustomIconKey,
                 (SELECT COUNT(1) FROM tracked_file_entries t WHERE t.sync_folder_id = f.id) AS TrackedFileCount
             FROM local_sync_folders f
             ORDER BY f.local_path ASC;
@@ -170,6 +173,9 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
                 f.is_paused AS IsPaused,
                 f.last_synced_at_utc AS LastSyncedAtUtc,
                 f.last_error_message AS LastErrorMessage,
+                f.custom_alias AS CustomAlias,
+                f.custom_color_hex AS CustomColorHex,
+                f.custom_icon_key AS CustomIconKey,
                 (SELECT COUNT(1) FROM tracked_file_entries t WHERE t.sync_folder_id = f.id) AS TrackedFileCount
             FROM local_sync_folders f
             WHERE f.account_id = @AccountId
@@ -198,6 +204,9 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
                 f.is_paused AS IsPaused,
                 f.last_synced_at_utc AS LastSyncedAtUtc,
                 f.last_error_message AS LastErrorMessage,
+                f.custom_alias AS CustomAlias,
+                f.custom_color_hex AS CustomColorHex,
+                f.custom_icon_key AS CustomIconKey,
                 (SELECT COUNT(1) FROM tracked_file_entries t WHERE t.sync_folder_id = f.id) AS TrackedFileCount
             FROM local_sync_folders f
             WHERE f.id = @FolderId;
@@ -222,10 +231,12 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
         const string sql = """
             INSERT INTO local_sync_folders (
                 id, account_id, local_path, remote_folder_id, remote_folder_name,
-                sync_mode, sync_state, is_paused, last_synced_at_utc, last_error_message
+                sync_mode, sync_state, is_paused, last_synced_at_utc, last_error_message,
+                custom_alias, custom_color_hex, custom_icon_key
             ) VALUES (
                 @Id, @AccountId, @LocalPath, @RemoteFolderId, @RemoteFolderName,
-                @Mode, @State, @IsPaused, @LastSyncedAtUtc, @LastErrorMessage
+                @Mode, @State, @IsPaused, @LastSyncedAtUtc, @LastErrorMessage,
+                @CustomAlias, @CustomColorHex, @CustomIconKey
             )
             ON CONFLICT(id) DO UPDATE SET
                 account_id = excluded.account_id,
@@ -236,7 +247,10 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
                 sync_state = excluded.sync_state,
                 is_paused = excluded.is_paused,
                 last_synced_at_utc = excluded.last_synced_at_utc,
-                last_error_message = excluded.last_error_message;
+                last_error_message = excluded.last_error_message,
+                custom_alias = excluded.custom_alias,
+                custom_color_hex = excluded.custom_color_hex,
+                custom_icon_key = excluded.custom_icon_key;
             """;
 
         await connection.ExecuteAsync(new CommandDefinition(sql, new
@@ -250,7 +264,10 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
             State = (int)folder.State,
             IsPaused = folder.IsPaused ? 1 : 0,
             folder.LastSyncedAtUtc,
-            folder.LastErrorMessage
+            folder.LastErrorMessage,
+            folder.CustomAlias,
+            folder.CustomColorHex,
+            folder.CustomIconKey
         }, cancellationToken: cancellationToken));
     }
 

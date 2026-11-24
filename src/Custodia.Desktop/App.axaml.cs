@@ -20,6 +20,7 @@ public partial class App : Application
     public SingleInstanceGuard? SingleInstance { get; set; }
 
     private TrayIcon? _trayIcon;
+    private TrayIconAnimator? _trayIconAnimator;
     private EventHandler<string>? _trayLanguageChangedHandler;
     private EventHandler? _traySummaryChangedHandler;
     private bool _isExplicitExit;
@@ -69,6 +70,21 @@ public partial class App : Application
                     });
 
                 return result.FirstOrDefault()?.Path.LocalPath;
+            };
+
+            mainVm.SyncFoldersVm.PickLocalFoldersCallback = async () =>
+            {
+                var result = await mainWindow.StorageProvider.OpenFolderPickerAsync(
+                    new Avalonia.Platform.Storage.FolderPickerOpenOptions
+                    {
+                        Title = mainVm.Loc.Text("MapMultipleFoldersTitle"),
+                        AllowMultiple = true
+                    });
+
+                return result
+                    .Select(f => f.Path.LocalPath)
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .ToArray();
             };
 
             mainVm.AccountsVm.PickCredentialsFileCallback = async () =>
@@ -196,6 +212,7 @@ public partial class App : Application
             mainVm.SyncFoldersVm.RemoteBrowser.CopyTextCallback = CopyTextAsync;
             mainVm.TransferQueueVm.CopyTextCallback = CopyTextAsync;
             mainVm.ActivityLogsVm.CopyTextCallback = CopyTextAsync;
+            mainVm.AboutVm.CopyTextCallback = CopyTextAsync;
 
             async Task OpenLocalFolderAsync(string path)
             {
@@ -427,6 +444,12 @@ public partial class App : Application
             _traySummaryChangedHandler = null;
         }
 
+        if (_trayIconAnimator is not null)
+        {
+            _trayIconAnimator.Dispose();
+            _trayIconAnimator = null;
+        }
+
         if (_trayIcon is not null)
         {
             try
@@ -548,6 +571,7 @@ public partial class App : Application
             Menu = menu,
             IsVisible = true
         };
+        _trayIconAnimator = new TrayIconAnimator(_trayIcon);
 
         _trayIcon.Clicked += (_, _) =>
         {
@@ -589,6 +613,7 @@ public partial class App : Application
             SetHeaderIfChanged(openDownloadsItem, mainVm.Loc.Text("TrayOpenDownloads"));
             SetHeaderIfChanged(settingsItem, mainVm.Loc.Text("TraySettings"));
             SetHeaderIfChanged(exitItem, mainVm.Loc.Text("TrayExit"));
+            _trayIconAnimator?.SetState(mainVm.GetTrayVisualState());
         }
 
         // Sync tray menu items on demand, language change, or debounced state transitions (never mutating ToolTipText so top bar never blinks).
@@ -597,6 +622,7 @@ public partial class App : Application
         _trayLanguageChangedHandler = (_, _) => RefreshTrayMenuTexts();
         _traySummaryChangedHandler = (_, _) =>
         {
+            _trayIconAnimator?.SetState(mainVm.GetTrayVisualState());
             var now = DateTimeOffset.UtcNow;
             if ((now - lastMenuSyncUtc).TotalMilliseconds >= 800)
             {

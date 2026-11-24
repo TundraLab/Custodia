@@ -80,6 +80,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     private readonly IAuthCredentialManager _authManager;
     private readonly IDriveSyncService _syncService;
     private readonly MemoryCleanerService _memoryCleaner;
+    private readonly NotificationSoundService? _soundService;
     private CancellationTokenSource? _saveFeedbackCts;
     private CancellationTokenSource? _reloadFeedbackCts;
 
@@ -101,6 +102,15 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _notificationsEnabled = true;
+
+    [ObservableProperty]
+    private bool _notificationSoundEnabled = true;
+
+    [ObservableProperty]
+    private int _selectedNotificationSoundIndex;
+
+    [ObservableProperty]
+    private bool _gmailAccountAlertsEnabled = true;
 
     [ObservableProperty]
     private bool _minimizeToTrayOnClose = true;
@@ -240,6 +250,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     public ObservableCollection<string> ConflictPolicies { get; } = [];
     public ObservableCollection<string> UpdateFrequencies { get; } = [];
+    public ObservableCollection<string> NotificationSoundOptions { get; } = [];
 
     public SettingsViewModel(
         IAppSettingsService settingsService,
@@ -249,7 +260,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
         IDesktopNotificationService notificationService,
         IAuthCredentialManager authManager,
         IDriveSyncService syncService,
-        MemoryCleanerService memoryCleaner)
+        MemoryCleanerService memoryCleaner,
+        NotificationSoundService? soundService = null)
     {
         _settingsService = settingsService;
         _apiServer = apiServer;
@@ -258,6 +270,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         _authManager = authManager;
         _syncService = syncService;
         _memoryCleaner = memoryCleaner;
+        _soundService = soundService;
         Loc = localization;
 
         IsAutostartSupported = _autostartManager.IsSupported;
@@ -335,6 +348,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
         UiScalePercent = Math.Clamp(current.UiScalePercent, 100, 300);
         StartOnBoot = current.StartOnBoot || _autostartManager.IsEnabled();
         NotificationsEnabled = current.NotificationsEnabled;
+        NotificationSoundEnabled = current.NotificationSoundEnabled;
+        SelectedNotificationSoundIndex = NotificationSoundService.GetPresetIndex(current.NotificationSoundTone);
+        GmailAccountAlertsEnabled = current.GmailAccountAlertsEnabled;
         MinimizeToTrayOnClose = current.MinimizeToTrayOnClose;
         AutoCheckUpdates = current.AutoCheckUpdates;
         SelectedUpdateFrequencyIndex = current.UpdateCheckIntervalDays switch
@@ -584,6 +600,14 @@ public sealed partial class SettingsViewModel : ViewModelBase
         UpdateFrequencies.Add(Loc.Text("UpdateFrequencyWeekly"));
         UpdateFrequencies.Add(Loc.Text("UpdateFrequencyOnStartup"));
         SelectedUpdateFrequencyIndex = Math.Clamp(savedFreqIndex, 0, UpdateFrequencies.Count - 1);
+
+        var savedToneIndex = Math.Max(0, SelectedNotificationSoundIndex);
+        NotificationSoundOptions.Clear();
+        foreach (var preset in NotificationSoundService.Presets)
+        {
+            NotificationSoundOptions.Add(Loc.Text(preset.LabelKey));
+        }
+        SelectedNotificationSoundIndex = Math.Clamp(savedToneIndex, 0, Math.Max(0, NotificationSoundOptions.Count - 1));
     }
 
     private void RefreshPathAndApiTexts()
@@ -637,6 +661,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
                 UiScalePercent = Math.Clamp(UiScalePercent, 100, 300),
                 StartOnBoot = StartOnBoot,
                 NotificationsEnabled = NotificationsEnabled,
+                NotificationSoundEnabled = NotificationSoundEnabled,
+                NotificationSoundTone = NotificationSoundService.GetPresetIdByIndex(SelectedNotificationSoundIndex),
+                GmailAccountAlertsEnabled = GmailAccountAlertsEnabled,
                 MinimizeToTrayOnClose = MinimizeToTrayOnClose,
                 AutoCheckUpdates = AutoCheckUpdates,
                 UpdateCheckIntervalDays = updateIntervalDays,
@@ -747,6 +774,18 @@ public sealed partial class SettingsViewModel : ViewModelBase
             Loc.Text("TestNotificationBody"),
             NotificationUrgency.Normal,
             bypassThrottle: true);
+    }
+
+    [RelayCommand]
+    private async Task PreviewNotificationSoundAsync()
+    {
+        if (_soundService is null)
+        {
+            return;
+        }
+
+        var toneId = NotificationSoundService.GetPresetIdByIndex(SelectedNotificationSoundIndex);
+        await _soundService.PlayToneAsync(toneId, isError: false, bypassDebounce: true);
     }
 
     [RelayCommand]

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,8 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
 
     private const string LatestReleaseWebUrl =
         "https://github.com/TundraLab/Custodia/releases/latest";
+
+    private static readonly TimeSpan MetadataCheckTimeout = TimeSpan.FromSeconds(10);
 
     private readonly ILogger<GitHubAppUpdateService> _logger;
     private readonly HttpClient _httpClient;
@@ -123,94 +126,113 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
 
     public async Task<AppUpdateCheckResult> CheckForUpdatesAsync(CancellationToken cancellationToken = default)
     {
+        if (_ownsHttpClient && !NetworkInterface.GetIsNetworkAvailable())
+        {
+            throw new UpdateOfflineException("No active network interface.");
+        }
+
         var installKind = DetectInstallKind(out var installedPackagePath);
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(MetadataCheckTimeout);
+        var effectiveCt = timeoutCts.Token;
 
-        using var req = new HttpRequestMessage(HttpMethod.Get, LatestReleaseApiUrl);
-        using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-
-        if (resp.StatusCode is HttpStatusCode.Forbidden or (HttpStatusCode)429)
+        try
         {
-            return await CheckViaRedirectFallbackAsync(installKind, installedPackagePath, cancellationToken);
-        }
+            using var req = new HttpRequestMessage(HttpMethod.Get, LatestReleaseApiUrl);
+            using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, effectiveCt);
 
-        resp.EnsureSuccessStatusCode();
-        await using var stream = await resp.Content.ReadAsStreamAsync(cancellationToken);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        var root = doc.RootElement;
-
-        var tagName = root.TryGetProperty("tag_name", out var tagEl)
-            ? tagEl.GetString() ?? $"v{_currentVersion}"
-            : $"v{_currentVersion}";
-        var latestVersion = tagName.Trim().TrimStart('v', 'V');
-        var releaseUrl = root.TryGetProperty("html_url", out var htmlEl)
-            ? htmlEl.GetString() ?? LatestReleaseWebUrl
-            : LatestReleaseWebUrl;
-        var releaseNotes = root.TryGetProperty("body", out var bodyEl)
-            ? bodyEl.GetString() ?? string.Empty
-            : string.Empty;
-
-        DateTimeOffset? publishedAt = null;
-        if (root.TryGetProperty("published_at", out var pubEl) &&
-            pubEl.ValueKind == JsonValueKind.String &&
-            DateTimeOffset.TryParse(pubEl.GetString(), out var parsedPub))
-        {
-            publishedAt = parsedPub;
-        }
-
-        ReleaseAssetInfo? rpmAsset = null;
-        ReleaseAssetInfo? appImageAsset = null;
-        ReleaseAssetInfo? installerAsset = null;
-        ReleaseAssetInfo? checksumsAsset = null;
-
-        if (root.TryGetProperty("assets", out var assetsEl) && assetsEl.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var asset in assetsEl.EnumerateArray())
+            if (resp.StatusCode is HttpStatusCode.Forbidden or (HttpStatusCode)429)
             {
-                var name = asset.TryGetProperty("name", out var nEl) ? nEl.GetString() ?? string.Empty : string.Empty;
-                var url = asset.TryGetProperty("browser_download_url", out var uEl) ? uEl.GetString() ?? string.Empty : string.Empty;
-                var size = asset.TryGetProperty("size", out var sEl) && sEl.TryGetInt64(out var parsedSize) ? parsedSize : 0;
+                return await CheckViaRedirectFallbackAsync(installKind, installedPackagePath, effectiveCt);
+            }
 
-                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url))
-                {
-                    continue;
-                }
+            resp.EnsureSuccessStatusCode();
+            await using var stream = await resp.Content.ReadAsStreamAsync(effectiveCt);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: effectiveCt);
+            var root = doc.RootElement;
 
-                var info = new ReleaseAssetInfo(name, url, size);
-                if (name.EndsWith(".rpm", StringComparison.OrdinalIgnoreCase))
+            var tagName = root.TryGetProperty("tag_name", out var tagEl)
+                ? tagEl.GetString() ?? $"v{_currentVersion}"
+                : $"v{_currentVersion}";
+            var latestVersion = tagName.Trim().TrimStart('v', 'V');
+            var releaseUrl = root.TryGetProperty("html_url", out var htmlEl)
+                ? htmlEl.GetString() ?? LatestReleaseWebUrl
+                : LatestReleaseWebUrl;
+            var releaseNotes = root.TryGetProperty("body", out var bodyEl)
+                ? bodyEl.GetString() ?? string.Empty
+                : string.Empty;
+
+            DateTimeOffset? publishedAt = null;
+            if (root.TryGetProperty("published_at", out var pubEl) &&
+                pubEl.ValueKind == JsonValueKind.String &&
+                DateTimeOffset.TryParse(pubEl.GetString(), out var parsedPub))
+            {
+                publishedAt = parsedPub;
+            }
+
+            ReleaseAssetInfo? rpmAsset = null;
+            ReleaseAssetInfo? appImageAsset = null;
+            ReleaseAssetInfo? installerAsset = null;
+            ReleaseAssetInfo? checksumsAsset = null;
+
+            if (root.TryGetProperty("assets", out var assetsEl) && assetsEl.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var asset in assetsEl.EnumerateArray())
                 {
-                    rpmAsset = info;
-                }
-                else if (name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase))
-                {
-                    appImageAsset = info;
-                }
-                else if (name.EndsWith(".sh", StringComparison.OrdinalIgnoreCase))
-                {
-                    installerAsset ??= info;
-                }
-                else if (string.Equals(name, "SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase))
-                {
-                    checksumsAsset = info;
+                    var name = asset.TryGetProperty("name", out var nEl) ? nEl.GetString() ?? string.Empty : string.Empty;
+                    var url = asset.TryGetProperty("browser_download_url", out var uEl) ? uEl.GetString() ?? string.Empty : string.Empty;
+                    var size = asset.TryGetProperty("size", out var sEl) && sEl.TryGetInt64(out var parsedSize) ? parsedSize : 0;
+
+                    if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url))
+                    {
+                        continue;
+                    }
+
+                    var info = new ReleaseAssetInfo(name, url, size);
+                    if (name.EndsWith(".rpm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        rpmAsset = info;
+                    }
+                    else if (name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase))
+                    {
+                        appImageAsset = info;
+                    }
+                    else if (name.EndsWith(".sh", StringComparison.OrdinalIgnoreCase))
+                    {
+                        installerAsset ??= info;
+                    }
+                    else if (string.Equals(name, "SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase))
+                    {
+                        checksumsAsset = info;
+                    }
                 }
             }
-        }
 
-        return new AppUpdateCheckResult
+            return new AppUpdateCheckResult
+            {
+                CurrentVersion = _currentVersion,
+                LatestVersion = latestVersion,
+                TagName = tagName,
+                IsUpdateAvailable = AppVersionInfo.IsNewerVersion(latestVersion, _currentVersion),
+                ReleaseUrl = releaseUrl,
+                ReleaseNotes = releaseNotes.Trim(),
+                PublishedAtUtc = publishedAt,
+                RpmAsset = rpmAsset,
+                AppImageAsset = appImageAsset,
+                InstallerScriptAsset = installerAsset,
+                ChecksumsAsset = checksumsAsset,
+                InstallKind = installKind,
+                InstalledPackagePath = installedPackagePath
+            };
+        }
+        catch (HttpRequestException ex)
         {
-            CurrentVersion = _currentVersion,
-            LatestVersion = latestVersion,
-            TagName = tagName,
-            IsUpdateAvailable = AppVersionInfo.IsNewerVersion(latestVersion, _currentVersion),
-            ReleaseUrl = releaseUrl,
-            ReleaseNotes = releaseNotes.Trim(),
-            PublishedAtUtc = publishedAt,
-            RpmAsset = rpmAsset,
-            AppImageAsset = appImageAsset,
-            InstallerScriptAsset = installerAsset,
-            ChecksumsAsset = checksumsAsset,
-            InstallKind = installKind,
-            InstalledPackagePath = installedPackagePath
-        };
+            throw new UpdateOfflineException("Could not reach update server.", ex);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new UpdateOfflineException("Timed out while checking for updates.", ex);
+        }
     }
 
     private async Task<AppUpdateCheckResult> CheckViaRedirectFallbackAsync(
