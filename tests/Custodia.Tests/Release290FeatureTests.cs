@@ -493,6 +493,10 @@ public sealed class Release290FeatureTests
         Assert.Contains("\"recipientEmail\":\"cliente@gmail.com\"", captureHandler.Requests[0]);
         Assert.Contains("\"eventType\":\"revoke\"", captureHandler.Requests[1]);
         Assert.Contains($"\"senderEmail\":\"{AppsScriptMailerClient.OfficialSenderEmail}\"", captureHandler.Requests[1]);
+
+        Assert.True(AppsScriptMailerClient.IsSuccessJsonResponse("{\"ok\":true}"));
+        Assert.False(AppsScriptMailerClient.IsSuccessJsonResponse("{\"ok\":false}"));
+        Assert.False(AppsScriptMailerClient.IsSuccessJsonResponse("<html>login</html>"));
     }
 
     [Fact]

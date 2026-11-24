@@ -8,7 +8,7 @@ namespace TundraDrive.Core.Notifications;
 public sealed class AppsScriptMailerClient : ITundraMailerClient, IDisposable
 {
     public const string OfficialSenderEmail = "contato.tundralab@gmail.com";
-    public const string DefaultWebhookUrl = "";
+    public const string DefaultWebhookUrl = "https://script.google.com/macros/s/AKfycbzBg3WELwuAg3qWssjzm2GWSxTsKJzvhPvRBdS_UXwF5DM7aFx5wCiwULec39GZA3YMBQ/exec";
 
     private readonly IAppSettingsService _settingsService;
     private readonly ILogger<AppsScriptMailerClient> _logger;
@@ -24,8 +24,8 @@ public sealed class AppsScriptMailerClient : ITundraMailerClient, IDisposable
         _logger = logger;
         _ownsHttpClient = httpHandler is null;
         _httpClient = httpHandler is null
-            ? new HttpClient { Timeout = TimeSpan.FromSeconds(10) }
-            : new HttpClient(httpHandler, disposeHandler: false) { Timeout = TimeSpan.FromSeconds(10) };
+            ? new HttpClient { Timeout = TimeSpan.FromSeconds(15) }
+            : new HttpClient(httpHandler, disposeHandler: false) { Timeout = TimeSpan.FromSeconds(15) };
     }
 
     public string? ResolveWebhookUrl()
@@ -69,7 +69,7 @@ public sealed class AppsScriptMailerClient : ITundraMailerClient, IDisposable
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(10));
+            cts.CancelAfter(TimeSpan.FromSeconds(15));
 
             var payloadJson = BuildPayloadJson(recipientEmail, recipientName, isConnected, language);
             using var req = new HttpRequestMessage(HttpMethod.Post, webhookUrl)
@@ -78,10 +78,16 @@ public sealed class AppsScriptMailerClient : ITundraMailerClient, IDisposable
             };
 
             using var resp = await _httpClient.SendAsync(req, cts.Token);
+            var body = await resp.Content.ReadAsStringAsync(cts.Token);
             if (!resp.IsSuccessStatusCode)
             {
-                var body = await resp.Content.ReadAsStringAsync(cts.Token);
                 _logger.LogWarning("TundraLab mailer webhook returned HTTP {StatusCode}: {Body}", (int)resp.StatusCode, body);
+                return false;
+            }
+
+            if (!IsSuccessJsonResponse(body))
+            {
+                _logger.LogWarning("TundraLab mailer webhook did not confirm ok=true: {Body}", body);
                 return false;
             }
 
@@ -90,6 +96,25 @@ public sealed class AppsScriptMailerClient : ITundraMailerClient, IDisposable
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Could not deliver lifecycle email request to TundraLab mailer webhook.");
+            return false;
+        }
+    }
+
+    internal static bool IsSuccessJsonResponse(string? responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(responseBody);
+            return doc.RootElement.TryGetProperty("ok", out var okProp) &&
+                   okProp.ValueKind == JsonValueKind.True;
+        }
+        catch
+        {
             return false;
         }
     }
