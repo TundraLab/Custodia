@@ -42,10 +42,13 @@ tmp/
 temp/
 scratch/
 
-# IDE and OS files
+# IDE, local config, and OS files
 .vs/
 .vscode/
 .idea/
+.agent/
+.agents/
+AGENTS.md
 *.user
 *.suo
 .DS_Store
