@@ -4,12 +4,11 @@
              x:Class="TundraDrive.Desktop.Views.RemoteBrowserView"
              x:DataType="vm:RemoteBrowserViewModel">
 
-  <!-- Navegador remoto -->
+  <!-- Remote Google Drive browser -->
   <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
-    <Grid Grid.Row="0" RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,Auto,*,Auto" RowSpacing="8" ColumnSpacing="8">
+    <Grid Grid.Row="0" RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,Auto,*,Auto" RowSpacing="10" ColumnSpacing="8">
       <Button Grid.Row="0" Grid.Column="0"
-              Classes="SecondaryAction"
-              Padding="8,4"
+              Classes="m3-outlined m3-compact"
               IsEnabled="{Binding CanNavigateBack}"
               ToolTip.Tip="{Binding Loc.BackButton}"
               Command="{Binding NavigateBackCommand}">
@@ -20,7 +19,7 @@
       </Button>
 
       <Button Grid.Row="0" Grid.Column="1"
-              Classes="SecondaryAction"
+              Classes="m3-tonal m3-compact"
               Content="{Binding Loc.MyDriveLabel}"
               Command="{Binding NavigateToRootCommand}" />
 
@@ -30,68 +29,63 @@
                KeyDown="OnSearchBoxKeyDown" />
 
       <Button Grid.Row="0" Grid.Column="3"
-              Classes="SecondaryAction"
+              Classes="m3-outlined"
               Content="{Binding Loc.SearchButton}"
               Command="{Binding SearchCommand}" />
 
       <WrapPanel Grid.Row="1" Grid.ColumnSpan="4" Orientation="Horizontal">
-        <Button Classes="SecondaryAction"
-                Margin="0,0,6,0"
-                Padding="10,5"
+        <Button Classes="m3-outlined m3-compact"
+                Margin="0,0,6,4"
                 Content="{Binding Loc.OpenFolderButton}"
                 IsEnabled="{Binding CanOpenSelectedFolder}"
                 Command="{Binding OpenNodeCommand}" />
-        <Button Classes="SecondaryAction"
-                Margin="0,0,6,0"
-                Padding="10,5"
+        <Button Classes="m3-tonal m3-compact"
+                Margin="0,0,6,4"
                 Content="{Binding Loc.DownloadButton}"
                 IsEnabled="{Binding CanDownloadSelectedFile}"
                 Command="{Binding DownloadSelectedNodeCommand}" />
-        <Button Classes="DangerAction"
-                Margin="0,0,6,0"
-                Padding="10,5"
+        <Button Classes="m3-danger-outlined m3-compact"
+                Margin="0,0,6,4"
                 Content="{Binding Loc.MoveToTrashButton}"
                 IsEnabled="{Binding HasSelectedNode}"
                 Command="{Binding TrashSelectedNodeCommand}" />
-        <Button Classes="SecondaryAction"
-                Margin="0,0,6,0"
-                Padding="10,5"
+        <Button Classes="m3-outlined m3-compact"
+                Margin="0,0,6,4"
                 Content="{Binding Loc.NewFolderButton}"
                 Command="{Binding ToggleCreateFolderCommand}" />
-        <Button Classes="SecondaryAction"
-                Margin="0,0,6,0"
-                Padding="10,5"
+        <Button Classes="m3-tonal m3-compact"
+                Margin="0,0,6,4"
                 Content="{Binding Loc.SyncLocalIntoHereButton}"
                 Command="{Binding SyncLocalFoldersIntoCurrentCommand}" />
-        <Button Classes="PrimaryAction"
+        <Button Classes="m3-filled m3-compact"
+                Margin="0,0,0,4"
                 Content="{Binding Loc.SyncSelectedFolderButton}"
                 Command="{Binding SyncSelectedOrCurrentFolderCommand}" />
       </WrapPanel>
 
       <Border Grid.Row="2"
               Grid.ColumnSpan="4"
-              Classes="SurfaceCard"
-              Padding="10,8"
+              Classes="m3-card"
+              Padding="12,10"
               IsVisible="{Binding IsCreateFolderOpen}">
         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
           <TextBox Grid.Column="0"
                    Watermark="{Binding Loc.NewFolderPlaceholder}"
                    Text="{Binding NewFolderName}" />
           <Button Grid.Column="1"
-                  Classes="PrimaryAction"
-                  Padding="12,5"
+                  Classes="m3-filled m3-compact"
                   Content="{Binding Loc.CreateFolderConfirmButton}"
                   Command="{Binding CreateFolderCommand}" />
           <Button Grid.Column="2"
-                  Classes="SecondaryAction"
-                  Padding="10,5"
+                  Classes="m3-outlined m3-compact"
                   Content="{Binding Loc.CancelButton}"
                   Command="{Binding ToggleCreateFolderCommand}" />
         </Grid>
       </Border>
     </Grid>
 
-    <Border Grid.Row="1" Classes="FlatRow" Padding="10,6">
+    <!-- Breadcrumb trail -->
+    <Border Grid.Row="1" Classes="m3-card" Padding="12,8">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
         <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding Breadcrumbs}">
@@ -103,14 +97,14 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:RemoteBreadcrumbItem">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                  <Button Content="{Binding Name}"
-                          Command="{Binding SelectCommand}"
-                          Background="Transparent"
-                          BorderThickness="0"
-                          Padding="4,2"
+                  <Button Classes="m3-text"
+                          MinHeight="0"
+                          Padding="6,3"
                           FontSize="12.5"
-                          Foreground="{StaticResource TundraTextPrimary}" />
-                  <TextBlock Text="/" VerticalAlignment="Center" Classes="MutedMeta" />
+                          Foreground="{DynamicResource M3OnSurface}"
+                          Content="{Binding Name}"
+                          Command="{Binding SelectCommand}" />
+                  <TextBlock Text="/" VerticalAlignment="Center" Classes="m3-meta" />
                 </StackPanel>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
@@ -118,34 +112,35 @@
         </ScrollViewer>
 
         <Button Grid.Column="1"
-                Classes="SecondaryAction"
+                Classes="m3-outlined m3-compact"
                 Content="{Binding Loc.RefreshButton}"
                 Command="{Binding LoadCurrentFolderCommand}" />
       </Grid>
     </Border>
 
-    <Border Grid.Row="2" Classes="SurfaceCard" Padding="0">
+    <!-- Remote files and folders list -->
+    <Border Grid.Row="2" Classes="m3-card" Padding="0" ClipToBounds="True">
       <Grid RowDefinitions="Auto,*">
-        <Border Grid.Row="0"
-                BorderBrush="{StaticResource TundraBorderBrush}"
-                BorderThickness="0,0,0,1"
-                Padding="12,8">
-          <Grid ColumnDefinitions="*,110,90,135" ColumnSpacing="8">
-            <TextBlock Grid.Column="0" Classes="MutedMeta" Text="{Binding Loc.ColName}" />
-            <TextBlock Grid.Column="1" Classes="MutedMeta" Text="{Binding Loc.ColType}" />
-            <TextBlock Grid.Column="2" Classes="MutedMeta" Text="{Binding Loc.ColSize}" />
-            <TextBlock Grid.Column="3" Classes="MutedMeta" Text="{Binding Loc.ColModified}" />
-          </Grid>
-        </Border>
+        <StackPanel Grid.Row="0">
+          <Border Padding="16,10">
+            <Grid ColumnDefinitions="*,110,90,135" ColumnSpacing="8">
+              <TextBlock Grid.Column="0" Classes="m3-meta" Text="{Binding Loc.ColName}" />
+              <TextBlock Grid.Column="1" Classes="m3-meta" Text="{Binding Loc.ColType}" />
+              <TextBlock Grid.Column="2" Classes="m3-meta" Text="{Binding Loc.ColSize}" />
+              <TextBlock Grid.Column="3" Classes="m3-meta" Text="{Binding Loc.ColModified}" />
+            </Grid>
+          </Border>
+          <Border Classes="m3-divider-full" />
+        </StackPanel>
 
         <ListBox Grid.Row="1"
-                 Classes="FlatRowList"
+                 Classes="m3-rows"
                  ItemsSource="{Binding Nodes}"
                  SelectedItem="{Binding SelectedNode}"
                  DoubleTapped="OnNodeDoubleTapped">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:RemoteNodeItemViewModel">
-              <Border Padding="8,6" Background="Transparent">
+              <Border Padding="16,10" Background="Transparent">
                 <Border.ContextMenu>
                   <ContextMenu>
                     <MenuItem Header="{Binding OpenLabel}"
@@ -172,19 +167,19 @@
                 <Grid ColumnDefinitions="*,110,90,135" ColumnSpacing="8">
                   <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <PathIcon Width="15" Height="15"
-                              Foreground="{StaticResource TundraAccent}"
+                              Foreground="{DynamicResource M3Primary}"
                               IsVisible="{Binding IsFolder}"
                               Data="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
                     <PathIcon Width="15" Height="15"
-                              Foreground="{StaticResource TundraTextSecondary}"
+                              Foreground="{DynamicResource M3OnSurfaceVariant}"
                               IsVisible="{Binding !IsFolder}"
                               Data="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
-                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Foreground="{DynamicResource M3OnSurface}" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                   </StackPanel>
 
-                  <TextBlock Grid.Column="1" Classes="MutedMeta" VerticalAlignment="Center" Text="{Binding TypeDisplay}" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Grid.Column="2" Classes="MutedMeta" VerticalAlignment="Center" Text="{Binding SizeDisplay}" />
-                  <TextBlock Grid.Column="3" Classes="MutedMeta" VerticalAlignment="Center" Text="{Binding ModifiedDisplay}" />
+                  <TextBlock Grid.Column="1" Classes="m3-meta" VerticalAlignment="Center" Text="{Binding TypeDisplay}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2" Classes="m3-meta" VerticalAlignment="Center" Text="{Binding SizeDisplay}" />
+                  <TextBlock Grid.Column="3" Classes="m3-meta" VerticalAlignment="Center" Text="{Binding ModifiedDisplay}" />
                 </Grid>
               </Border>
             </DataTemplate>
@@ -193,6 +188,6 @@
       </Grid>
     </Border>
 
-    <TextBlock Grid.Row="3" Classes="MutedMeta" Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+    <TextBlock Grid.Row="3" Classes="m3-meta" Text="{Binding StatusMessage}" TextWrapping="Wrap" />
   </Grid>
 </UserControl>

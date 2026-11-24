@@ -4,29 +4,31 @@
              x:Class="TundraDrive.Desktop.Views.ActivityLogsView"
              x:DataType="vm:ActivityLogsViewModel">
 
-  <!-- Aba de logs de atividade -->
+  <!-- Activity logs tab -->
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="24" RowSpacing="14">
-    <Grid Grid.Row="0" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="8" ColumnSpacing="12">
-      <TextBlock Grid.Row="0" Grid.Column="0" Classes="PageTitle" VerticalAlignment="Center" Text="{Binding Loc.ActivityLogsTitle}" />
+    <!-- Compact header -->
+    <Grid Grid.Row="0" MinHeight="48" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+      <TextBlock Grid.Column="0" Classes="m3-page-title" VerticalAlignment="Center" Text="{Binding Loc.ActivityLogsTitle}" />
 
-      <WrapPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-        <Button Classes="SecondaryAction"
+      <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+        <Button Classes="m3-outlined"
                 Margin="0,0,8,4"
                 Content="{Binding Loc.OpenLocalFolderMenu}"
                 IsEnabled="{Binding CanOpenSelectedTarget}"
                 Command="{Binding OpenSelectedTargetFolderCommand}" />
-        <Button Classes="SecondaryAction"
+        <Button Classes="m3-outlined"
                 Margin="0,0,8,4"
                 Content="{Binding Loc.RefreshButton}"
                 Command="{Binding RefreshLogsCommand}" />
-        <Button Classes="DangerAction"
+        <Button Classes="m3-danger-outlined"
                 Margin="0,0,0,4"
                 Content="{Binding Loc.ClearLogsButton}"
                 Command="{Binding ClearLogsCommand}" />
       </WrapPanel>
     </Grid>
 
-    <Grid Grid.Row="1" ColumnDefinitions="180,*,Auto" ColumnSpacing="10">
+    <!-- Filter bar -->
+    <Grid Grid.Row="1" ColumnDefinitions="190,*,Auto" ColumnSpacing="10">
       <ComboBox Grid.Column="0"
                 HorizontalAlignment="Stretch"
                 ItemsSource="{Binding SeverityFilterOptions}"
@@ -38,19 +40,20 @@
                KeyDown="OnSearchBoxKeyDown" />
 
       <Button Grid.Column="2"
-              Classes="SecondaryAction"
+              Classes="m3-tonal"
               Content="{Binding Loc.ApplyFilterButton}"
               Command="{Binding RefreshLogsCommand}" />
     </Grid>
 
-    <Border Grid.Row="2" Classes="SurfaceCard" Padding="0">
+    <!-- Inset grouped activity log list -->
+    <Border Grid.Row="2" Classes="m3-grouped-list">
       <Grid>
-        <ListBox Classes="FlatRowList"
+        <ListBox Classes="m3-rows"
                  ItemsSource="{Binding Logs}"
                  SelectedItem="{Binding SelectedLog}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:ActivityLogItemViewModel">
-              <Border Padding="14,10" Background="Transparent">
+              <Border Padding="16,12" Background="Transparent">
                 <Border.ContextMenu>
                   <ContextMenu>
                     <MenuItem Header="{Binding CopyMessageLabel}" Command="{Binding CopyMessageCommand}" />
@@ -64,7 +67,7 @@
                 </Border.ContextMenu>
                 <StackPanel Spacing="4">
                   <WrapPanel Orientation="Horizontal">
-                    <TextBlock Classes="MutedMeta"
+                    <TextBlock Classes="m3-meta"
                                FontSize="11.5"
                                Margin="0,0,10,0"
                                VerticalAlignment="Center"
@@ -75,7 +78,7 @@
                                VerticalAlignment="Center"
                                Foreground="{Binding AccentBrush}"
                                Text="{Binding SeverityLabel}" />
-                    <TextBlock Classes="MutedMeta"
+                    <TextBlock Classes="m3-meta"
                                FontSize="11.5"
                                FontFamily="monospace"
                                VerticalAlignment="Center"
@@ -83,14 +86,14 @@
                   </WrapPanel>
 
                   <TextBlock FontSize="13"
-                             Foreground="{StaticResource TundraTextPrimary}"
+                             Foreground="{DynamicResource M3OnSurface}"
                              TextWrapping="Wrap"
                              Text="{Binding Message}" />
 
-                  <TextBlock Classes="MutedMeta"
+                  <TextBlock Classes="m3-meta"
                              FontFamily="monospace"
                              FontSize="11.5"
-                             Foreground="#9AA4B2"
+                             Foreground="{DynamicResource M3OnSurfaceVariant}"
                              TextWrapping="Wrap"
                              IsVisible="{Binding HasTargetPath}"
                              Text="{Binding TargetPath}" />
@@ -102,12 +105,12 @@
 
         <TextBlock VerticalAlignment="Center"
                    HorizontalAlignment="Center"
-                   Classes="Subtitle"
+                   Classes="m3-subtitle"
                    Text="{Binding Loc.NoLogsHint}"
                    IsVisible="{Binding HasNoLogs}" />
       </Grid>
     </Border>
 
-    <TextBlock Grid.Row="3" Classes="MutedMeta" Text="{Binding StatusSummary}" />
+    <TextBlock Grid.Row="3" Classes="m3-meta" Text="{Binding StatusSummary}" />
   </Grid>
 </UserControl>

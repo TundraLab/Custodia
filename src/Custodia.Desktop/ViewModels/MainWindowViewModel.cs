@@ -62,9 +62,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(SidebarSyncAccentBrush))]
     private TransferDirection? _activeSidebarDirection;
 
-    private static readonly IBrush SidebarAccentUpload = SolidColorBrush.Parse("#3B82F6");
-    private static readonly IBrush SidebarAccentDownload = SolidColorBrush.Parse("#2EA043");
-    private static readonly IBrush SidebarAccentDelete = SolidColorBrush.Parse("#EF4444");
+    private static readonly IBrush SidebarAccentUpload = SolidColorBrush.Parse("#A8C7FA");
+    private static readonly IBrush SidebarAccentDownload = SolidColorBrush.Parse("#6DD58C");
+    private static readonly IBrush SidebarAccentDelete = SolidColorBrush.Parse("#F28B82");
 
     public bool IsSidebarUploading => IsSyncActive && ActiveSidebarDirection == TransferDirection.Upload;
     public bool IsSidebarDownloading => IsSyncActive && ActiveSidebarDirection == TransferDirection.Download;

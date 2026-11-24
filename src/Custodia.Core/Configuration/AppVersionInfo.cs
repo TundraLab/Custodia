@@ -4,7 +4,7 @@ namespace TundraDrive.Core.Configuration;
 
 public static class AppVersionInfo
 {
-    public const string FallbackVersion = "2.9.2";
+    public const string FallbackVersion = "3.0.0";
     public const string RepositoryOwner = "TundraLab";
     public const string RepositoryName = "Custodia";
     public const string CurrentLegalVersion = "2026-11-24";

@@ -4,118 +4,120 @@
              x:Class="TundraDrive.Desktop.Views.AboutView"
              x:DataType="vm:AboutViewModel">
 
-  <!-- Aba sobre -->
+  <!-- About tab -->
   <ScrollViewer Padding="24"
                 HorizontalScrollBarVisibility="Disabled"
                 VerticalScrollBarVisibility="Auto"
                 AllowAutoHide="False">
-    <StackPanel Spacing="16" HorizontalAlignment="Stretch">
-      <StackPanel Spacing="2">
-        <TextBlock Classes="PageTitle" Text="{Binding Loc.AboutSectionTitle}" />
-        <TextBlock Classes="Subtitle" Text="{Binding Loc.AboutVersionLabel}" />
+    <StackPanel Spacing="18" HorizontalAlignment="Stretch">
+      <!-- Compact header -->
+      <StackPanel MinHeight="48" VerticalAlignment="Center" Spacing="2">
+        <TextBlock Classes="m3-page-title" Text="{Binding Loc.AboutSectionTitle}" />
+        <TextBlock Classes="m3-subtitle" Text="{Binding Loc.AboutVersionLabel}" />
       </StackPanel>
 
-      <Border Classes="SurfaceCard" Padding="18">
-        <StackPanel Spacing="14">
+      <!-- Application identity card -->
+      <Border Classes="m3-card">
+        <StackPanel Spacing="16">
           <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
             <Border Grid.Column="0"
-                    Background="#0B111E"
-                    BorderBrush="{StaticResource TundraBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="14"
-                    Padding="8">
+                    Background="{DynamicResource M3SurfaceContainerHigh}"
+                    CornerRadius="16"
+                    BorderThickness="0"
+                    Padding="10">
               <Image Source="avares://Custodia/Assets/custodia-icon.png"
-                     Width="64"
-                     Height="64"
+                     Width="60"
+                     Height="60"
                      Stretch="Uniform" />
             </Border>
 
             <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
-              <TextBlock FontSize="21" FontWeight="SemiBold" Text="Custódia" />
-              <TextBlock Classes="Subtitle"
+              <TextBlock FontSize="21" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurface}" Text="Custódia" />
+              <TextBlock Classes="m3-subtitle"
                          TextWrapping="Wrap"
                          Text="{Binding Loc.AboutDescription}" />
             </StackPanel>
 
             <Button Grid.Column="2"
-                    Classes="SecondaryAction"
+                    Classes="m3-outlined"
                     VerticalAlignment="Top"
                     Command="{Binding OpenRepositoryCommand}">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <PathIcon Width="15" Height="15"
-                          Foreground="{StaticResource TundraTextPrimary}"
+                          Foreground="{DynamicResource M3OnSurface}"
                           Data="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
                 <TextBlock Text="GitHub • TundraLab/Custodia" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
           </Grid>
 
-          <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-            <Border Grid.Column="0" Classes="FlatRow" Padding="12,8">
-              <Grid ColumnDefinitions="90,*" ColumnSpacing="10">
-                <TextBlock Grid.Column="0" Classes="MutedMeta" FontSize="12" VerticalAlignment="Center" Text="{Binding Loc.AboutCompanyLabel}" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                  <Image Source="avares://Custodia/Assets/brand-logo.png"
-                         Width="20"
-                         Height="20"
-                         Stretch="Uniform" />
-                  <TextBlock FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Text="{Binding CompanyName}" />
-                </StackPanel>
-              </Grid>
-            </Border>
-
-            <Border Grid.Column="1" Classes="FlatRow" Padding="12,8">
-              <Grid ColumnDefinitions="110,*" ColumnSpacing="10">
-                <TextBlock Grid.Column="0" Classes="MutedMeta" FontSize="12" VerticalAlignment="Center" Text="{Binding Loc.AboutDeveloperLabel}" />
-                <TextBlock Grid.Column="1" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Text="{Binding DeveloperName}" TextTrimming="CharacterEllipsis" />
-              </Grid>
-            </Border>
-          </Grid>
-
           <WrapPanel Orientation="Horizontal">
-            <Button Classes="SecondaryAction"
+            <Button Classes="m3-outlined m3-compact"
                     Margin="0,0,8,4"
-                    Padding="12,7"
                     Content="{Binding Loc.LegalPrivacyButton}"
                     Command="{Binding OpenPrivacyPolicyCommand}" />
-            <Button Classes="SecondaryAction"
+            <Button Classes="m3-outlined m3-compact"
                     Margin="0,0,8,4"
-                    Padding="12,7"
                     Content="{Binding Loc.LegalTermsButton}"
                     Command="{Binding OpenTermsOfUseCommand}" />
-            <Button Classes="SecondaryAction"
+            <Button Classes="m3-outlined m3-compact"
                     Margin="0,0,8,4"
-                    Padding="12,7"
                     Content="{Binding Loc.LegalGooglePolicyButton}"
                     Command="{Binding OpenGoogleApiPolicyCommand}" />
-            <Button Classes="SecondaryAction"
+            <Button Classes="m3-outlined m3-compact"
                     Margin="0,0,0,4"
-                    Padding="12,7"
                     Content="{Binding Loc.LegalReviewButton}"
                     Command="{Binding ReviewLegalTermsCommand}" />
           </WrapPanel>
         </StackPanel>
       </Border>
 
-      <!-- Atualizações -->
-      <Border Classes="SurfaceCard" Padding="18">
+      <!-- Company and author metadata (Inset Grouped List) -->
+      <Border Classes="m3-grouped-list">
+        <StackPanel>
+          <Border Classes="m3-grouped-row">
+            <Grid ColumnDefinitions="130,*" ColumnSpacing="12">
+              <TextBlock Grid.Column="0" Classes="m3-meta" VerticalAlignment="Center" Text="{Binding Loc.AboutCompanyLabel}" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Image Source="avares://Custodia/Assets/brand-logo.png"
+                       Width="20"
+                       Height="20"
+                       Stretch="Uniform" />
+                <TextBlock FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurface}" VerticalAlignment="Center" Text="{Binding CompanyName}" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border Classes="m3-divider" />
+
+          <Border Classes="m3-grouped-row">
+            <Grid ColumnDefinitions="130,*" ColumnSpacing="12">
+              <TextBlock Grid.Column="0" Classes="m3-meta" VerticalAlignment="Center" Text="{Binding Loc.AboutDeveloperLabel}" />
+              <TextBlock Grid.Column="1" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurface}" VerticalAlignment="Center" Text="{Binding DeveloperName}" TextTrimming="CharacterEllipsis" />
+            </Grid>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Application updates card -->
+      <Border Classes="m3-card">
         <StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
-              <TextBlock Classes="SectionTitle" Text="{Binding Loc.UpdatesSectionTitle}" />
-              <TextBlock Classes="MutedMeta" FontSize="12.5" Text="{Binding InstalledModeSummary}" />
-              <TextBlock Classes="MutedMeta" FontSize="11.5" Text="{Binding LastCheckSummary}" />
-              <TextBlock Classes="MutedMeta" FontSize="11.5" Foreground="#93C5FD" Text="{Binding UpdateScheduleSummary}" />
+              <TextBlock Classes="m3-section-title" Text="{Binding Loc.UpdatesSectionTitle}" />
+              <TextBlock Classes="m3-meta" FontSize="12.5" Text="{Binding InstalledModeSummary}" />
+              <TextBlock Classes="m3-meta" FontSize="11.5" Text="{Binding LastCheckSummary}" />
+              <TextBlock Classes="m3-meta" FontSize="11.5" Foreground="{DynamicResource M3Primary}" Text="{Binding UpdateScheduleSummary}" />
             </StackPanel>
 
             <Button Grid.Column="1"
-                    Classes="SecondaryAction"
+                    Classes="m3-tonal"
                     IsEnabled="{Binding CanCheckUpdates}"
                     Command="{Binding CheckForUpdatesCommand}">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <PathIcon Width="13" Height="13"
-                          Classes.Spinning="{Binding IsCheckingUpdates}"
-                          Foreground="{StaticResource TundraTextPrimary}"
+                          Classes.m3-spinning="{Binding IsCheckingUpdates}"
+                          Foreground="{DynamicResource M3OnSecondaryContainer}"
                           Data="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z">
                   <PathIcon.RenderTransform>
                     <RotateTransform />
@@ -137,88 +139,68 @@
                        Minimum="0"
                        Maximum="100"
                        Value="{Binding UpdateCheckProgress}"
-                       IsVisible="{Binding IsCheckingUpdates}"
-                       Foreground="{StaticResource TundraAccent}" />
+                       IsVisible="{Binding IsCheckingUpdates}" />
 
           <ProgressBar Height="6"
                        Minimum="0"
                        Maximum="100"
                        Value="{Binding UpdateDownloadProgress}"
-                       IsVisible="{Binding IsDownloadingUpdate}"
-                       Foreground="{StaticResource TundraAccent}" />
+                       IsVisible="{Binding IsDownloadingUpdate}" />
 
           <WrapPanel Orientation="Horizontal"
                      IsVisible="{Binding IsUpdateAvailable}">
-            <Button Classes="PrimaryAction"
+            <Button Classes="m3-filled"
                     Margin="0,0,10,4"
                     IsEnabled="{Binding CanInstallUpdate}"
                     Content="{Binding Loc.UpdateInstallNowButton}"
                     Command="{Binding InstallUpdateCommand}" />
-            <Button Classes="SecondaryAction"
+            <Button Classes="m3-outlined"
                     Margin="0,0,0,4"
                     Content="{Binding Loc.UpdateOpenReleaseButton}"
                     Command="{Binding OpenReleasePageCommand}" />
           </WrapPanel>
 
-          <Border Classes="FlatRow"
-                  Background="#13171F"
-                  Padding="14,12"
+          <Border Classes="m3-card-inset"
                   HorizontalAlignment="Stretch"
                   IsVisible="{Binding HasReleaseNotes}">
             <TextBlock FontSize="12.5"
                        TextWrapping="Wrap"
                        LineHeight="20"
-                       Foreground="{StaticResource TundraTextSecondary}"
+                       Foreground="{DynamicResource M3OnSurfaceVariant}"
                        Text="{Binding LatestReleaseNotes}" />
           </Border>
         </StackPanel>
       </Border>
 
-      <!-- Suporte e Feedback -->
-      <Border Classes="SurfaceCard" Padding="18">
-        <StackPanel Spacing="12">
+      <!-- Support and feedback card -->
+      <Border Classes="m3-card">
+        <StackPanel Spacing="14">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
-              <TextBlock Classes="SectionTitle" Text="{Binding Loc.SupportSectionTitle}" />
-              <TextBlock Classes="MutedMeta" FontSize="12" Text="{Binding Loc.SupportSectionSubtitle}" TextWrapping="Wrap" />
+              <TextBlock Classes="m3-section-title" Text="{Binding Loc.SupportSectionTitle}" />
+              <TextBlock Classes="m3-meta" FontSize="12" Text="{Binding Loc.SupportSectionSubtitle}" TextWrapping="Wrap" />
             </StackPanel>
 
+            <!-- M3 segmented pill switcher -->
             <Border Grid.Column="1"
-                    Background="#0B111E"
-                    BorderBrush="{StaticResource TundraBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="10"
-                    Padding="4"
+                    Classes="m3-segmented-track"
+                    Background="{DynamicResource M3SurfaceContainerHigh}"
                     VerticalAlignment="Center">
               <StackPanel Orientation="Horizontal" Spacing="4">
-                <Button Classes="PrimaryAction"
-                        Padding="12,6"
-                        IsVisible="{Binding IsBugMode}"
+                <Button Classes="m3-segmented"
+                        Classes.m3-seg-active="{Binding IsBugMode}"
                         Content="{Binding Loc.FeedbackTypeBug}"
                         Command="{Binding SelectBugModeCommand}" />
-                <Button Classes="SecondaryAction"
-                        Padding="12,6"
-                        IsVisible="{Binding IsSuggestionMode}"
-                        Content="{Binding Loc.FeedbackTypeBug}"
-                        Command="{Binding SelectBugModeCommand}" />
-                <Button Classes="PrimaryAction"
-                        Padding="12,6"
-                        IsVisible="{Binding IsSuggestionMode}"
-                        Content="{Binding Loc.FeedbackTypeSuggestion}"
-                        Command="{Binding SelectSuggestionModeCommand}" />
-                <Button Classes="SecondaryAction"
-                        Padding="12,6"
-                        IsVisible="{Binding IsBugMode}"
+                <Button Classes="m3-segmented"
+                        Classes.m3-seg-active="{Binding IsSuggestionMode}"
                         Content="{Binding Loc.FeedbackTypeSuggestion}"
                         Command="{Binding SelectSuggestionModeCommand}" />
               </StackPanel>
             </Border>
           </Grid>
 
-          <!-- Formulário unificado de suporte (Bug / Sugestão) -->
-          <Border Classes="FlatRow"
-                  Background="#13171F"
-                  Padding="14">
+          <!-- Unified support form -->
+          <Border Classes="m3-card-inset" Padding="16">
             <StackPanel Spacing="10">
               <Grid ColumnDefinitions="*,Auto"
                     ColumnSpacing="12"
@@ -226,6 +208,7 @@
                 <TextBlock Grid.Column="0"
                            FontSize="12.5"
                            FontWeight="Medium"
+                           Foreground="{DynamicResource M3OnSurface}"
                            VerticalAlignment="Center"
                            Text="{Binding Loc.SuggestionCategoryLabel}" />
                 <ComboBox Grid.Column="1"
@@ -234,10 +217,10 @@
                           SelectedIndex="{Binding SelectedSuggestionCategoryIndex}" />
               </Grid>
 
-              <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding FeedbackTitleLabel}" />
+              <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurface}" Text="{Binding FeedbackTitleLabel}" />
               <TextBox Watermark="{Binding FeedbackTitleWatermark}" Text="{Binding FeedbackTitle}" />
 
-              <TextBlock FontSize="12.5" FontWeight="Medium" Text="{Binding FeedbackDescriptionLabel}" />
+              <TextBlock FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource M3OnSurfaceVariant}" Text="{Binding FeedbackDescriptionLabel}" />
               <TextBox AcceptsReturn="True"
                        Height="88"
                        TextWrapping="Wrap"
@@ -251,22 +234,19 @@
                             IsChecked="{Binding IncludeDiagnostics}"
                             Content="{Binding Loc.BugIncludeDiagnosticsCheckbox}" />
                   <Button Grid.Column="1"
-                          Classes="SecondaryAction"
-                          Padding="10,4"
-                          FontSize="12"
+                          Classes="m3-outlined m3-compact"
                           VerticalAlignment="Center"
                           Content="{Binding PreviewDiagnosticsButtonText}"
                           Command="{Binding ToggleDiagnosticsPreviewCommand}" />
                 </Grid>
 
-                <Border Classes="FlatRow"
-                        Background="#0B111E"
-                        BorderBrush="{StaticResource TundraBorderBrush}"
-                        BorderThickness="1"
-                        Padding="10"
+                <Border Background="{DynamicResource M3Surface}"
+                        CornerRadius="12"
+                        BorderThickness="0"
+                        Padding="12"
                         IsVisible="{Binding IsDiagnosticsPreviewOpen}">
                   <StackPanel Spacing="6">
-                    <TextBlock Classes="MutedMeta"
+                    <TextBlock Classes="m3-meta"
                                FontSize="11.5"
                                TextWrapping="Wrap"
                                Text="{Binding Loc.DiagnosticsPreviewHeader}" />
@@ -277,19 +257,19 @@
                                  FontSize="11.5"
                                  LineHeight="17"
                                  TextWrapping="Wrap"
-                                 Foreground="{StaticResource TundraTextSecondary}"
+                                 Foreground="{DynamicResource M3OnSurfaceVariant}"
                                  Text="{Binding DiagnosticsPreviewText}" />
                     </ScrollViewer>
                   </StackPanel>
                 </Border>
               </StackPanel>
 
-              <WrapPanel Orientation="Horizontal">
-                <Button Classes="PrimaryAction"
+              <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <Button Classes="m3-filled"
                         Margin="0,0,8,4"
                         Content="{Binding Loc.OpenGitHubIssueButton}"
                         Command="{Binding SubmitFeedbackGitHubCommand}" />
-                <Button Classes="SecondaryAction"
+                <Button Classes="m3-tonal"
                         Margin="0,0,0,4"
                         Content="{Binding Loc.CopyReportButton}"
                         Command="{Binding CopyFeedbackCommand}" />
@@ -297,8 +277,8 @@
             </StackPanel>
           </Border>
 
-          <TextBlock Classes="MutedMeta"
-                     Foreground="#93C5FD"
+          <TextBlock Classes="m3-meta"
+                     Foreground="{DynamicResource M3Primary}"
                      TextWrapping="Wrap"
                      IsVisible="{Binding FeedbackStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                      Text="{Binding FeedbackStatusMessage}" />

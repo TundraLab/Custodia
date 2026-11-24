@@ -75,7 +75,7 @@ public sealed class ViewModelBehaviorTests
         queueVm.UpsertTransfer(download);
         Assert.Equal(TransferDirection.Download, queueVm.ActiveDirection);
         Assert.True(queueVm.Items[0].IsDownloadingActive);
-        Assert.Equal(Color.Parse("#2EA043"), ((ISolidColorBrush)queueVm.Items[0].TransferProgressBrush).Color);
+        Assert.Equal(Color.Parse("#6DD58C"), ((ISolidColorBrush)queueVm.Items[0].TransferProgressBrush).Color);
 
         var del = new TransferQueueItem
         {
@@ -89,8 +89,8 @@ public sealed class ViewModelBehaviorTests
         Assert.Equal(TransferDirection.Delete, queueVm.ActiveDirection);
         Assert.True(queueVm.Items[0].IsDeletingActive);
         Assert.Equal("Exclusão", queueVm.Items[0].DirectionDisplay);
-        Assert.Equal(Color.Parse("#EF4444"), ((ISolidColorBrush)queueVm.Items[0].TransferProgressBrush).Color);
-        Assert.Equal(Color.Parse("#EF4444"), ((ISolidColorBrush)queueVm.Items[0].AccentBorderBrush).Color);
+        Assert.Equal(Color.Parse("#F28B82"), ((ISolidColorBrush)queueVm.Items[0].TransferProgressBrush).Color);
+        Assert.Equal(Color.Parse("#F28B82"), ((ISolidColorBrush)queueVm.Items[0].AccentBorderBrush).Color);
 
         loc.SetLanguage("en-US");
         Assert.Equal("Delete", queueVm.Items[0].DirectionDisplay);
@@ -144,7 +144,7 @@ public sealed class ViewModelBehaviorTests
         uninitVm.ActiveSidebarDirection = TransferDirection.Delete;
         Assert.True(uninitVm.IsSidebarDeleting);
         Assert.False(uninitVm.IsSidebarGenericSyncing);
-        Assert.Equal(Color.Parse("#EF4444"), ((ISolidColorBrush)uninitVm.SidebarSyncAccentBrush).Color);
+        Assert.Equal(Color.Parse("#F28B82"), ((ISolidColorBrush)uninitVm.SidebarSyncAccentBrush).Color);
     }
 
     [Fact]

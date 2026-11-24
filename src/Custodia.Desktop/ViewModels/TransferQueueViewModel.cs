@@ -314,12 +314,12 @@ public sealed partial class TransferItemViewModel : ViewModelBase
 
     public bool CanCancel => Status is TransferStatus.Queued or TransferStatus.InProgress;
 
-    private static readonly IBrush BrushProgress = SolidColorBrush.Parse("#3B82F6");
-    private static readonly IBrush BrushDownload = SolidColorBrush.Parse("#2EA043");
-    private static readonly IBrush BrushCompleted = SolidColorBrush.Parse("#2EA043");
-    private static readonly IBrush BrushFailed = SolidColorBrush.Parse("#EF4444");
-    private static readonly IBrush BrushCancelled = SolidColorBrush.Parse("#6B7280");
-    private static readonly IBrush BrushDefault = SolidColorBrush.Parse("#2D333B");
+    private static readonly IBrush BrushProgress = SolidColorBrush.Parse("#A8C7FA");
+    private static readonly IBrush BrushDownload = SolidColorBrush.Parse("#6DD58C");
+    private static readonly IBrush BrushCompleted = SolidColorBrush.Parse("#6DD58C");
+    private static readonly IBrush BrushFailed = SolidColorBrush.Parse("#F28B82");
+    private static readonly IBrush BrushCancelled = SolidColorBrush.Parse("#8E9099");
+    private static readonly IBrush BrushDefault = SolidColorBrush.Parse("#44474F");
 
     public IBrush TransferProgressBrush => Status switch
     {

@@ -8,7 +8,7 @@
 
   <Application.Styles>
     <FluentTheme />
-    <StyleInclude Source="avares://Custodia/Styles/TundraTheme.axaml" />
+    <StyleInclude Source="avares://Custodia/Styles/Material3Theme.axaml" />
   </Application.Styles>
 
   <Application.DataTemplates>

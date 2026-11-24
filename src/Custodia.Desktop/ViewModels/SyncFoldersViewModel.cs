@@ -168,8 +168,8 @@ public sealed partial class SyncFolderItemViewModel : ViewModelBase
     public Geometry EditIconPreviewGeometry =>
         Geometry.Parse(FolderCustomizationPresets.ResolveIconSvg(EditIconKey));
 
-    private static readonly IBrush BrushChoiceSelected = SolidColorBrush.Parse("#FFFFFF");
-    private static readonly IBrush BrushChoiceDefault = SolidColorBrush.Parse("#334155");
+    private static readonly IBrush BrushChoiceSelected = SolidColorBrush.Parse("#E2E2E9");
+    private static readonly IBrush BrushChoiceDefault = SolidColorBrush.Parse("#44474F");
 
     private void RebuildCustomizationOptions()
     {
@@ -247,10 +247,10 @@ public sealed partial class SyncFolderItemViewModel : ViewModelBase
 
     public IBrush AccentBorderBrush => State switch
     {
-        FolderSyncState.Syncing => SolidColorBrush.Parse("#3B82F6"),
-        FolderSyncState.Paused => SolidColorBrush.Parse("#6B7280"),
-        FolderSyncState.Error => SolidColorBrush.Parse("#EF4444"),
-        _ => SolidColorBrush.Parse("#2EA043")
+        FolderSyncState.Syncing => SolidColorBrush.Parse("#A8C7FA"),
+        FolderSyncState.Paused => SolidColorBrush.Parse("#8E9099"),
+        FolderSyncState.Error => SolidColorBrush.Parse("#F28B82"),
+        _ => SolidColorBrush.Parse("#6DD58C")
     };
 
     [RelayCommand]
@@ -333,13 +333,13 @@ public sealed partial class SyncFoldersViewModel : ViewModelBase
     private string _storageAlertMessage = string.Empty;
 
     [ObservableProperty]
-    private IBrush _storageProgressBrush = SolidColorBrush.Parse("#3B82F6");
+    private IBrush _storageProgressBrush = SolidColorBrush.Parse("#A8C7FA");
 
     [ObservableProperty]
-    private IBrush _storageAlertBorderBrush = SolidColorBrush.Parse("#2A303B");
+    private IBrush _storageAlertBorderBrush = SolidColorBrush.Parse("#44474F");
 
     [ObservableProperty]
-    private IBrush _storageAlertTextBrush = SolidColorBrush.Parse("#D29922");
+    private IBrush _storageAlertTextBrush = SolidColorBrush.Parse("#F5C26B");
 
     [ObservableProperty]
     private string _statusMessage = string.Empty;
@@ -463,18 +463,18 @@ public sealed partial class SyncFoldersViewModel : ViewModelBase
                 ? Loc.Format("StorageWarningFmt", account.Quota.UsagePercentage)
                 : string.Empty;
         StorageProgressBrush = isFull
-            ? SolidColorBrush.Parse("#EF4444")
+            ? SolidColorBrush.Parse("#F28B82")
             : HasStorageAlert
-                ? SolidColorBrush.Parse("#D29922")
-                : SolidColorBrush.Parse("#3B82F6");
+                ? SolidColorBrush.Parse("#F5C26B")
+                : SolidColorBrush.Parse("#A8C7FA");
         StorageAlertBorderBrush = isFull
-            ? SolidColorBrush.Parse("#EF4444")
+            ? SolidColorBrush.Parse("#F28B82")
             : HasStorageAlert
-                ? SolidColorBrush.Parse("#D29922")
-                : SolidColorBrush.Parse("#2A303B");
+                ? SolidColorBrush.Parse("#F5C26B")
+                : SolidColorBrush.Parse("#44474F");
         StorageAlertTextBrush = isFull
-            ? SolidColorBrush.Parse("#F87171")
-            : SolidColorBrush.Parse("#D29922");
+            ? SolidColorBrush.Parse("#FFB4AB")
+            : SolidColorBrush.Parse("#F5C26B");
 
         UpdateSegmentedBarWidths(account);
     }

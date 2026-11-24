@@ -19,8 +19,8 @@ namespace TundraDrive.Desktop.ViewModels;
 
 public sealed partial class AboutViewModel : ViewModelBase
 {
-    private static readonly IBrush BrushPrimary = SolidColorBrush.Parse("#F0F4F8");
-    private static readonly IBrush BrushError = SolidColorBrush.Parse("#FCA5A5");
+    private static readonly IBrush BrushPrimary = SolidColorBrush.Parse("#E2E2E9");
+    private static readonly IBrush BrushError = SolidColorBrush.Parse("#FFB4AB");
 
     private readonly IAppUpdateService? _updateService;
     private readonly IAppSettingsService? _settingsService;

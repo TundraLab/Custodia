@@ -11,10 +11,10 @@ namespace TundraDrive.Desktop.ViewModels;
 
 public sealed class ActivityLogItemViewModel
 {
-    private static readonly IBrush BrushSuccess = SolidColorBrush.Parse("#2EA043");
-    private static readonly IBrush BrushWarning = SolidColorBrush.Parse("#D29922");
-    private static readonly IBrush BrushError = SolidColorBrush.Parse("#EF4444");
-    private static readonly IBrush BrushInfo = SolidColorBrush.Parse("#3B82F6");
+    private static readonly IBrush BrushSuccess = SolidColorBrush.Parse("#6DD58C");
+    private static readonly IBrush BrushWarning = SolidColorBrush.Parse("#F5C26B");
+    private static readonly IBrush BrushError = SolidColorBrush.Parse("#F28B82");
+    private static readonly IBrush BrushInfo = SolidColorBrush.Parse("#A8C7FA");
 
     public long Id { get; init; }
     public ActivitySeverity Severity { get; init; }
@@ -24,7 +24,7 @@ public sealed class ActivityLogItemViewModel
     public bool HasTargetPath { get; init; }
     public string TimestampDisplay { get; init; } = string.Empty;
     public string SeverityLabel { get; init; } = string.Empty;
-    public IBrush AccentBrush { get; init; } = SolidColorBrush.Parse("#2D333B");
+    public IBrush AccentBrush { get; init; } = SolidColorBrush.Parse("#44474F");
     public string CopyMessageLabel { get; init; } = string.Empty;
     public string CopyTargetLabel { get; init; } = string.Empty;
     public string OpenFolderLabel { get; init; } = string.Empty;

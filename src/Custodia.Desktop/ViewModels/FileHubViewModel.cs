@@ -32,7 +32,7 @@ public sealed class FileHubBreadcrumbItem
 
 public sealed partial class FileHubItemViewModel : ObservableObject, IDisposable
 {
-    internal static readonly IBrush DefaultMutedBrush = SolidColorBrush.Parse("#9AA4B2");
+    internal static readonly IBrush DefaultMutedBrush = SolidColorBrush.Parse("#C4C6D0");
 
     private bool _isDisposed;
 
@@ -110,16 +110,16 @@ public sealed partial class FileHubItemViewModel : ObservableObject, IDisposable
 public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
 {
     private static readonly IBrush BrushMutedGray = FileHubItemViewModel.DefaultMutedBrush;
-    private static readonly IBrush BrushFolderBlue = SolidColorBrush.Parse("#60A5FA");
-    private static readonly IBrush BrushSyncedGreen = SolidColorBrush.Parse("#2EA043");
-    private static readonly IBrush BrushTrashSlate = SolidColorBrush.Parse("#94A3B8");
-    private static readonly IBrush BrushSheetGreen = SolidColorBrush.Parse("#22C55E");
-    private static readonly IBrush BrushPdfRed = SolidColorBrush.Parse("#EF4444");
-    private static readonly IBrush BrushDocBlue = SolidColorBrush.Parse("#3B82F6");
-    private static readonly IBrush BrushSlideAmber = SolidColorBrush.Parse("#F59E0B");
-    private static readonly IBrush BrushVideoCyan = SolidColorBrush.Parse("#38BDF8");
-    private static readonly IBrush BrushAudioPurple = SolidColorBrush.Parse("#A855F7");
-    private static readonly IBrush BrushImagePink = SolidColorBrush.Parse("#EC4899");
+    private static readonly IBrush BrushFolderBlue = SolidColorBrush.Parse("#A8C7FA");
+    private static readonly IBrush BrushSyncedGreen = SolidColorBrush.Parse("#6DD58C");
+    private static readonly IBrush BrushTrashSlate = SolidColorBrush.Parse("#9296A4");
+    private static readonly IBrush BrushSheetGreen = SolidColorBrush.Parse("#6DD58C");
+    private static readonly IBrush BrushPdfRed = SolidColorBrush.Parse("#F28B82");
+    private static readonly IBrush BrushDocBlue = SolidColorBrush.Parse("#A8C7FA");
+    private static readonly IBrush BrushSlideAmber = SolidColorBrush.Parse("#F5C26B");
+    private static readonly IBrush BrushVideoCyan = SolidColorBrush.Parse("#7FCFFF");
+    private static readonly IBrush BrushAudioPurple = SolidColorBrush.Parse("#D0BCFF");
+    private static readonly IBrush BrushImagePink = SolidColorBrush.Parse("#F6A5C0");
     private const string GoogleOneStorageUrl = "https://one.google.com/storage";
 
     private const string FolderIconSvg = "M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z";
@@ -1760,8 +1760,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
 
     private void RebuildCustomizeChoices()
     {
-        var activeBorder = SolidColorBrush.Parse("#F8FAFC");
-        var inactiveBorder = SolidColorBrush.Parse("#334155");
+        var activeBorder = SolidColorBrush.Parse("#E2E2E9");
+        var inactiveBorder = SolidColorBrush.Parse("#44474F");
 
         CustomizeColorChoices.Clear();
         foreach (var preset in FolderCustomizationPresets.Colors)
@@ -1791,7 +1791,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                 TryParseIconGeometry(icon.SvgData),
                 isEnglish ? icon.NameEn : icon.NamePt,
                 isSelected,
-                isSelected ? SolidColorBrush.Parse("#3B82F6") : inactiveBorder,
+                isSelected ? SolidColorBrush.Parse("#A8C7FA") : inactiveBorder,
                 new RelayCommand(() =>
                 {
                     CustomizeEditIconKey = key;

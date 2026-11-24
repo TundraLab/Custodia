@@ -1,0 +1,903 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Styles.Resources>
+    <!-- Material Design 3 Dark Blue surface hierarchy -->
+    <SolidColorBrush x:Key="M3Surface">#111318</SolidColorBrush>
+    <SolidColorBrush x:Key="M3SurfaceContainerLow">#171A1F</SolidColorBrush>
+    <SolidColorBrush x:Key="M3SurfaceContainer">#1D2024</SolidColorBrush>
+    <SolidColorBrush x:Key="M3SurfaceContainerHigh">#282A2F</SolidColorBrush>
+    <SolidColorBrush x:Key="M3SurfaceContainerHighest">#33363D</SolidColorBrush>
+    <SolidColorBrush x:Key="M3SurfaceHover">#2F3238</SolidColorBrush>
+
+    <!-- Primary and secondary tonal tokens (M3 Blue) -->
+    <SolidColorBrush x:Key="M3Primary">#A8C7FA</SolidColorBrush>
+    <SolidColorBrush x:Key="M3PrimaryHover">#B9D2FB</SolidColorBrush>
+    <SolidColorBrush x:Key="M3PrimaryPressed">#92B8F7</SolidColorBrush>
+    <SolidColorBrush x:Key="M3OnPrimary">#062E6F</SolidColorBrush>
+    <SolidColorBrush x:Key="M3PrimaryContainer">#0842A0</SolidColorBrush>
+    <SolidColorBrush x:Key="M3OnPrimaryContainer">#D3E3FD</SolidColorBrush>
+
+    <SolidColorBrush x:Key="M3SecondaryContainer">#374955</SolidColorBrush>
+    <SolidColorBrush x:Key="M3SecondaryContainerHover">#425665</SolidColorBrush>
+    <SolidColorBrush x:Key="M3SecondaryContainerPressed">#2E3E49</SolidColorBrush>
+    <SolidColorBrush x:Key="M3OnSecondaryContainer">#D3E4F3</SolidColorBrush>
+
+    <!-- Text, outline, and divider tokens -->
+    <SolidColorBrush x:Key="M3OnSurface">#E2E2E9</SolidColorBrush>
+    <SolidColorBrush x:Key="M3OnSurfaceVariant">#C4C6D0</SolidColorBrush>
+    <SolidColorBrush x:Key="M3OnSurfaceMuted">#9296A4</SolidColorBrush>
+    <SolidColorBrush x:Key="M3OnSurfaceDisabled">#6B6F7B</SolidColorBrush>
+    <SolidColorBrush x:Key="M3Outline">#8E9099</SolidColorBrush>
+    <SolidColorBrush x:Key="M3OutlineVariant">#44474F</SolidColorBrush>
+    <SolidColorBrush x:Key="M3DividerBrush">#6644474F</SolidColorBrush>
+
+    <!-- Semantic and storage tokens -->
+    <SolidColorBrush x:Key="M3Error">#FFB4AB</SolidColorBrush>
+    <SolidColorBrush x:Key="M3ErrorAccent">#F28B82</SolidColorBrush>
+    <SolidColorBrush x:Key="M3OnError">#690005</SolidColorBrush>
+    <SolidColorBrush x:Key="M3ErrorContainer">#4A1C20</SolidColorBrush>
+    <SolidColorBrush x:Key="M3ErrorContainerHover">#5B2328</SolidColorBrush>
+    <SolidColorBrush x:Key="M3OnErrorContainer">#FFDAD6</SolidColorBrush>
+
+    <SolidColorBrush x:Key="M3Success">#6DD58C</SolidColorBrush>
+    <SolidColorBrush x:Key="M3OnSuccess">#00391B</SolidColorBrush>
+    <SolidColorBrush x:Key="M3SuccessContainer">#1B3927</SolidColorBrush>
+    <SolidColorBrush x:Key="M3SuccessContainerHover">#234731</SolidColorBrush>
+    <SolidColorBrush x:Key="M3OnSuccessContainer">#B8F3C8</SolidColorBrush>
+
+    <SolidColorBrush x:Key="M3Warning">#F5C26B</SolidColorBrush>
+    <SolidColorBrush x:Key="M3WarningContainer">#3B2E14</SolidColorBrush>
+    <SolidColorBrush x:Key="M3OnWarningContainer">#FFE0A3</SolidColorBrush>
+
+    <SolidColorBrush x:Key="M3Tertiary">#7FCFFF</SolidColorBrush>
+    <SolidColorBrush x:Key="M3StorageTrash">#8E9099</SolidColorBrush>
+    <SolidColorBrush x:Key="M3Scrim">#99000000</SolidColorBrush>
+    <SolidColorBrush x:Key="M3ModalScrim">#CC0B0D12</SolidColorBrush>
+
+    <!-- FluentTheme overrides for dark M3 popups, inputs, checkboxes, and sliders -->
+    <SolidColorBrush x:Key="ComboBoxDropDownBackground">#282A2F</SolidColorBrush>
+    <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush">#44474F</SolidColorBrush>
+    <SolidColorBrush x:Key="ComboBoxBackground">#282A2F</SolidColorBrush>
+    <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver">#2F3238</SolidColorBrush>
+    <SolidColorBrush x:Key="ComboBoxBorderBrush">#44474F</SolidColorBrush>
+    <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver">#8E9099</SolidColorBrush>
+    <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver">#33363D</SolidColorBrush>
+    <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected">#374955</SolidColorBrush>
+    <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver">#425665</SolidColorBrush>
+
+    <SolidColorBrush x:Key="MenuFlyoutPresenterBackground">#282A2F</SolidColorBrush>
+    <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush">#44474F</SolidColorBrush>
+    <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver">#33363D</SolidColorBrush>
+
+    <SolidColorBrush x:Key="TextControlBackground">#282A2F</SolidColorBrush>
+    <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#2F3238</SolidColorBrush>
+    <SolidColorBrush x:Key="TextControlBackgroundFocused">#282A2F</SolidColorBrush>
+    <SolidColorBrush x:Key="TextControlBorderBrush">#44474F</SolidColorBrush>
+    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#8E9099</SolidColorBrush>
+    <SolidColorBrush x:Key="TextControlBorderBrushFocused">#A8C7FA</SolidColorBrush>
+    <SolidColorBrush x:Key="TextControlForeground">#E2E2E9</SolidColorBrush>
+    <SolidColorBrush x:Key="TextControlPlaceholderForeground">#9296A4</SolidColorBrush>
+
+    <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillChecked">#A8C7FA</SolidColorBrush>
+    <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPointerOver">#B9D2FB</SolidColorBrush>
+    <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPressed">#92B8F7</SolidColorBrush>
+    <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked">#062E6F</SolidColorBrush>
+    <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPointerOver">#062E6F</SolidColorBrush>
+    <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeChecked">#A8C7FA</SolidColorBrush>
+    <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeUnchecked">#8E9099</SolidColorBrush>
+
+    <SolidColorBrush x:Key="SliderTrackValueFill">#A8C7FA</SolidColorBrush>
+    <SolidColorBrush x:Key="SliderTrackValueFillPointerOver">#B9D2FB</SolidColorBrush>
+    <SolidColorBrush x:Key="SliderTrackFill">#33363D</SolidColorBrush>
+    <SolidColorBrush x:Key="SliderThumbBackground">#A8C7FA</SolidColorBrush>
+    <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver">#B9D2FB</SolidColorBrush>
+    <SolidColorBrush x:Key="SliderThumbBackgroundPressed">#92B8F7</SolidColorBrush>
+  </Styles.Resources>
+
+  <!-- Typography -->
+  <Style Selector="TextBlock.m3-page-title">
+    <Setter Property="FontSize" Value="20" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+  </Style>
+
+  <Style Selector="TextBlock.m3-section-title">
+    <Setter Property="FontSize" Value="14.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+  </Style>
+
+  <Style Selector="TextBlock.m3-group-label">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceVariant}" />
+  </Style>
+
+  <Style Selector="TextBlock.m3-subtitle">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceVariant}" />
+  </Style>
+
+  <Style Selector="TextBlock.m3-meta">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceMuted}" />
+  </Style>
+
+  <!-- Surface cards, dialogs, and inset grouped lists -->
+  <Style Selector="Border.m3-card">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainer}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Padding" Value="18,16" />
+  </Style>
+
+  <Style Selector="Border.m3-card-elevated">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Padding" Value="14,12" />
+  </Style>
+
+  <Style Selector="Border.m3-card-inset">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="14,12" />
+  </Style>
+
+  <Style Selector="Border.m3-dialog">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="24" />
+    <Setter Property="Padding" Value="20" />
+  </Style>
+
+  <Style Selector="Border.m3-grouped-list">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainer}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+
+  <Style Selector="Border.m3-grouped-row">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="16,12" />
+  </Style>
+
+  <Style Selector="Border.m3-divider">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource M3OutlineVariant}" />
+    <Setter Property="Opacity" Value="0.4" />
+    <Setter Property="Margin" Value="16,0" />
+  </Style>
+
+  <Style Selector="Border.m3-divider-full">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource M3OutlineVariant}" />
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+
+  <Style Selector="Border.m3-segmented-track">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainer}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="Padding" Value="4" />
+  </Style>
+
+  <Style Selector="Border.m3-banner-error">
+    <Setter Property="Background" Value="{DynamicResource M3ErrorContainer}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Padding" Value="14,10" />
+  </Style>
+
+  <Style Selector="Border.m3-banner-info">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainer}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Padding" Value="14,10" />
+  </Style>
+
+  <!-- Primary filled pill button -->
+  <Style Selector="Button.m3-filled">
+    <Setter Property="Background" Value="{DynamicResource M3Primary}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnPrimary}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="18,8" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="RenderTransform" Value="scale(1)" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.m3-filled /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3Primary}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnPrimary}" />
+  </Style>
+
+  <Style Selector="Button.m3-filled:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3PrimaryHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnPrimary}" />
+  </Style>
+
+  <Style Selector="Button.m3-filled:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.98)" />
+    <Setter Property="Opacity" Value="0.9" />
+  </Style>
+
+  <Style Selector="Button.m3-filled:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3PrimaryPressed}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnPrimary}" />
+  </Style>
+
+  <Style Selector="Button.m3-filled:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHighest}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceDisabled}" />
+  </Style>
+
+  <Style Selector="Button.m3-filled.m3-success">
+    <Setter Property="Background" Value="{DynamicResource M3Success}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSuccess}" />
+  </Style>
+
+  <Style Selector="Button.m3-filled.m3-success /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3Success}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSuccess}" />
+  </Style>
+
+  <Style Selector="Button.m3-filled.m3-success:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3Success}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSuccess}" />
+    <Setter Property="Opacity" Value="0.92" />
+  </Style>
+
+  <!-- Secondary tonal pill button -->
+  <Style Selector="Button.m3-tonal">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainer}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSecondaryContainer}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="16,8" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="RenderTransform" Value="scale(1)" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.m3-tonal /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainer}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSecondaryContainer}" />
+  </Style>
+
+  <Style Selector="Button.m3-tonal:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainerHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSecondaryContainer}" />
+  </Style>
+
+  <Style Selector="Button.m3-tonal:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.98)" />
+    <Setter Property="Opacity" Value="0.9" />
+  </Style>
+
+  <Style Selector="Button.m3-tonal:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainerPressed}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSecondaryContainer}" />
+  </Style>
+
+  <Style Selector="Button.m3-tonal:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHighest}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceDisabled}" />
+  </Style>
+
+  <!-- Outlined pill button -->
+  <Style Selector="Button.m3-outlined">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3OutlineVariant}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="16,8" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="RenderTransform" Value="scale(1)" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.m3-outlined /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3OutlineVariant}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+  </Style>
+
+  <Style Selector="Button.m3-outlined:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3Outline}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+  </Style>
+
+  <Style Selector="Button.m3-outlined:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.98)" />
+    <Setter Property="Opacity" Value="0.88" />
+  </Style>
+
+  <Style Selector="Button.m3-outlined:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3DividerBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceDisabled}" />
+  </Style>
+
+  <Style Selector="Button.m3-outlined.m3-success">
+    <Setter Property="Background" Value="{DynamicResource M3SuccessContainer}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3Success}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSuccessContainer}" />
+  </Style>
+
+  <Style Selector="Button.m3-outlined.m3-success /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SuccessContainer}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3Success}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSuccessContainer}" />
+  </Style>
+
+  <Style Selector="Button.m3-outlined.m3-success:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SuccessContainerHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3Success}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSuccessContainer}" />
+  </Style>
+
+  <!-- Text / subtle pill button -->
+  <Style Selector="Button.m3-text">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceVariant}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.m3-text /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceVariant}" />
+  </Style>
+
+  <Style Selector="Button.m3-text:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+  </Style>
+
+  <Style Selector="Button.m3-text:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceDisabled}" />
+  </Style>
+
+  <!-- Danger outlined and tonal pill buttons -->
+  <Style Selector="Button.m3-danger-outlined">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource M3Error}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3OutlineVariant}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="16,8" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="RenderTransform" Value="scale(1)" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.m3-danger-outlined /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3OutlineVariant}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3Error}" />
+  </Style>
+
+  <Style Selector="Button.m3-danger-outlined:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3ErrorContainer}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3ErrorAccent}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnErrorContainer}" />
+  </Style>
+
+  <Style Selector="Button.m3-danger-outlined:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.98)" />
+    <Setter Property="Opacity" Value="0.88" />
+  </Style>
+
+  <Style Selector="Button.m3-danger-outlined:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3DividerBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceDisabled}" />
+  </Style>
+
+  <Style Selector="Button.m3-danger-tonal">
+    <Setter Property="Background" Value="{DynamicResource M3ErrorContainer}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnErrorContainer}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="16,8" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="RenderTransform" Value="scale(1)" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.m3-danger-tonal /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3ErrorContainer}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnErrorContainer}" />
+  </Style>
+
+  <Style Selector="Button.m3-danger-tonal:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3ErrorContainerHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnErrorContainer}" />
+  </Style>
+
+  <Style Selector="Button.m3-danger-tonal:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.98)" />
+    <Setter Property="Opacity" Value="0.88" />
+  </Style>
+
+  <Style Selector="Button.m3-danger-tonal:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHighest}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceDisabled}" />
+  </Style>
+
+  <!-- Segmented pill buttons -->
+  <Style Selector="Button.m3-segmented">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceVariant}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="12,5" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.m3-segmented /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceVariant}" />
+  </Style>
+
+  <Style Selector="Button.m3-segmented:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+  </Style>
+
+  <Style Selector="Button.m3-segmented.m3-seg-active">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainer}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSecondaryContainer}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Button.m3-segmented.m3-seg-active /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainer}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSecondaryContainer}" />
+  </Style>
+
+  <Style Selector="Button.m3-segmented.m3-seg-active:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainerHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSecondaryContainer}" />
+  </Style>
+
+  <Style Selector="Button.m3-segmented.m3-seg-trash-active">
+    <Setter Property="Background" Value="{DynamicResource M3ErrorContainer}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnErrorContainer}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Button.m3-segmented.m3-seg-trash-active /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3ErrorContainer}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnErrorContainer}" />
+  </Style>
+
+  <Style Selector="Button.m3-segmented.m3-seg-trash-active:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3ErrorContainerHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnErrorContainer}" />
+  </Style>
+
+  <!-- Compact and icon modifiers -->
+  <Style Selector="Button.m3-compact">
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="12,5" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <Style Selector="Button.m3-icon">
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="MinWidth" Value="30" />
+    <Setter Property="Padding" Value="6" />
+    <Setter Property="CornerRadius" Value="20" />
+  </Style>
+
+  <!-- Sidebar pill navigation -->
+  <Style Selector="ListBox.m3-nav">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="ListBox.m3-nav > ListBoxItem">
+    <Setter Property="Padding" Value="11,9" />
+    <Setter Property="Margin" Value="0,2" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceVariant}" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+
+  <Style Selector="ListBox.m3-nav > ListBoxItem /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="ListBox.m3-nav > ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+  </Style>
+
+  <Style Selector="ListBox.m3-nav > ListBoxItem:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+  </Style>
+
+  <Style Selector="ListBox.m3-nav > ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainer}" />
+  </Style>
+
+  <Style Selector="ListBox.m3-nav > ListBoxItem:selected:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainerHover}" />
+  </Style>
+
+  <Style Selector="ListBox.m3-nav > ListBoxItem:selected">
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSecondaryContainer}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- File grid cards -->
+  <Style Selector="ListBox.m3-grid">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="ListBox.m3-grid > ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0,0,12,12" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="ListBox.m3-grid > ListBoxItem /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="ListBox.m3-grid > ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3OutlineVariant}" />
+  </Style>
+
+  <Style Selector="ListBox.m3-grid > ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainer}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3Primary}" />
+  </Style>
+
+  <Style Selector="ListBox.m3-grid > ListBoxItem:selected:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainerHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3Primary}" />
+  </Style>
+
+  <!-- Card list (sync rules, transfers) -->
+  <Style Selector="ListBox.m3-cards">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="ListBox.m3-cards > ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0,0,0,12" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainer}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+
+  <Style Selector="ListBox.m3-cards > ListBoxItem /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainer}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="ListBox.m3-cards > ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainer}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3OutlineVariant}" />
+  </Style>
+
+  <Style Selector="ListBox.m3-cards > ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3Primary}" />
+  </Style>
+
+  <Style Selector="ListBox.m3-cards > ListBoxItem:selected:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3Primary}" />
+  </Style>
+
+  <!-- Flat inset rows (file list, remote browser, activity logs) -->
+  <Style Selector="ListBox.m3-rows">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="ListBox.m3-rows > ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3DividerBrush}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+
+  <Style Selector="ListBox.m3-rows > ListBoxItem /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="ListBox.m3-rows > ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+  </Style>
+
+  <Style Selector="ListBox.m3-rows > ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainer}" />
+  </Style>
+
+  <Style Selector="ListBox.m3-rows > ListBoxItem:selected:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainerHover}" />
+  </Style>
+
+  <!-- Progress indicators -->
+  <Style Selector="ProgressBar">
+    <Setter Property="Height" Value="6" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHighest}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3Primary}" />
+  </Style>
+
+  <!-- Status icon animations -->
+  <Style Selector="PathIcon.m3-spinning">
+    <Setter Property="RenderTransform">
+      <RotateTransform />
+    </Setter>
+    <Style.Animations>
+      <Animation Duration="0:0:1.2" IterationCount="Infinite">
+        <KeyFrame Cue="0%">
+          <Setter Property="RotateTransform.Angle" Value="0" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="RotateTransform.Angle" Value="360" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+
+  <Style Selector="PathIcon.m3-upload-pulse">
+    <Setter Property="RenderTransform">
+      <TranslateTransform />
+    </Setter>
+    <Style.Animations>
+      <Animation Duration="0:0:0.85" IterationCount="Infinite">
+        <KeyFrame Cue="0%">
+          <Setter Property="TranslateTransform.Y" Value="3" />
+          <Setter Property="Opacity" Value="0.45" />
+        </KeyFrame>
+        <KeyFrame Cue="50%">
+          <Setter Property="TranslateTransform.Y" Value="-3" />
+          <Setter Property="Opacity" Value="1.0" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="TranslateTransform.Y" Value="3" />
+          <Setter Property="Opacity" Value="0.45" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+
+  <Style Selector="PathIcon.m3-download-pulse">
+    <Setter Property="RenderTransform">
+      <TranslateTransform />
+    </Setter>
+    <Style.Animations>
+      <Animation Duration="0:0:0.85" IterationCount="Infinite">
+        <KeyFrame Cue="0%">
+          <Setter Property="TranslateTransform.Y" Value="-3" />
+          <Setter Property="Opacity" Value="0.45" />
+        </KeyFrame>
+        <KeyFrame Cue="50%">
+          <Setter Property="TranslateTransform.Y" Value="3" />
+          <Setter Property="Opacity" Value="1.0" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="TranslateTransform.Y" Value="-3" />
+          <Setter Property="Opacity" Value="0.45" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+
+  <Style Selector="PathIcon.m3-delete-pulse">
+    <Setter Property="RenderTransform">
+      <TranslateTransform />
+    </Setter>
+    <Style.Animations>
+      <Animation Duration="0:0:0.55" IterationCount="Infinite">
+        <KeyFrame Cue="0%">
+          <Setter Property="TranslateTransform.X" Value="-2.5" />
+          <Setter Property="Opacity" Value="0.6" />
+        </KeyFrame>
+        <KeyFrame Cue="25%">
+          <Setter Property="TranslateTransform.X" Value="2.5" />
+          <Setter Property="Opacity" Value="1.0" />
+        </KeyFrame>
+        <KeyFrame Cue="50%">
+          <Setter Property="TranslateTransform.X" Value="-2.5" />
+          <Setter Property="Opacity" Value="0.8" />
+        </KeyFrame>
+        <KeyFrame Cue="75%">
+          <Setter Property="TranslateTransform.X" Value="2.5" />
+          <Setter Property="Opacity" Value="1.0" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="TranslateTransform.X" Value="-2.5" />
+          <Setter Property="Opacity" Value="0.6" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+
+  <Style Selector="PathIcon.m3-error-pulse">
+    <Setter Property="RenderTransform">
+      <TranslateTransform />
+    </Setter>
+    <Style.Animations>
+      <Animation Duration="0:0:0.75" IterationCount="Infinite">
+        <KeyFrame Cue="0%">
+          <Setter Property="TranslateTransform.X" Value="0" />
+          <Setter Property="Opacity" Value="0.55" />
+        </KeyFrame>
+        <KeyFrame Cue="20%">
+          <Setter Property="TranslateTransform.X" Value="-2.5" />
+          <Setter Property="Opacity" Value="1.0" />
+        </KeyFrame>
+        <KeyFrame Cue="40%">
+          <Setter Property="TranslateTransform.X" Value="2.5" />
+          <Setter Property="Opacity" Value="1.0" />
+        </KeyFrame>
+        <KeyFrame Cue="60%">
+          <Setter Property="TranslateTransform.X" Value="-1.5" />
+          <Setter Property="Opacity" Value="0.9" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="TranslateTransform.X" Value="0" />
+          <Setter Property="Opacity" Value="0.55" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+
+  <!-- Native Fluent input and popup overrides -->
+  <Style Selector="ComboBox">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3OutlineVariant}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="FontSize" Value="12.5" />
+  </Style>
+
+  <Style Selector="ComboBox:pointerover /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3Outline}" />
+  </Style>
+
+  <Style Selector="ComboBoxItem">
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Margin" Value="4,2" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+  </Style>
+
+  <Style Selector="ComboBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource M3SecondaryContainer}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSecondaryContainer}" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+
+  <Style Selector="ContextMenu">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3OutlineVariant}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Padding" Value="6" />
+  </Style>
+
+  <Style Selector="MenuItem">
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+  </Style>
+
+  <Style Selector="TextBox">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3OutlineVariant}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+    <Setter Property="Padding" Value="12,8" />
+  </Style>
+
+  <Style Selector="NumericUpDown">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3OutlineVariant}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+  </Style>
+
+</Styles>

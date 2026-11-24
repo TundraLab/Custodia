@@ -81,10 +81,10 @@ public sealed partial class AccountsViewModel : ViewModelBase
     private string _storageAlertMessage = string.Empty;
 
     [ObservableProperty]
-    private IBrush _storageProgressBrush = SolidColorBrush.Parse("#3B82F6");
+    private IBrush _storageProgressBrush = SolidColorBrush.Parse("#A8C7FA");
 
     [ObservableProperty]
-    private IBrush _storageAlertTextBrush = SolidColorBrush.Parse("#D29922");
+    private IBrush _storageAlertTextBrush = SolidColorBrush.Parse("#F5C26B");
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasAccountAvatar))]
@@ -297,13 +297,13 @@ public sealed partial class AccountsViewModel : ViewModelBase
                     ? Loc.Format("StorageWarningFmt", account.Quota.UsagePercentage)
                     : string.Empty;
             StorageProgressBrush = IsStorageFull
-                ? SolidColorBrush.Parse("#EF4444")
+                ? SolidColorBrush.Parse("#F28B82")
                 : HasStorageAlert
-                    ? SolidColorBrush.Parse("#D29922")
-                    : SolidColorBrush.Parse("#3B82F6");
+                    ? SolidColorBrush.Parse("#F5C26B")
+                    : SolidColorBrush.Parse("#A8C7FA");
             StorageAlertTextBrush = IsStorageFull
-                ? SolidColorBrush.Parse("#F87171")
-                : SolidColorBrush.Parse("#D29922");
+                ? SolidColorBrush.Parse("#FFB4AB")
+                : SolidColorBrush.Parse("#F5C26B");
         }
         else
         {
@@ -319,7 +319,7 @@ public sealed partial class AccountsViewModel : ViewModelBase
             IsStorageFull = false;
             HasStorageAlert = false;
             StorageAlertMessage = string.Empty;
-            StorageProgressBrush = SolidColorBrush.Parse("#3B82F6");
+            StorageProgressBrush = SolidColorBrush.Parse("#A8C7FA");
             DriveBarWidth = 0;
             OtherBarWidth = 0;
             TrashBarWidth = 0;

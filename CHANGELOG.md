@@ -2,6 +2,14 @@
 
 Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [3.0.0] - 2026-11-24
+
+### Alterado
+- **Identidade visual Material Design 3 (Dark Blue):** novo tema `Material3Theme.axaml` com tokens `DynamicResource`, elevação tonal sem bordas pesadas, botões pílula (`m3-filled`, `m3-tonal`, `m3-outlined`), controles segmentados, listas agrupadas estilo GNOME/M3 em **Configurações**, **Contas**, **Sobre** e **Logs**, além de paleta semântica harmonizada em todos os ViewModels.
+
+### Adicionado
+- **Política de Privacidade, Termos de Uso e consentimento inicial:** adição de `PRIVACY.md` e `TERMS.md`, modal de revisão e aceite inicial no primeiro uso (com acesso contínuo na aba **Sobre**) e opt-in explícito para e-mails transacionais.
+
 ## [2.9.2] - 2026-11-24
 
 ### Alterado

@@ -70,15 +70,15 @@ public sealed partial class SettingsAccountItemViewModel : ObservableObject
         if (jsonMeta is null)
         {
             JsonBadgeText = loc.Text("CredentialsMissingBadge");
-            JsonBadgeBgBrush = SolidColorBrush.Parse("#3B1D1D");
-            JsonBadgeFgBrush = SolidColorBrush.Parse("#FCA5A5");
+            JsonBadgeBgBrush = SolidColorBrush.Parse("#4A1C20");
+            JsonBadgeFgBrush = SolidColorBrush.Parse("#FFDAD6");
             JsonDetailText = loc.Text("AccountJsonMissingDetail");
         }
         else if (jsonMeta.IsPerAccount)
         {
             JsonBadgeText = loc.Text("AccountJsonCustomBadge");
-            JsonBadgeBgBrush = SolidColorBrush.Parse("#172B3F");
-            JsonBadgeFgBrush = SolidColorBrush.Parse("#93C5FD");
+            JsonBadgeBgBrush = SolidColorBrush.Parse("#374955");
+            JsonBadgeFgBrush = SolidColorBrush.Parse("#D3E4F3");
             JsonDetailText = string.IsNullOrWhiteSpace(jsonMeta.ProjectId)
                 ? jsonMeta.MaskedClientId
                 : $"{jsonMeta.ProjectId} • {jsonMeta.MaskedClientId}";
@@ -86,8 +86,8 @@ public sealed partial class SettingsAccountItemViewModel : ObservableObject
         else
         {
             JsonBadgeText = loc.Text("AccountJsonGlobalBadge");
-            JsonBadgeBgBrush = SolidColorBrush.Parse("#1F2937");
-            JsonBadgeFgBrush = SolidColorBrush.Parse("#CBD5E1");
+            JsonBadgeBgBrush = SolidColorBrush.Parse("#282A2F");
+            JsonBadgeFgBrush = SolidColorBrush.Parse("#C4C6D0");
             JsonDetailText = string.IsNullOrWhiteSpace(jsonMeta.ProjectId)
                 ? jsonMeta.MaskedClientId
                 : $"{jsonMeta.ProjectId} • {jsonMeta.MaskedClientId}";
@@ -315,16 +315,16 @@ public sealed partial class SettingsViewModel : ViewModelBase
     public bool HasCredentialsFeedback => !string.IsNullOrWhiteSpace(CredentialsFeedbackMessage);
 
     public IBrush CredentialsFeedbackBgBrush => IsCredentialsFeedbackError
-        ? SolidColorBrush.Parse("#2A1215")
-        : SolidColorBrush.Parse("#102A22");
+        ? SolidColorBrush.Parse("#4A1C20")
+        : SolidColorBrush.Parse("#1B3927");
 
     public IBrush CredentialsFeedbackBorderBrush => IsCredentialsFeedbackError
-        ? SolidColorBrush.Parse("#B91C1C")
-        : SolidColorBrush.Parse("#166534");
+        ? SolidColorBrush.Parse("#F28B82")
+        : SolidColorBrush.Parse("#6DD58C");
 
     public IBrush CredentialsFeedbackTextBrush => IsCredentialsFeedbackError
-        ? SolidColorBrush.Parse("#FECACA")
-        : SolidColorBrush.Parse("#A7F3D0");
+        ? SolidColorBrush.Parse("#FFDAD6")
+        : SolidColorBrush.Parse("#B8F3C8");
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanRevokeCredentialsJson))]
