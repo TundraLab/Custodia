@@ -23,8 +23,8 @@
 
 ## Qualidade
 
-- **Build local:** compilação limpa em `.NET 10.0` (`Custodia.sln` — `Custodia.Core`, `Custodia.Api`, `Custodia.Desktop` e pacotes `x86_64` `.rpm` / `.AppImage`)
-- **Suíte de testes:** **53 testes unitários xUnit aprovados (`0` falhas)** via `dotnet test Custodia.sln` cobrindo sincronização, fila de transferências, persistência SQLite, isolamento de contas OAuth2, atualizador, sanitização de suporte e envio de ciclo de vida
+- **Build e distribuição:** compilação limpa em `.NET 10.0` para Linux `x86_64` com empacotamento nativo `.rpm` e `.AppImage` verificado por SHA-256
+- **Suíte de testes:** **53 testes unitários xUnit aprovados (`0` falhas)** cobrindo motor de sincronização, fila de transferências, persistência SQLite, isolamento de contas OAuth2, atualizador, sanitização de suporte e e-mails de ciclo de vida
 - **Plataforma principal:** Linux `x86_64` (Fedora Workstation/KDE, Pop!_OS GNOME/COSMIC e KDE Plasma 5/6)
 - **Documentação técnica:** OpenAPI `3.0.3` em tempo real (`GET /api/v1/openapi.json`), guia [docs/API.md](docs/API.md), [Custodia-API.pdf](Custodia-API.pdf) e histórico completo em [CHANGELOG.md](CHANGELOG.md)
 
@@ -57,39 +57,39 @@
 - **Personalização de pastas (cor, símbolo e apelido):** personalize diretamente com o botão direito em **Meus Arquivos** ou na aba **Pastas de Sincronização**, com cores e ícones preservados entre sessões.
 - **Pré-visualização multimídia integrada:** imagens, vídeos (miniatura, duração e player), áudios (forma de onda e player interno), PDFs com navegação por páginas, documentos Office (`DOCX`, `XLSX`, `PPTX`, `ODT`, `ODS`, `ODP`), arquivos Google Workspace e texto/código.
 - **Fila e ícone dinâmico na bandeja sem travamento:** fila sem teto de 200 itens, histórico expandido, banners animados em falhas de upload/download e ícone pulsante na barra superior que cresce e troca de cor/símbolo conforme o estado (`↑` upload azul, `↓` download verde, `✕` exclusão vermelho, `↻` sincronização e `!` erro), sincronizado com o menu nativo sem congelar status antigos.
-- **Sincronização flexível por pasta:** modo **Bidirecional (`PC <-> Drive`)** ou **Backup Unidirecional (`PC -> Drive`)**, mapeamento múltiplo preservando nomes e subpastas vazias, validação por hash MD5/SHA256, política de conflitos, padrões ignorados e monitoramento em tempo real com `FileSystemWatcher`.
+- **Sincronização flexível por pasta:** modo **Bidirecional (`PC <-> Drive`)** ou **Backup Unidirecional (`PC -> Drive`)**, mapeamento múltiplo preservando nomes e subpastas vazias, validação por hash MD5/SHA256, política de conflitos, padrões ignorados e monitoramento contínuo de alterações locais em tempo real.
 - **Lixeira segura:** exclusões em pastas sincronizadas enviam os itens para a Lixeira do Google Drive (ou para a Lixeira FreeDesktop do sistema compatível com GNOME Files e KDE Dolphin); exclusões permanentes ocorrem apenas manualmente na Lixeira.
 - **Gestão avançada de múltiplas contas:** pastas dedicadas e legíveis por e-mail em `~/.config/custodia/contas/<email>/` (`credentials.json`, `conta.json` e `pastas-sincronizadas.json`), detecção automática de `client_secret_*.json` em `~/Downloads`, importação por arrastar e soltar em Configurações, inspeção de `Project ID` / `Client ID`, alternância rápida, reconexão e preservação automática de pastas ao remover/readicionar uma conta (com opção explícita para excluir a configuração).
-- **Avisos de boas-vindas e revogação TundraLab:** envio opcional automático a partir de **`contato.tundralab@gmail.com`** via serviço Google Apps Script ([docs/apps-script/contato-tundralab-mailer.gs](docs/apps-script/contato-tundralab-mailer.gs)), sem precisar ativar a Gmail API nos projetos OAuth dos usuários.
+- **Avisos de boas-vindas e revogação TundraLab:** envio opcional automático a partir de **`contato.tundralab@gmail.com`** via serviço dedicado TundraLab, sem precisar ativar a Gmail API nos projetos OAuth dos usuários.
 - **Suporte e atualizações na aba Sobre:** verificação agendada de releases com proteção offline, formulário unificado com seletor **Bug / Erro** (`&labels=bug`) vs **Sugestão** (`&labels=enhancement`), diagnóstico técnico opcional e sanitizado apenas em relatórios de bug (prévia via **Ver dados** e limite seguro de URL preservando o log completo em **Copiar texto**).
 - **Idioma, zoom, RAM e som:** PT-BR e EN-US, zoom de 100% a 300% (`Ctrl++`, `Ctrl+-`, `Ctrl+0`), limpador periódico de RAM e 6 variações de toques sintetizados nas notificações D-Bus (ou modo silencioso).
 
 ## Arquitetura
 
 ```text
-  Avalonia UI (Custodia.Desktop — MVVM, Bandeja e Notificações)
+  Interface Desktop (Avalonia UI — MVVM, Bandeja e Notificações)
                           │
                           ▼
-   Custodia.Core (Sync Engine, OAuth2, Watcher, Hashes e Updater)
+   Núcleo de Sincronização (Sync Engine, OAuth2, Hashes e Updater)
      ├──▶ Google Drive API v3 (escopo drive direto da máquina do usuário)
-     ├──▶ SQLite + Dapper (~/.local/share/custodia/custodia.db)
-     ├──▶ Mailer TundraLab (Apps Script -> contato.tundralab@gmail.com)
-     └──▶ Custodia.Api (ASP.NET Core Minimal API + OpenAPI 3.0.3 em 127.0.0.1:5080)
+     ├──▶ SQLite local (~/.local/share/custodia/custodia.db)
+     ├──▶ Serviço de E-mail TundraLab (contato.tundralab@gmail.com)
+     └──▶ API REST Local (ASP.NET Core + OpenAPI 3.0.3 em 127.0.0.1:5080)
 ```
 
-- **`Custodia.Desktop`:** camada visual em Avalonia UI 11.3.8 (`CommunityToolkit.Mvvm`), gerenciamento de janela única (`SingleInstanceGuard`), ícone pulsante de bandeja via D-Bus/AppIndicator e pré-visualização multimídia.
-- **`Custodia.Core`:** motor de sincronização bidirecional e unidirecional, resolução de conflitos, verificação MD5/SHA256, observador de arquivos (`FileSystemWatcher`), cofre de credenciais por conta e atualizador via GitHub Releases.
-- **`Custodia.Api`:** servidor HTTP Minimal API embarcado em *loopback* local (`127.0.0.1`) expondo endpoints REST e schema OpenAPI `3.0.3` para integração segura com automações e agentes de IA.
-- **Fluxo de dados:** alterações locais detectadas pelo watcher ou varredura periódica são comparadas com o estado persistido no SQLite e aplicadas na Google Drive API v3; todas as operações alimentam a fila visual em tempo real e o histórico local.
+- **Camada Desktop:** interface em Avalonia UI 11.3.8 com padrão MVVM, instância única garantida, ícone dinâmico na bandeja via D-Bus/AppIndicator e pré-visualização multimídia.
+- **Núcleo de Sincronização:** motor bidirecional e unidirecional, resolução de conflitos, validação de integridade MD5/SHA256, monitoramento local contínuo, cofre OAuth2 por conta e verificador de atualizações oficiais.
+- **API REST Local:** servidor HTTP Minimal API embarcado em *loopback* local (`127.0.0.1`) expondo endpoints REST e schema OpenAPI `3.0.3` para integração segura com scripts locais e agentes de IA.
+- **Fluxo de dados:** mudanças locais ou remotas são comparadas com o estado persistido no SQLite e sincronizadas diretamente com a Google Drive API v3, atualizando em tempo real a fila de transferências e os registros locais.
 
 ## Decisões técnicas
 
-- **C# e `.NET 10.0`:** escolhido pela tipagem forte, excelente suporte a concorrência assíncrona (`SemaphoreSlim`, `PeriodicTimer`, `CancellationToken`) e capacidade de publicar binários *self-contained* rápidos para Linux `x86_64`.
-- **Avalonia UI (`11.3.8`):** escolhido para entregar uma UI fluida e consistente entre GNOME, COSMIC e KDE Plasma (X11 e Wayland) com *compiled bindings*, baixo consumo de memória e arquitetura MVVM testável.
-- **SQLite + Dapper:** escolhido por oferecer banco relacional local leve, transacional (ACID) e de latência mínima sem exigir serviço externo instalado no PC do usuário.
-- **Google Drive API v3 direta:** escolhida para que arquivos e tokens trafeguem somente entre o computador do usuário e o Google Drive, eliminando dependência de servidores intermediários.
-- **AppImage e RPM (`x86_64`):** `.rpm` oferece integração nativa via `dnf`/`rpm` no Fedora e derivados, enquanto o `.AppImage` garante execução universal em Ubuntu/Pop!_OS e outras distros sem exigir SDK ou runtime externo.
-- **API Local em `127.0.0.1:5080`:** restringe automações locais e agentes de IA à máquina do usuário, garantindo que scripts usem o cliente já autenticado sem manipular tokens OAuth diretamente nem abrir portas na rede local.
+- **C# e `.NET 10.0`:** escolhido pela tipagem forte, excelente suporte a concorrência assíncrona controlada e publicação *self-contained* estável para Linux `x86_64`.
+- **Avalonia UI (`11.3.8`):** escolhida para entregar uma UI fluida e consistente entre GNOME, COSMIC e KDE Plasma (X11 e Wayland) com baixo consumo de memória e arquitetura MVVM testável.
+- **SQLite + Dapper:** escolhidos por oferecerem banco relacional local leve, transacional (ACID) e de baixa latência sem exigir serviço externo instalado no PC do usuário.
+- **Google Drive API v3 direta:** escolhida para que arquivos e tokens trafeguem somente entre o computador do usuário e o Google Drive, sem servidores intermediários.
+- **AppImage e RPM (`x86_64`):** `.rpm` oferece integração nativa no Fedora e derivados, enquanto o `.AppImage` garante execução universal em Ubuntu/Pop!_OS e outras distros sem exigir SDK ou runtime externo.
+- **API Local em `127.0.0.1:5080`:** restringe automações e agentes de IA à própria máquina, permitindo operar arquivos sem expor tokens OAuth nem abrir portas na rede externa.
 
 ## Modos de sincronização
 
@@ -267,36 +267,6 @@ Guia completo com exemplos, schemas de Function Calling e cliente Python: **[Cus
 - `DELETE /api/v1/files/{remoteFileId}?permanent=true`: apaga definitivamente (ou envia para a Lixeira se omitir `permanent=true`).
 - `GET /api/v1/transfers`: lista transferências ativas e recentes.
 - `GET /api/v1/logs?limit=50`: consulta os logs de sincronização e ações.
-
-<details>
-<summary>Para desenvolvedores: compilar pelo código-fonte e estrutura do projeto</summary>
-
-### Requisitos e execução
-
-Instale o SDK `.NET 10.0` (`sudo dnf install dotnet-sdk-10.0` no Fedora ou `sudo apt install dotnet-sdk-10.0` no Pop!_OS/Ubuntu) e execute:
-
-```bash
-dotnet restore Custodia.sln
-dotnet build Custodia.sln
-dotnet test Custodia.sln
-dotnet run --project src/Custodia.Desktop/Custodia.Desktop.csproj
-```
-
-Para gerar os pacotes `.AppImage` e `.rpm` (`x86_64`) localmente em `dist/`:
-
-```bash
-./packaging/linux/build-rpm.sh
-./packaging/linux/build-appimage.sh
-```
-
-### Estrutura do código
-
-- `src/Custodia.Core`: modelos, SQLite com Dapper (`~/.local/share/custodia/custodia.db`), cliente Google Drive v3, fluxo OAuth2 (`0600`), cliente de e-mail TundraLab (`AppsScriptMailerClient`), watcher local (`FileSystemWatcher`) e verificação MD5/SHA256.
-- `src/Custodia.Api`: servidor ASP.NET Core Minimal API em `127.0.0.1:5080` para scripts locais e agentes de IA.
-- `src/Custodia.Desktop`: interface Avalonia UI 11.3.8 (MVVM com `CommunityToolkit.Mvvm`), menu de contexto completo em Meus Arquivos, ícone dinâmico da bandeja e notificações D-Bus.
-- `tests/Custodia.Tests`: suíte com 53 testes unitários xUnit.
-
-</details>
 
 ## Licença e Propriedade Intelectual
 
