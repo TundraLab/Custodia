@@ -105,9 +105,9 @@
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
               <TextBlock Classes="m3-section-title" Text="{Binding Loc.UpdatesSectionTitle}" />
-              <TextBlock Classes="m3-meta" FontSize="12.5" Text="{Binding InstalledModeSummary}" />
-              <TextBlock Classes="m3-meta" FontSize="11.5" Text="{Binding LastCheckSummary}" />
-              <TextBlock Classes="m3-meta" FontSize="11.5" Foreground="{DynamicResource M3Primary}" Text="{Binding UpdateScheduleSummary}" />
+              <TextBlock Classes="m3-meta" FontSize="12.5" TextWrapping="Wrap" Text="{Binding InstalledModeSummary}" />
+              <TextBlock Classes="m3-meta" FontSize="11.5" TextWrapping="Wrap" Text="{Binding LastCheckSummary}" />
+              <TextBlock Classes="m3-meta" FontSize="11.5" TextWrapping="Wrap" Foreground="{DynamicResource M3Primary}" Text="{Binding UpdateScheduleSummary}" />
             </StackPanel>
 
             <Button Grid.Column="1"
@@ -163,11 +163,15 @@
           <Border Classes="m3-card-inset"
                   HorizontalAlignment="Stretch"
                   IsVisible="{Binding HasReleaseNotes}">
-            <TextBlock FontSize="12.5"
-                       TextWrapping="Wrap"
-                       LineHeight="20"
-                       Foreground="{DynamicResource M3OnSurfaceVariant}"
-                       Text="{Binding LatestReleaseNotes}" />
+            <ScrollViewer MaxHeight="220"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+              <TextBlock FontSize="12.5"
+                         TextWrapping="Wrap"
+                         LineHeight="20"
+                         Foreground="{DynamicResource M3OnSurfaceVariant}"
+                         Text="{Binding LatestReleaseNotes}" />
+            </ScrollViewer>
           </Border>
         </StackPanel>
       </Border>

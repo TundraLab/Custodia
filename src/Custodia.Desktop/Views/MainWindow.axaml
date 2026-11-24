@@ -507,6 +507,7 @@
                          FontWeight="SemiBold"
                          Foreground="{DynamicResource M3OnSecondaryContainer}"
                          VerticalAlignment="Center"
+                         TextWrapping="Wrap"
                          Text="{Binding UpdateBannerText}" />
             </StackPanel>
             <Button Grid.Column="1"
