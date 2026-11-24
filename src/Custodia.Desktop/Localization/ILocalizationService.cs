@@ -224,6 +224,11 @@ public interface ILocalizationService : INotifyPropertyChanged
     string SuggestionTitleWatermark { get; }
     string SuggestionDescriptionLabel { get; }
     string SuggestionDescriptionWatermark { get; }
+    string FeedbackTypeBug { get; }
+    string FeedbackTypeSuggestion { get; }
+    string PreviewDiagnosticsButton { get; }
+    string HideDiagnosticsButton { get; }
+    string DiagnosticsPreviewHeader { get; }
 
     string NotificationSoundCheckbox { get; }
     string NotificationSoundToneLabel { get; }

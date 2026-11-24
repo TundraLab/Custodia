@@ -590,6 +590,97 @@ public sealed class Release290FeatureTests
         }
     }
 
+    [Fact]
+    public async Task AboutViewModel_SupportSelector_SanitizesOptionalDiagnostics_AndEnforcesUrlLimit()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"custodia-support-{Guid.NewGuid():N}");
+        var dbPath = Path.Combine(tempRoot, "custodia.db");
+        Directory.CreateDirectory(tempRoot);
+
+        try
+        {
+            var factory = new SqliteConnectionFactory(dbPath);
+            await DatabaseInitializer.InitializeAsync(factory);
+            var repo = new SqliteSyncStateRepository(factory);
+
+            for (var i = 0; i < 35; i++)
+            {
+                await repo.AddActivityLogAsync(new SyncActivityLog
+                {
+                    CreatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-i),
+                    Severity = i % 2 == 0 ? ActivitySeverity.Error : ActivitySeverity.Warning,
+                    Action = "UploadFailed",
+                    TargetPath = $"/home/gustavo/SecretDocs/item-{i}.pdf",
+                    Message = $"Falha #{i:D2} para privateuser{i}@gmail.com em /home/gustavo/Documentos/segredo-{i}.txt com detalhe extenso para testar corte seguro da URL"
+                });
+            }
+
+            var loc = new LocalizationService();
+            loc.SetLanguage("pt-BR");
+            var aboutVm = new AboutViewModel(loc, repository: repo);
+
+            Uri? openedUri = null;
+            string? copiedText = null;
+            aboutVm.OpenExternalUriCallback = uri =>
+            {
+                openedUri = uri;
+                return Task.CompletedTask;
+            };
+            aboutVm.CopyTextCallback = text =>
+            {
+                copiedText = text;
+                return Task.CompletedTask;
+            };
+
+            // Diagnostics are opt-in by default and bug labels are used
+            Assert.False(aboutVm.IncludeDiagnostics);
+            Assert.False(aboutVm.IsSuggestionMode);
+            Assert.Equal(loc.BugDescriptionLabel, aboutVm.FeedbackDescriptionLabel);
+
+            aboutVm.FeedbackTitle = "Pasta travada";
+            aboutVm.FeedbackDescription = "Teste reproduzível";
+            await aboutVm.SubmitFeedbackGitHubCommand.ExecuteAsync(null);
+            Assert.NotNull(openedUri);
+            Assert.Contains("labels=bug", openedUri!.Query);
+            Assert.DoesNotContain("Diagn%C3%B3stico", openedUri.Query);
+
+            // Switch to Suggestion mode updates label and description caption
+            aboutVm.SelectSuggestionModeCommand.Execute(null);
+            Assert.True(aboutVm.IsSuggestionMode);
+            Assert.Equal(loc.SuggestionDescriptionLabel, aboutVm.FeedbackDescriptionLabel);
+            await aboutVm.SubmitFeedbackGitHubCommand.ExecuteAsync(null);
+            Assert.Contains("labels=enhancement", openedUri.Query);
+
+            // Switch back to Bug, open preview and opt into diagnostics
+            aboutVm.SelectBugModeCommand.Execute(null);
+            aboutVm.IncludeDiagnostics = true;
+            await aboutVm.ToggleDiagnosticsPreviewCommand.ExecuteAsync(null);
+            Assert.True(aboutVm.IsDiagnosticsPreviewOpen);
+            Assert.Contains("[email]", aboutVm.DiagnosticsPreviewText);
+            Assert.Contains("/home/[user]", aboutVm.DiagnosticsPreviewText);
+            Assert.DoesNotContain("privateuser0@gmail.com", aboutVm.DiagnosticsPreviewText);
+            Assert.DoesNotContain("/home/gustavo", aboutVm.DiagnosticsPreviewText);
+
+            // URL enforces safe length while Copy keeps full log details
+            aboutVm.FeedbackDescription = new string('A', 4500);
+            await aboutVm.SubmitFeedbackGitHubCommand.ExecuteAsync(null);
+            Assert.True(openedUri.AbsoluteUri.Length <= AboutViewModel.MaxGitHubIssueUrlLength);
+
+            aboutVm.FeedbackDescription = "Descrição curta";
+            await aboutVm.CopyFeedbackCommand.ExecuteAsync(null);
+            Assert.NotNull(copiedText);
+            Assert.Contains("Falha #34", copiedText);
+            Assert.DoesNotContain("privateuser34@gmail.com", copiedText);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
     private static async Task WaitForAlertCountAsync(MockAccountFlowDriveClientProxy proxy, int expectedCount)
     {
         var deadline = DateTime.UtcNow.AddSeconds(2);

@@ -165,75 +165,114 @@
               <TextBlock Classes="MutedMeta" FontSize="12" Text="{Binding Loc.SupportSectionSubtitle}" TextWrapping="Wrap" />
             </StackPanel>
 
-            <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-              <Button Classes="SecondaryAction"
-                      Margin="0,0,8,4"
-                      Content="{Binding Loc.ReportBugButton}"
-                      Command="{Binding ToggleBugReportCommand}" />
-              <Button Classes="PrimaryAction"
-                      Margin="0,0,0,4"
-                      Content="{Binding Loc.SubmitSuggestionButton}"
-                      Command="{Binding ToggleSuggestionCommand}" />
-            </WrapPanel>
+            <Border Grid.Column="1"
+                    Background="#0B111E"
+                    BorderBrush="{StaticResource TundraBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="4"
+                    VerticalAlignment="Center">
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <Button Classes="PrimaryAction"
+                        Padding="12,6"
+                        IsVisible="{Binding IsBugMode}"
+                        Content="{Binding Loc.FeedbackTypeBug}"
+                        Command="{Binding SelectBugModeCommand}" />
+                <Button Classes="SecondaryAction"
+                        Padding="12,6"
+                        IsVisible="{Binding IsSuggestionMode}"
+                        Content="{Binding Loc.FeedbackTypeBug}"
+                        Command="{Binding SelectBugModeCommand}" />
+                <Button Classes="PrimaryAction"
+                        Padding="12,6"
+                        IsVisible="{Binding IsSuggestionMode}"
+                        Content="{Binding Loc.FeedbackTypeSuggestion}"
+                        Command="{Binding SelectSuggestionModeCommand}" />
+                <Button Classes="SecondaryAction"
+                        Padding="12,6"
+                        IsVisible="{Binding IsBugMode}"
+                        Content="{Binding Loc.FeedbackTypeSuggestion}"
+                        Command="{Binding SelectSuggestionModeCommand}" />
+              </StackPanel>
+            </Border>
           </Grid>
 
-          <!-- Formulário: Reportar erro -->
+          <!-- Formulário unificado de suporte (Bug / Sugestão) -->
           <Border Classes="FlatRow"
                   Background="#13171F"
-                  Padding="14"
-                  IsVisible="{Binding IsBugReportOpen}">
+                  Padding="14">
             <StackPanel Spacing="10">
-              <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding Loc.BugTitleLabel}" />
-              <TextBox Watermark="{Binding Loc.BugTitleWatermark}" Text="{Binding BugTitle}" />
-              <TextBlock FontSize="12.5" FontWeight="Medium" Text="{Binding Loc.BugDescriptionLabel}" />
-              <TextBox AcceptsReturn="True"
-                       Height="86"
-                       TextWrapping="Wrap"
-                       Watermark="{Binding Loc.BugDescriptionWatermark}"
-                       Text="{Binding BugDescription}" />
-              <WrapPanel Orientation="Horizontal">
-                <Button Classes="PrimaryAction"
-                        Margin="0,0,8,4"
-                        Content="{Binding Loc.OpenGitHubIssueButton}"
-                        Command="{Binding SubmitBugReportGitHubCommand}" />
-                <Button Classes="SecondaryAction"
-                        Margin="0,0,0,4"
-                        Content="{Binding Loc.CopyReportButton}"
-                        Command="{Binding CopyBugReportCommand}" />
-              </WrapPanel>
-            </StackPanel>
-          </Border>
-
-          <!-- Formulário: Enviar sugestão futura -->
-          <Border Classes="FlatRow"
-                  Background="#13171F"
-                  Padding="14"
-                  IsVisible="{Binding IsSuggestionOpen}">
-            <StackPanel Spacing="10">
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                <TextBlock Grid.Column="0" FontSize="12.5" FontWeight="Medium" VerticalAlignment="Center" Text="{Binding Loc.SuggestionCategoryLabel}" />
+              <Grid ColumnDefinitions="*,Auto"
+                    ColumnSpacing="12"
+                    IsVisible="{Binding IsSuggestionMode}">
+                <TextBlock Grid.Column="0"
+                           FontSize="12.5"
+                           FontWeight="Medium"
+                           VerticalAlignment="Center"
+                           Text="{Binding Loc.SuggestionCategoryLabel}" />
                 <ComboBox Grid.Column="1"
                           Width="240"
                           ItemsSource="{Binding SuggestionCategories}"
                           SelectedIndex="{Binding SelectedSuggestionCategoryIndex}" />
               </Grid>
-              <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding Loc.SuggestionTitleLabel}" />
-              <TextBox Watermark="{Binding Loc.SuggestionTitleWatermark}" Text="{Binding SuggestionTitle}" />
-              <TextBlock FontSize="12.5" FontWeight="Medium" Text="{Binding Loc.SuggestionDescriptionLabel}" />
+
+              <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding FeedbackTitleLabel}" />
+              <TextBox Watermark="{Binding FeedbackTitleWatermark}" Text="{Binding FeedbackTitle}" />
+
+              <TextBlock FontSize="12.5" FontWeight="Medium" Text="{Binding FeedbackDescriptionLabel}" />
               <TextBox AcceptsReturn="True"
-                       Height="86"
+                       Height="88"
                        TextWrapping="Wrap"
-                       Watermark="{Binding Loc.SuggestionDescriptionWatermark}"
-                       Text="{Binding SuggestionDescription}" />
+                       Watermark="{Binding FeedbackDescriptionWatermark}"
+                       Text="{Binding FeedbackDescription}" />
+
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <CheckBox Grid.Column="0"
+                          VerticalAlignment="Center"
+                          IsChecked="{Binding IncludeDiagnostics}"
+                          Content="{Binding Loc.BugIncludeDiagnosticsCheckbox}" />
+                <Button Grid.Column="1"
+                        Classes="SecondaryAction"
+                        Padding="10,4"
+                        FontSize="12"
+                        VerticalAlignment="Center"
+                        Content="{Binding PreviewDiagnosticsButtonText}"
+                        Command="{Binding ToggleDiagnosticsPreviewCommand}" />
+              </Grid>
+
+              <Border Classes="FlatRow"
+                      Background="#0B111E"
+                      BorderBrush="{StaticResource TundraBorderBrush}"
+                      BorderThickness="1"
+                      Padding="10"
+                      IsVisible="{Binding IsDiagnosticsPreviewOpen}">
+                <StackPanel Spacing="6">
+                  <TextBlock Classes="MutedMeta"
+                             FontSize="11.5"
+                             TextWrapping="Wrap"
+                             Text="{Binding Loc.DiagnosticsPreviewHeader}" />
+                  <ScrollViewer MaxHeight="150"
+                                HorizontalScrollBarVisibility="Disabled"
+                                VerticalScrollBarVisibility="Auto">
+                    <TextBlock FontFamily="Consolas,Liberation Mono,Menlo,monospace"
+                               FontSize="11.5"
+                               LineHeight="17"
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource TundraTextSecondary}"
+                               Text="{Binding DiagnosticsPreviewText}" />
+                  </ScrollViewer>
+                </StackPanel>
+              </Border>
+
               <WrapPanel Orientation="Horizontal">
                 <Button Classes="PrimaryAction"
                         Margin="0,0,8,4"
                         Content="{Binding Loc.OpenGitHubIssueButton}"
-                        Command="{Binding SubmitSuggestionGitHubCommand}" />
+                        Command="{Binding SubmitFeedbackGitHubCommand}" />
                 <Button Classes="SecondaryAction"
                         Margin="0,0,0,4"
                         Content="{Binding Loc.CopyReportButton}"
-                        Command="{Binding CopySuggestionCommand}" />
+                        Command="{Binding CopyFeedbackCommand}" />
               </WrapPanel>
             </StackPanel>
           </Border>

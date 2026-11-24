@@ -449,15 +449,21 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["SuggestionCategoryLabel"] = "Categoria",
         ["SuggestionTitleLabel"] = "Título da sugestão",
         ["SuggestionTitleWatermark"] = "Ex: nova opção para pastas ou atalho...",
-        ["SuggestionDescriptionLabel"] = "Detalhes da recomendação",
-        ["SuggestionDescriptionWatermark"] = "Explique como essa melhoria ajudaria no seu dia a dia...",
+        ["SuggestionDescriptionLabel"] = "Benefício esperado e detalhes da sugestão",
+        ["SuggestionDescriptionWatermark"] = "Explique o caso de uso e como essa melhoria ajudaria no dia a dia...",
         ["SuggestionCatFeature"] = "Nova funcionalidade",
         ["SuggestionCatSync"] = "Sincronização e pastas",
         ["SuggestionCatInterface"] = "Interface e usabilidade",
         ["SuggestionCatIntegration"] = "Integrações Linux / API",
+        ["FeedbackTypeBug"] = "Bug / Erro",
+        ["FeedbackTypeSuggestion"] = "Sugestão",
+        ["PreviewDiagnosticsButton"] = "Ver dados",
+        ["HideDiagnosticsButton"] = "Ocultar dados",
+        ["DiagnosticsPreviewHeader"] = "Prévia dos dados técnicos (nenhum e-mail, usuário ou caminho pessoal é enviado):",
         ["FeedbackValidationHint"] = "Preencha pelo menos o título ou a descrição antes de continuar.",
         ["FeedbackCopiedStatus"] = "Texto copiado para a área de transferência.",
         ["FeedbackOpenedStatus"] = "Formulário aberto no GitHub Issues.",
+        ["FeedbackUrlTrimmedStatus"] = "Formulário aberto no GitHub Issues (log resumido para caber na URL; use 'Copiar texto' para o log completo).",
 
         ["NotificationSoundCheckbox"] = "Reproduzir som ao exibir notificação",
         ["NotificationSoundToneLabel"] = "Toque da notificação",
@@ -968,15 +974,21 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["SuggestionCategoryLabel"] = "Category",
         ["SuggestionTitleLabel"] = "Suggestion title",
         ["SuggestionTitleWatermark"] = "e.g., new folder option or shortcut...",
-        ["SuggestionDescriptionLabel"] = "Recommendation details",
-        ["SuggestionDescriptionWatermark"] = "Describe how this improvement would help your workflow...",
+        ["SuggestionDescriptionLabel"] = "Expected benefit and suggestion details",
+        ["SuggestionDescriptionWatermark"] = "Describe the use case and how this improvement would help your workflow...",
         ["SuggestionCatFeature"] = "New feature",
         ["SuggestionCatSync"] = "Sync & folders",
         ["SuggestionCatInterface"] = "UI & usability",
         ["SuggestionCatIntegration"] = "Linux integrations / API",
+        ["FeedbackTypeBug"] = "Bug / Issue",
+        ["FeedbackTypeSuggestion"] = "Suggestion",
+        ["PreviewDiagnosticsButton"] = "View data",
+        ["HideDiagnosticsButton"] = "Hide data",
+        ["DiagnosticsPreviewHeader"] = "Technical data preview (no emails, username, or personal paths included):",
         ["FeedbackValidationHint"] = "Please enter at least a title or description before submitting.",
         ["FeedbackCopiedStatus"] = "Text copied to clipboard.",
         ["FeedbackOpenedStatus"] = "Pre-filled form opened on GitHub Issues.",
+        ["FeedbackUrlTrimmedStatus"] = "GitHub Issues opened (log trimmed to fit URL limits; use 'Copy text' for the full log).",
 
         ["NotificationSoundCheckbox"] = "Play sound when showing notification",
         ["NotificationSoundToneLabel"] = "Notification tone",
@@ -1306,6 +1318,11 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string SuggestionTitleWatermark => Text("SuggestionTitleWatermark");
     public string SuggestionDescriptionLabel => Text("SuggestionDescriptionLabel");
     public string SuggestionDescriptionWatermark => Text("SuggestionDescriptionWatermark");
+    public string FeedbackTypeBug => Text("FeedbackTypeBug");
+    public string FeedbackTypeSuggestion => Text("FeedbackTypeSuggestion");
+    public string PreviewDiagnosticsButton => Text("PreviewDiagnosticsButton");
+    public string HideDiagnosticsButton => Text("HideDiagnosticsButton");
+    public string DiagnosticsPreviewHeader => Text("DiagnosticsPreviewHeader");
 
     public string NotificationSoundCheckbox => Text("NotificationSoundCheckbox");
     public string NotificationSoundToneLabel => Text("NotificationSoundToneLabel");

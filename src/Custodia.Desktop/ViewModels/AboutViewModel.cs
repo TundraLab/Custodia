@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Avalonia.Media;
@@ -78,30 +79,44 @@ public sealed partial class AboutViewModel : ViewModelBase
     public IBrush UpdateStatusBrush => IsUpdateError ? BrushError : BrushPrimary;
 
     [ObservableProperty]
-    private bool _isBugReportOpen;
+    [NotifyPropertyChangedFor(nameof(IsBugMode))]
+    [NotifyPropertyChangedFor(nameof(FeedbackTitleLabel))]
+    [NotifyPropertyChangedFor(nameof(FeedbackTitleWatermark))]
+    [NotifyPropertyChangedFor(nameof(FeedbackDescriptionLabel))]
+    [NotifyPropertyChangedFor(nameof(FeedbackDescriptionWatermark))]
+    private bool _isSuggestionMode;
+
+    public bool IsBugMode => !IsSuggestionMode;
 
     [ObservableProperty]
-    private string _bugTitle = string.Empty;
+    private string _feedbackTitle = string.Empty;
 
     [ObservableProperty]
-    private string _bugDescription = string.Empty;
-
-    [ObservableProperty]
-    private bool _isSuggestionOpen;
-
-    [ObservableProperty]
-    private string _suggestionTitle = string.Empty;
-
-    [ObservableProperty]
-    private string _suggestionDescription = string.Empty;
+    private string _feedbackDescription = string.Empty;
 
     [ObservableProperty]
     private int _selectedSuggestionCategoryIndex;
 
     [ObservableProperty]
+    private bool _includeDiagnostics;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PreviewDiagnosticsButtonText))]
+    private bool _isDiagnosticsPreviewOpen;
+
+    [ObservableProperty]
+    private string _diagnosticsPreviewText = string.Empty;
+
+    [ObservableProperty]
     private string _feedbackStatusMessage = string.Empty;
 
     public ObservableCollection<string> SuggestionCategories { get; } = [];
+
+    public string FeedbackTitleLabel => IsSuggestionMode ? Loc.SuggestionTitleLabel : Loc.BugTitleLabel;
+    public string FeedbackTitleWatermark => IsSuggestionMode ? Loc.SuggestionTitleWatermark : Loc.BugTitleWatermark;
+    public string FeedbackDescriptionLabel => IsSuggestionMode ? Loc.SuggestionDescriptionLabel : Loc.BugDescriptionLabel;
+    public string FeedbackDescriptionWatermark => IsSuggestionMode ? Loc.SuggestionDescriptionWatermark : Loc.BugDescriptionWatermark;
+    public string PreviewDiagnosticsButtonText => IsDiagnosticsPreviewOpen ? Loc.HideDiagnosticsButton : Loc.PreviewDiagnosticsButton;
 
     [ObservableProperty]
     private string _latestReleaseUrl = MainWindowViewModel.RepositoryUrl + "/releases/latest";
@@ -163,6 +178,11 @@ public sealed partial class AboutViewModel : ViewModelBase
             RefreshLastCheckSummary();
             RefreshUpdateScheduleSummary();
             OnPropertyChanged(nameof(CheckUpdatesButtonText));
+            OnPropertyChanged(nameof(FeedbackTitleLabel));
+            OnPropertyChanged(nameof(FeedbackTitleWatermark));
+            OnPropertyChanged(nameof(FeedbackDescriptionLabel));
+            OnPropertyChanged(nameof(FeedbackDescriptionWatermark));
+            OnPropertyChanged(nameof(PreviewDiagnosticsButtonText));
             RefreshLocalizedStatusFromCache();
         };
     }
@@ -512,132 +532,275 @@ public sealed partial class AboutViewModel : ViewModelBase
         SelectedSuggestionCategoryIndex = Math.Clamp(prevIndex, 0, SuggestionCategories.Count - 1);
     }
 
+    public const int MaxGitHubIssueUrlLength = 5800;
+
+    private static readonly Regex EmailRedactRegex = new(
+        @"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}",
+        RegexOptions.Compiled);
+
+    private static readonly Regex HomePathRedactRegex = new(
+        @"(/home/|/Users/)[^/\s]+",
+        RegexOptions.Compiled);
+
+    private static readonly Regex WindowsUserPathRedactRegex = new(
+        @"(C:\\Users\\)[^\\/\s]+",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     [RelayCommand]
-    private void ToggleBugReport()
+    private void SelectBugMode()
     {
-        IsBugReportOpen = !IsBugReportOpen;
-        if (IsBugReportOpen)
-        {
-            IsSuggestionOpen = false;
-        }
+        IsSuggestionMode = false;
         FeedbackStatusMessage = string.Empty;
     }
 
     [RelayCommand]
-    private void ToggleSuggestion()
+    private void SelectSuggestionMode()
     {
-        IsSuggestionOpen = !IsSuggestionOpen;
-        if (IsSuggestionOpen)
-        {
-            IsBugReportOpen = false;
-        }
+        IsSuggestionMode = true;
         FeedbackStatusMessage = string.Empty;
     }
 
-    [RelayCommand]
-    private async Task SubmitBugReportGitHubAsync()
+    partial void OnIncludeDiagnosticsChanged(bool value)
     {
-        if (string.IsNullOrWhiteSpace(BugTitle) && string.IsNullOrWhiteSpace(BugDescription))
+        if (IsDiagnosticsPreviewOpen)
+        {
+            _ = RefreshDiagnosticsPreviewAsync();
+        }
+    }
+
+    [RelayCommand]
+    private async Task ToggleDiagnosticsPreviewAsync()
+    {
+        IsDiagnosticsPreviewOpen = !IsDiagnosticsPreviewOpen;
+        if (IsDiagnosticsPreviewOpen)
+        {
+            await RefreshDiagnosticsPreviewAsync();
+        }
+    }
+
+    private async Task RefreshDiagnosticsPreviewAsync()
+    {
+        DiagnosticsPreviewText = await BuildSanitizedDiagnosticsMarkdownAsync(maxLogLines: 20);
+    }
+
+    [RelayCommand]
+    public async Task SubmitFeedbackGitHubAsync()
+    {
+        if (string.IsNullOrWhiteSpace(FeedbackTitle) && string.IsNullOrWhiteSpace(FeedbackDescription))
         {
             FeedbackStatusMessage = Loc.Text("FeedbackValidationHint");
             return;
         }
 
-        var title = string.IsNullOrWhiteSpace(BugTitle) ? "[Bug] Custódia" : $"[Bug] {BugTitle.Trim()}";
-        var body = await BuildBugReportMarkdownAsync();
-        await OpenGitHubIssueAsync(title, body, "bug");
-    }
-
-    [RelayCommand]
-    private async Task CopyBugReportAsync()
-    {
-        if (string.IsNullOrWhiteSpace(BugTitle) && string.IsNullOrWhiteSpace(BugDescription))
-        {
-            FeedbackStatusMessage = Loc.Text("FeedbackValidationHint");
-            return;
-        }
-
-        var title = string.IsNullOrWhiteSpace(BugTitle) ? "[Bug] Custódia" : $"[Bug] {BugTitle.Trim()}";
-        var body = $"# {title}\n\n{await BuildBugReportMarkdownAsync()}";
-        if (CopyTextCallback is not null)
-        {
-            await CopyTextCallback.Invoke(body);
-            FeedbackStatusMessage = Loc.Text("FeedbackCopiedStatus");
-        }
-    }
-
-    [RelayCommand]
-    private async Task SubmitSuggestionGitHubAsync()
-    {
-        if (string.IsNullOrWhiteSpace(SuggestionTitle) && string.IsNullOrWhiteSpace(SuggestionDescription))
-        {
-            FeedbackStatusMessage = Loc.Text("FeedbackValidationHint");
-            return;
-        }
-
-        var category = SelectedSuggestionCategoryIndex >= 0 && SelectedSuggestionCategoryIndex < SuggestionCategories.Count
-            ? SuggestionCategories[SelectedSuggestionCategoryIndex]
-            : Loc.Text("SuggestionCatFeature");
-        var title = string.IsNullOrWhiteSpace(SuggestionTitle)
-            ? $"[Sugestão] {category}"
-            : $"[Sugestão] {SuggestionTitle.Trim()}";
-        var body = BuildSuggestionMarkdown(category);
-        await OpenGitHubIssueAsync(title, body, "enhancement");
-    }
-
-    [RelayCommand]
-    private async Task CopySuggestionAsync()
-    {
-        if (string.IsNullOrWhiteSpace(SuggestionTitle) && string.IsNullOrWhiteSpace(SuggestionDescription))
-        {
-            FeedbackStatusMessage = Loc.Text("FeedbackValidationHint");
-            return;
-        }
-
-        var category = SelectedSuggestionCategoryIndex >= 0 && SelectedSuggestionCategoryIndex < SuggestionCategories.Count
-            ? SuggestionCategories[SelectedSuggestionCategoryIndex]
-            : Loc.Text("SuggestionCatFeature");
-        var title = string.IsNullOrWhiteSpace(SuggestionTitle)
-            ? $"[Sugestão] {category}"
-            : $"[Sugestão] {SuggestionTitle.Trim()}";
-        var body = $"# {title}\n\n{BuildSuggestionMarkdown(category)}";
-        if (CopyTextCallback is not null)
-        {
-            await CopyTextCallback.Invoke(body);
-            FeedbackStatusMessage = Loc.Text("FeedbackCopiedStatus");
-        }
-    }
-
-    private string BuildSuggestionMarkdown(string category)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine($"**Categoria:** {category}");
-        sb.AppendLine($"**Versão:** Custódia v{AppVersionInfo.CurrentVersion}");
-        sb.AppendLine();
-        sb.AppendLine("## Descrição da sugestão");
-        sb.AppendLine(string.IsNullOrWhiteSpace(SuggestionDescription) ? "(sem detalhes)" : SuggestionDescription.Trim());
-        return sb.ToString();
-    }
-
-    private Task<string> BuildBugReportMarkdownAsync()
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("## O que aconteceu");
-        sb.AppendLine(string.IsNullOrWhiteSpace(BugDescription) ? "(descreva o comportamento observado)" : BugDescription.Trim());
-        return Task.FromResult(sb.ToString());
-    }
-
-    private async Task OpenGitHubIssueAsync(string title, string body, string label)
-    {
         if (OpenExternalUriCallback is null)
         {
             return;
         }
 
-        const int maxBodyLen = 3200;
-        var truncatedBody = body.Length > maxBodyLen ? body[..maxBodyLen] + "\n..." : body;
-        var url = $"{RepositoryUrl}/issues/new?labels={Uri.EscapeDataString(label)}&title={Uri.EscapeDataString(title)}&body={Uri.EscapeDataString(truncatedBody)}";
+        var (title, label) = BuildIssueTitleAndLabel();
+        var body = await BuildFeedbackMarkdownAsync(maxLogLines: 20);
+        var url = BuildGitHubIssueUrl(title, body, label, out var wasTrimmed);
+        if (wasTrimmed && IncludeDiagnostics)
+        {
+            var compactBody = await BuildFeedbackMarkdownAsync(maxLogLines: 8);
+            var compactUrl = BuildGitHubIssueUrl(title, compactBody, label, out var stillTrimmed);
+            if (!stillTrimmed)
+            {
+                url = compactUrl;
+            }
+            else
+            {
+                var minBody = await BuildFeedbackMarkdownAsync(maxLogLines: 0);
+                url = BuildGitHubIssueUrl(title, minBody, label, out _);
+            }
+        }
+
         await OpenExternalUriCallback.Invoke(new Uri(url));
-        FeedbackStatusMessage = Loc.Text("FeedbackOpenedStatus");
+        FeedbackStatusMessage = wasTrimmed
+            ? Loc.Text("FeedbackUrlTrimmedStatus")
+            : Loc.Text("FeedbackOpenedStatus");
+    }
+
+    [RelayCommand]
+    public async Task CopyFeedbackAsync()
+    {
+        if (string.IsNullOrWhiteSpace(FeedbackTitle) && string.IsNullOrWhiteSpace(FeedbackDescription))
+        {
+            FeedbackStatusMessage = Loc.Text("FeedbackValidationHint");
+            return;
+        }
+
+        var (title, _) = BuildIssueTitleAndLabel();
+        var body = $"# {title}\n\n{await BuildFeedbackMarkdownAsync(maxLogLines: 100)}";
+        if (CopyTextCallback is not null)
+        {
+            await CopyTextCallback.Invoke(body);
+            FeedbackStatusMessage = Loc.Text("FeedbackCopiedStatus");
+        }
+    }
+
+    private (string Title, string Label) BuildIssueTitleAndLabel()
+    {
+        if (IsSuggestionMode)
+        {
+            var category = SelectedSuggestionCategoryIndex >= 0 && SelectedSuggestionCategoryIndex < SuggestionCategories.Count
+                ? SuggestionCategories[SelectedSuggestionCategoryIndex]
+                : Loc.Text("SuggestionCatFeature");
+            var title = string.IsNullOrWhiteSpace(FeedbackTitle)
+                ? $"[Sugestão] {category}"
+                : $"[Sugestão] {FeedbackTitle.Trim()}";
+            return (title, "enhancement");
+        }
+
+        var bugTitle = string.IsNullOrWhiteSpace(FeedbackTitle)
+            ? "[Bug] Custódia"
+            : $"[Bug] {FeedbackTitle.Trim()}";
+        return (bugTitle, "bug");
+    }
+
+    private async Task<string> BuildFeedbackMarkdownAsync(int maxLogLines)
+    {
+        var sb = new StringBuilder();
+        if (IsSuggestionMode)
+        {
+            var category = SelectedSuggestionCategoryIndex >= 0 && SelectedSuggestionCategoryIndex < SuggestionCategories.Count
+                ? SuggestionCategories[SelectedSuggestionCategoryIndex]
+                : Loc.Text("SuggestionCatFeature");
+            sb.AppendLine($"**Categoria:** {category}");
+            sb.AppendLine($"**Versão:** Custódia v{AppVersionInfo.CurrentVersion}");
+            sb.AppendLine();
+            sb.AppendLine("## Benefício esperado e detalhes");
+            sb.AppendLine(string.IsNullOrWhiteSpace(FeedbackDescription) ? "(sem detalhes)" : FeedbackDescription.Trim());
+        }
+        else
+        {
+            sb.AppendLine("## O que aconteceu");
+            sb.AppendLine(string.IsNullOrWhiteSpace(FeedbackDescription) ? "(descreva o comportamento observado)" : FeedbackDescription.Trim());
+        }
+
+        if (IncludeDiagnostics)
+        {
+            sb.AppendLine();
+            sb.Append(await BuildSanitizedDiagnosticsMarkdownAsync(maxLogLines));
+        }
+
+        return sb.ToString();
+    }
+
+    internal async Task<string> BuildSanitizedDiagnosticsMarkdownAsync(int maxLogLines)
+    {
+        var kind = _updateService?.DetectInstallKind(out _) ?? AppInstallKind.Standalone;
+        var modeName = kind switch
+        {
+            AppInstallKind.Rpm => "RPM",
+            AppInstallKind.AppImage => "AppImage",
+            _ => "Standalone"
+        };
+
+        var sb = new StringBuilder();
+        sb.AppendLine("## Diagnóstico técnico (sem dados pessoais)");
+        sb.AppendLine($"- Versão: Custódia v{AppVersionInfo.CurrentVersion} ({modeName})");
+        sb.AppendLine($"- Sistema: {SanitizeDiagnosticText(RuntimeInformation.OSDescription)} ({RuntimeInformation.ProcessArchitecture})");
+        sb.AppendLine($"- .NET: {Environment.Version}");
+        sb.AppendLine($"- Idioma: {Loc.CurrentLanguage}");
+
+        if (_repository is null)
+        {
+            return sb.ToString();
+        }
+
+        try
+        {
+            var recent = await _repository.GetActivityLogsAsync(minSeverity: ActivitySeverity.Warning, limit: 150);
+            var alerts = recent
+                .Where(l => l.Severity is ActivitySeverity.Warning or ActivitySeverity.Error)
+                .OrderByDescending(l => l.CreatedAtUtc)
+                .ToList();
+
+            sb.AppendLine();
+            sb.AppendLine($"### Últimos avisos/erros ({alerts.Count} registrado(s))");
+
+            if (alerts.Count == 0)
+            {
+                sb.AppendLine("- (nenhum aviso/erro recente)");
+                return sb.ToString();
+            }
+
+            if (maxLogLines <= 0)
+            {
+                sb.AppendLine("- (... log omitido para caber na URL; use 'Copiar texto' para ver completo)");
+                return sb.ToString();
+            }
+
+            var shown = alerts.Take(maxLogLines).ToList();
+            foreach (var entry in shown)
+            {
+                var level = entry.Severity == ActivitySeverity.Error ? "ERRO" : "AVISO";
+                var msg = SanitizeDiagnosticText(entry.Message);
+                if (msg.Length > 140)
+                {
+                    msg = msg[..137] + "...";
+                }
+                sb.AppendLine($"- [{entry.CreatedAtUtc.ToLocalTime():dd/MM HH:mm}] [{level}] {entry.Action}: {msg}");
+            }
+
+            if (alerts.Count > shown.Count)
+            {
+                sb.AppendLine($"- (... +{alerts.Count - shown.Count} mais; use 'Copiar texto' para o log completo)");
+            }
+        }
+        catch
+        {
+            sb.AppendLine("- (não foi possível ler os registros recentes)");
+        }
+
+        return sb.ToString();
+    }
+
+    internal static string SanitizeDiagnosticText(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return string.Empty;
+        }
+
+        var cleaned = EmailRedactRegex.Replace(input, "[email]");
+        cleaned = HomePathRedactRegex.Replace(cleaned, "$1[user]");
+        cleaned = WindowsUserPathRedactRegex.Replace(cleaned, "$1[user]");
+        return cleaned.Replace('\r', ' ').Replace('\n', ' ').Trim();
+    }
+
+    internal static string BuildGitHubIssueUrl(string title, string body, string label, out bool wasTrimmed)
+    {
+        wasTrimmed = false;
+        var basePrefix = $"{MainWindowViewModel.RepositoryUrl}/issues/new?labels={Uri.EscapeDataString(label)}&title={Uri.EscapeDataString(title)}&body=";
+        var fullUrl = basePrefix + Uri.EscapeDataString(body);
+        if (fullUrl.Length <= MaxGitHubIssueUrlLength)
+        {
+            return fullUrl;
+        }
+
+        wasTrimmed = true;
+        const string suffix = "\n\n... (texto resumido pelo limite de URL; use 'Copiar texto' para enviar completo)";
+        var low = 0;
+        var high = body.Length;
+        var best = suffix;
+
+        while (low <= high)
+        {
+            var mid = (low + high) / 2;
+            var candidate = body[..mid] + suffix;
+            if (basePrefix.Length + Uri.EscapeDataString(candidate).Length <= MaxGitHubIssueUrlLength)
+            {
+                best = candidate;
+                low = mid + 1;
+            }
+            else
+            {
+                high = mid - 1;
+            }
+        }
+
+        return basePrefix + Uri.EscapeDataString(best);
     }
 }
