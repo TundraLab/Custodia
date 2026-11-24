@@ -19,7 +19,7 @@ public sealed record FolderColorChoice(
 
 public sealed record FolderIconChoice(
     string Key,
-    Geometry Geometry,
+    Geometry? Geometry,
     string Label,
     bool IsSelected,
     IBrush SelectionBorderBrush,

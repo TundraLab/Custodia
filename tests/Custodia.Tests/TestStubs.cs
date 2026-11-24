@@ -75,8 +75,6 @@ internal class StubDriveClientProxy : DispatchProxy
     {
         if (targetMethod?.Name == "get_IsConnected")
             return true;
-        if (targetMethod?.Name == nameof(TundraDrive.Core.Drive.IGoogleDriveClient.TrySendGmailAlertAsync))
-            return Task.FromResult(true);
         return null;
     }
 }

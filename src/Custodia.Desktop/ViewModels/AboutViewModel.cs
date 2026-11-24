@@ -557,6 +557,7 @@ public sealed partial class AboutViewModel : ViewModelBase
     private void SelectSuggestionMode()
     {
         IsSuggestionMode = true;
+        IsDiagnosticsPreviewOpen = false;
         FeedbackStatusMessage = string.Empty;
     }
 
@@ -678,7 +679,7 @@ public sealed partial class AboutViewModel : ViewModelBase
             sb.AppendLine(string.IsNullOrWhiteSpace(FeedbackDescription) ? "(descreva o comportamento observado)" : FeedbackDescription.Trim());
         }
 
-        if (IncludeDiagnostics)
+        if (!IsSuggestionMode && IncludeDiagnostics)
         {
             sb.AppendLine();
             sb.Append(await BuildSanitizedDiagnosticsMarkdownAsync(maxLogLines));

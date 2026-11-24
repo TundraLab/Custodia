@@ -226,43 +226,45 @@
                        Watermark="{Binding FeedbackDescriptionWatermark}"
                        Text="{Binding FeedbackDescription}" />
 
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                <CheckBox Grid.Column="0"
+              <StackPanel Spacing="10" IsVisible="{Binding IsBugMode}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                  <CheckBox Grid.Column="0"
+                            VerticalAlignment="Center"
+                            IsChecked="{Binding IncludeDiagnostics}"
+                            Content="{Binding Loc.BugIncludeDiagnosticsCheckbox}" />
+                  <Button Grid.Column="1"
+                          Classes="SecondaryAction"
+                          Padding="10,4"
+                          FontSize="12"
                           VerticalAlignment="Center"
-                          IsChecked="{Binding IncludeDiagnostics}"
-                          Content="{Binding Loc.BugIncludeDiagnosticsCheckbox}" />
-                <Button Grid.Column="1"
-                        Classes="SecondaryAction"
-                        Padding="10,4"
-                        FontSize="12"
-                        VerticalAlignment="Center"
-                        Content="{Binding PreviewDiagnosticsButtonText}"
-                        Command="{Binding ToggleDiagnosticsPreviewCommand}" />
-              </Grid>
+                          Content="{Binding PreviewDiagnosticsButtonText}"
+                          Command="{Binding ToggleDiagnosticsPreviewCommand}" />
+                </Grid>
 
-              <Border Classes="FlatRow"
-                      Background="#0B111E"
-                      BorderBrush="{StaticResource TundraBorderBrush}"
-                      BorderThickness="1"
-                      Padding="10"
-                      IsVisible="{Binding IsDiagnosticsPreviewOpen}">
-                <StackPanel Spacing="6">
-                  <TextBlock Classes="MutedMeta"
-                             FontSize="11.5"
-                             TextWrapping="Wrap"
-                             Text="{Binding Loc.DiagnosticsPreviewHeader}" />
-                  <ScrollViewer MaxHeight="150"
-                                HorizontalScrollBarVisibility="Disabled"
-                                VerticalScrollBarVisibility="Auto">
-                    <TextBlock FontFamily="Consolas,Liberation Mono,Menlo,monospace"
+                <Border Classes="FlatRow"
+                        Background="#0B111E"
+                        BorderBrush="{StaticResource TundraBorderBrush}"
+                        BorderThickness="1"
+                        Padding="10"
+                        IsVisible="{Binding IsDiagnosticsPreviewOpen}">
+                  <StackPanel Spacing="6">
+                    <TextBlock Classes="MutedMeta"
                                FontSize="11.5"
-                               LineHeight="17"
                                TextWrapping="Wrap"
-                               Foreground="{StaticResource TundraTextSecondary}"
-                               Text="{Binding DiagnosticsPreviewText}" />
-                  </ScrollViewer>
-                </StackPanel>
-              </Border>
+                               Text="{Binding Loc.DiagnosticsPreviewHeader}" />
+                    <ScrollViewer MaxHeight="150"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                      <TextBlock FontFamily="Consolas,Liberation Mono,Menlo,monospace"
+                                 FontSize="11.5"
+                                 LineHeight="17"
+                                 TextWrapping="Wrap"
+                                 Foreground="{StaticResource TundraTextSecondary}"
+                                 Text="{Binding DiagnosticsPreviewText}" />
+                    </ScrollViewer>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
 
               <WrapPanel Orientation="Horizontal">
                 <Button Classes="PrimaryAction"

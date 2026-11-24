@@ -7,6 +7,7 @@ using TundraDrive.Api;
 using TundraDrive.Core.Configuration;
 using TundraDrive.Core.Drive;
 using TundraDrive.Core.Models;
+using TundraDrive.Core.Notifications;
 using TundraDrive.Core.Persistence;
 using TundraDrive.Core.Security;
 using TundraDrive.Core.Sync;
@@ -474,42 +475,33 @@ public sealed class Release290FeatureTests
     }
 
     [Fact]
-    public void GoogleDriveClient_BuildGmailRawPayload_EncodesUtf8HeadersAndBase64Body()
+    public async Task AppsScriptMailerClient_SendsConnectAndRevokePayloadsFromOfficialSender()
     {
-        var raw = GoogleDriveClient.BuildGmailRawPayload(
-            "user@example.com",
-            "Custodia - Conta conectada com sucesso",
-            "<p>Conta Custódia conectada com sucesso.</p>");
+        var settings = new TempAppSettingsService();
+        settings.Current.MailerWebhookUrl = "https://script.google.com/macros/s/demo-script/exec";
+        var captureHandler = new CapturingHttpMessageHandler();
+        using var mailer = new AppsScriptMailerClient(settings, NullLogger<AppsScriptMailerClient>.Instance, captureHandler);
 
-        Assert.DoesNotContain('+', raw);
-        Assert.DoesNotContain('/', raw);
-        Assert.DoesNotContain('=', raw);
+        var okConnect = await mailer.TrySendLifecycleEmailAsync("cliente@gmail.com", "Cliente Teste", isConnected: true, language: "pt-BR");
+        var okRevoke = await mailer.TrySendLifecycleEmailAsync("cliente@gmail.com", "Cliente Teste", isConnected: false, language: "pt-BR");
 
-        var padded = raw.Replace('-', '+').Replace('_', '/');
-        var mod = padded.Length % 4;
-        if (mod > 0)
-        {
-            padded = padded.PadRight(padded.Length + (4 - mod), '=');
-        }
-
-        var mime = Encoding.UTF8.GetString(Convert.FromBase64String(padded));
-        Assert.Contains("To: user@example.com", mime);
-        Assert.Contains("Subject: =?UTF-8?B?", mime);
-        Assert.Contains("Content-Transfer-Encoding: base64", mime);
-
-        var split = mime.Split("\r\n\r\n", 2, StringSplitOptions.None);
-        Assert.Equal(2, split.Length);
-        var decodedBody = Encoding.UTF8.GetString(Convert.FromBase64String(split[1].Trim()));
-        Assert.Contains("Custódia conectada com sucesso", decodedBody);
+        Assert.True(okConnect);
+        Assert.True(okRevoke);
+        Assert.Equal(2, captureHandler.Requests.Count);
+        Assert.Contains("\"eventType\":\"connect\"", captureHandler.Requests[0]);
+        Assert.Contains($"\"senderEmail\":\"{AppsScriptMailerClient.OfficialSenderEmail}\"", captureHandler.Requests[0]);
+        Assert.Contains("\"recipientEmail\":\"cliente@gmail.com\"", captureHandler.Requests[0]);
+        Assert.Contains("\"eventType\":\"revoke\"", captureHandler.Requests[1]);
+        Assert.Contains($"\"senderEmail\":\"{AppsScriptMailerClient.OfficialSenderEmail}\"", captureHandler.Requests[1]);
     }
 
     [Fact]
-    public async Task DriveSyncService_ConnectReconnectAndDisconnect_SendGmailAlertsWithTargetAccountKey()
+    public async Task DriveSyncService_ConnectReconnectAndDisconnect_SendLifecycleEmailsViaTundraMailer()
     {
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"custodia-gmail-{Guid.NewGuid():N}");
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"custodia-mailer-{Guid.NewGuid():N}");
         var dbPath = Path.Combine(tempRoot, "custodia.db");
-        var email1 = $"gmail1-{Guid.NewGuid():N}@example.com";
-        var email2 = $"gmail2-{Guid.NewGuid():N}@example.com";
+        var email1 = $"mail1-{Guid.NewGuid():N}@example.com";
+        var email2 = $"mail2-{Guid.NewGuid():N}@example.com";
         Directory.CreateDirectory(tempRoot);
 
         var auth = new AuthCredentialManager(NullLogger<AuthCredentialManager>.Instance);
@@ -524,6 +516,7 @@ public sealed class Release290FeatureTests
 
             var mockClient = DispatchProxy.Create<IGoogleDriveClient, MockAccountFlowDriveClientProxy>();
             var clientState = (MockAccountFlowDriveClientProxy)(object)mockClient;
+            var mailerSpy = new RecordingTundraMailerClient();
 
             var settings = new TempAppSettingsService();
             settings.Current.GmailAccountAlertsEnabled = true;
@@ -535,41 +528,36 @@ public sealed class Release290FeatureTests
                 settings,
                 auth,
                 watcher,
-                NullLogger<DriveSyncService>.Instance);
+                NullLogger<DriveSyncService>.Instance,
+                mailerSpy);
 
             clientState.Email = email1;
             var acc1 = await syncService.ConnectAccountAsync(addNewAccount: false);
             dir1 = auth.GetAccountFolderPath(acc1.Id, email1);
 
-            await WaitForAlertCountAsync(clientState, 1);
-            Assert.Equal((email1, acc1.Id, true), (clientState.GmailAlertCalls[0].Recipient, clientState.GmailAlertCalls[0].AccountKey, clientState.GmailAlertCalls[0].Subject.Contains("conectada", StringComparison.OrdinalIgnoreCase)));
+            await WaitForMailerCountAsync(mailerSpy, 1);
+            Assert.Equal((email1, true), (mailerSpy.Calls[0].Email, mailerSpy.Calls[0].IsConnected));
 
             await syncService.ReconnectAccountAsync(acc1.Id);
-            await WaitForAlertCountAsync(clientState, 2);
-            Assert.Equal((email1, acc1.Id, true), (clientState.GmailAlertCalls[1].Recipient, clientState.GmailAlertCalls[1].AccountKey, clientState.GmailAlertCalls[1].Subject.Contains("conectada", StringComparison.OrdinalIgnoreCase)));
+            await WaitForMailerCountAsync(mailerSpy, 2);
+            Assert.Equal((email1, true), (mailerSpy.Calls[1].Email, mailerSpy.Calls[1].IsConnected));
 
             clientState.Email = email2;
-            clientState.ForcedNextAccountId = "acc_second_gmail";
+            clientState.ForcedNextAccountId = "acc_second_mailer";
             var acc2 = await syncService.ConnectAccountAsync(addNewAccount: true);
             dir2 = auth.GetAccountFolderPath(acc2.Id, email2);
 
-            await WaitForAlertCountAsync(clientState, 3);
-            Assert.Equal((email2, acc2.Id), (clientState.GmailAlertCalls[2].Recipient, clientState.GmailAlertCalls[2].AccountKey));
+            await WaitForMailerCountAsync(mailerSpy, 3);
+            Assert.Equal((email2, true), (mailerSpy.Calls[2].Email, mailerSpy.Calls[2].IsConnected));
 
-            // Switch back to primary so disconnecting acc2 exercises the secondary-account branch
             await syncService.SwitchAccountAsync(acc1.Id);
             await syncService.DisconnectAccountAsync(acc2.Id);
-            await WaitForAlertCountAsync(clientState, 4);
-            Assert.Equal(email2, clientState.GmailAlertCalls[3].Recipient);
-            Assert.Equal(acc2.Id, clientState.GmailAlertCalls[3].AccountKey);
-            Assert.Contains("desconectada", clientState.GmailAlertCalls[3].Subject, StringComparison.OrdinalIgnoreCase);
+            await WaitForMailerCountAsync(mailerSpy, 4);
+            Assert.Equal((email2, false), (mailerSpy.Calls[3].Email, mailerSpy.Calls[3].IsConnected));
 
-            // Disconnecting the active account also sends an alert with its account key
             await syncService.DisconnectAccountAsync(acc1.Id);
-            await WaitForAlertCountAsync(clientState, 5);
-            Assert.Equal(email1, clientState.GmailAlertCalls[4].Recipient);
-            Assert.Equal(acc1.Id, clientState.GmailAlertCalls[4].AccountKey);
-            Assert.Contains("desconectada", clientState.GmailAlertCalls[4].Subject, StringComparison.OrdinalIgnoreCase);
+            await WaitForMailerCountAsync(mailerSpy, 5);
+            Assert.Equal((email1, false), (mailerSpy.Calls[4].Email, mailerSpy.Calls[4].IsConnected));
         }
         finally
         {
@@ -644,12 +632,18 @@ public sealed class Release290FeatureTests
             Assert.Contains("labels=bug", openedUri!.Query);
             Assert.DoesNotContain("Diagn%C3%B3stico", openedUri.Query);
 
-            // Switch to Suggestion mode updates label and description caption
+            // Switch to Suggestion mode updates label, hides preview, and never sends diagnostics
+            aboutVm.IncludeDiagnostics = true;
+            await aboutVm.ToggleDiagnosticsPreviewCommand.ExecuteAsync(null);
+            Assert.True(aboutVm.IsDiagnosticsPreviewOpen);
+
             aboutVm.SelectSuggestionModeCommand.Execute(null);
             Assert.True(aboutVm.IsSuggestionMode);
+            Assert.False(aboutVm.IsDiagnosticsPreviewOpen);
             Assert.Equal(loc.SuggestionDescriptionLabel, aboutVm.FeedbackDescriptionLabel);
             await aboutVm.SubmitFeedbackGitHubCommand.ExecuteAsync(null);
             Assert.Contains("labels=enhancement", openedUri.Query);
+            Assert.DoesNotContain("Diagn%C3%B3stico", openedUri.Query);
 
             // Switch back to Bug, open preview and opt into diagnostics
             aboutVm.SelectBugModeCommand.Execute(null);
@@ -681,15 +675,48 @@ public sealed class Release290FeatureTests
         }
     }
 
-    private static async Task WaitForAlertCountAsync(MockAccountFlowDriveClientProxy proxy, int expectedCount)
+    private static async Task WaitForMailerCountAsync(RecordingTundraMailerClient spy, int expectedCount)
     {
         var deadline = DateTime.UtcNow.AddSeconds(2);
-        while (DateTime.UtcNow < deadline && proxy.GmailAlertCalls.Count < expectedCount)
+        while (DateTime.UtcNow < deadline && spy.Calls.Count < expectedCount)
         {
             await Task.Delay(25);
         }
 
-        Assert.True(proxy.GmailAlertCalls.Count >= expectedCount, $"Expected at least {expectedCount} Gmail alert calls, got {proxy.GmailAlertCalls.Count}.");
+        Assert.True(spy.Calls.Count >= expectedCount, $"Expected at least {expectedCount} mailer calls, got {spy.Calls.Count}.");
+    }
+
+    private sealed class RecordingTundraMailerClient : ITundraMailerClient
+    {
+        public List<(string Email, string? Name, bool IsConnected, string Language)> Calls { get; } = [];
+
+        public Task<bool> TrySendLifecycleEmailAsync(
+            string recipientEmail,
+            string? recipientName,
+            bool isConnected,
+            string language = "pt-BR",
+            CancellationToken cancellationToken = default)
+        {
+            Calls.Add((recipientEmail, recipientName, isConnected, language));
+            return Task.FromResult(true);
+        }
+    }
+
+    private sealed class CapturingHttpMessageHandler : HttpMessageHandler
+    {
+        public List<string> Requests { get; } = [];
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var body = request.Content is not null
+                ? await request.Content.ReadAsStringAsync(cancellationToken)
+                : string.Empty;
+            Requests.Add(body);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"ok\":true}", Encoding.UTF8, "application/json")
+            };
+        }
     }
 
     private class MockAccountFlowDriveClientProxy : DispatchProxy
@@ -699,7 +726,6 @@ public sealed class Release290FeatureTests
         private readonly Dictionary<string, string> _emailsByKey = new(StringComparer.Ordinal);
         public string Email { get; set; } = "user@example.com";
         public string? ForcedNextAccountId { get; set; }
-        public List<(string Recipient, string Subject, string HtmlBody, string? AccountKey)> GmailAlertCalls { get; } = [];
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
@@ -752,15 +778,6 @@ public sealed class Release290FeatureTests
                         EmailAddress = email,
                         IsConnected = true
                     });
-                }
-                case nameof(IGoogleDriveClient.TrySendGmailAlertAsync):
-                {
-                    var recipient = (string)args![0]!;
-                    var subject = (string)args[1]!;
-                    var htmlBody = (string)args[2]!;
-                    var accountKey = args.Length > 3 ? (string?)args[3] : null;
-                    GmailAlertCalls.Add((recipient, subject, htmlBody, accountKey));
-                    return Task.FromResult(true);
                 }
                 default:
                     return null;
@@ -829,11 +846,48 @@ public sealed class Release290FeatureTests
                         IsConnected = true,
                         EmailAddress = "test@example.com"
                     });
-                case nameof(IGoogleDriveClient.TrySendGmailAlertAsync):
-                    return Task.FromResult(true);
                 default:
                     return null;
             }
         }
+    }
+
+    [Fact]
+    public async Task FileHubViewModel_CustomizesFolderColorAndSymbolViaContextAction()
+    {
+        var loc = new LocalizationService();
+        loc.SetLanguage("pt-BR");
+        var settings = new TempAppSettingsService();
+        var syncProxy = DispatchProxy.Create<IDriveSyncService, StubDriveSyncProxy>();
+        var driveProxy = DispatchProxy.Create<IGoogleDriveClient, StubDriveClientProxy>();
+        var repoProxy = DispatchProxy.Create<ISyncStateRepository, StubStateRepoProxy>();
+
+        var hub = new FileHubViewModel(repoProxy, driveProxy, syncProxy, new FilePreviewService(driveProxy), loc, settings);
+        var folderItem = new FileHubItemViewModel
+        {
+            Name = "Projetos",
+            OriginalFolderName = "Projetos",
+            IsFolder = true,
+            RemoteFileId = "drv-proj-9",
+            AppearanceKey = "drive:drv-proj-9"
+        };
+
+        hub.UpdateSelectedItems([folderItem]);
+        hub.SelectedItem = folderItem;
+        Assert.True(hub.CanCustomizeSelectedFolder);
+
+        hub.OpenCustomizeFolderCommand.Execute(null);
+        Assert.True(hub.IsCustomizeFolderOpen);
+
+        hub.CustomizeEditAlias = "Projetos Ativos";
+        hub.CustomizeColorChoices.First(c => c.Hex == "#10B981").SelectCommand.Execute(null);
+        hub.CustomizeIconChoices.First(i => i.Key == "star").SelectCommand.Execute(null);
+
+        await hub.SaveFolderCustomizationCommand.ExecuteAsync(null);
+        Assert.False(hub.IsCustomizeFolderOpen);
+        Assert.True(settings.Current.FolderAppearances.TryGetValue("drive:drv-proj-9", out var saved));
+        Assert.Equal("Projetos Ativos", saved!.Alias);
+        Assert.Equal("#10B981", saved.ColorHex);
+        Assert.Equal("star", saved.IconKey);
     }
 }

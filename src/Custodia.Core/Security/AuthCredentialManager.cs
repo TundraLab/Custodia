@@ -25,8 +25,7 @@ public sealed class AuthCredentialManager : IAuthCredentialManager
 
     private static readonly string[] DriveScopes =
     [
-        DriveService.Scope.Drive,
-        "https://www.googleapis.com/auth/gmail.send"
+        DriveService.Scope.Drive
     ];
 
     private sealed record AccountFolderMeta(

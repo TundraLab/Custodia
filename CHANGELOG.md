@@ -2,6 +2,18 @@
 
 Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [2.9.2] - 2026-11-24
+
+### Alterado
+- **Personalização de pastas direto em Meus Arquivos:** clique com o botão direito em qualquer pasta na lista ou na grade e escolha **Personalizar pasta** para definir apelido, cor e símbolo, com persistência para pastas sincronizadas e subpastas remotas/locais.
+- **Menu de contexto com exclusão destacada em vermelho:** ações **Mover para Lixeira**, **Excluir permanentemente** e **Esvaziar Lixeira** agora usam destaque e ícone vermelhos no menu de botão direito de **Meus Arquivos**.
+- **E-mails automáticos oficiais de `contato.tundralab@gmail.com` sem Gmail API:** integração via `AppsScriptMailerClient` para envio de mensagens de agradecimento/boas-vindas ao conectar e confirmação ao revogar/desconectar, removendo o escopo `gmail.send` dos usuários e o botão de ativação da Gmail API em Configurações.
+- **Documentação técnica e README atualizados:** correções terminológicas, bloco inicial de status, seção de Qualidade verificável, diagrama de arquitetura, decisões técnicas, guia expandido de segurança/privacidade e alinhamento completo com `LICENSE`.
+
+### Corrigido
+- **Diagnóstico oculto no modo Sugestão:** a opção de incluir diagnóstico técnico e últimos avisos/erros na aba **Sobre** agora aparece e é considerada exclusivamente no modo **Bug / Erro**.
+- **Limpeza visual nas credenciais OAuth:** remoção do selo `Ativo • 0600` no cartão de `credentials.json` em **Configurações**.
+
 ## [2.9.1] - 2026-11-24
 
 ### Alterado

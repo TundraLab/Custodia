@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using TundraDrive.Core.Configuration;
 using TundraDrive.Core.Drive;
 using TundraDrive.Core.Models;
+using TundraDrive.Core.Notifications;
 using TundraDrive.Core.Persistence;
 using TundraDrive.Core.Security;
 
@@ -17,6 +18,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
     private readonly IAuthCredentialManager _authManager;
     private readonly LocalFolderWatcherService _watcherService;
     private readonly ILogger<DriveSyncService> _logger;
+    private readonly ITundraMailerClient? _mailerClient;
 
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _folderLocks = new();
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _folderSyncCancellations = new();
@@ -45,7 +47,8 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         IAppSettingsService settingsService,
         IAuthCredentialManager authManager,
         LocalFolderWatcherService watcherService,
-        ILogger<DriveSyncService> logger)
+        ILogger<DriveSyncService> logger,
+        ITundraMailerClient? mailerClient = null)
     {
         _driveClient = driveClient;
         _repository = repository;
@@ -53,6 +56,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         _authManager = authManager;
         _watcherService = watcherService;
         _logger = logger;
+        _mailerClient = mailerClient;
 
         _isOnlineFlag = NetworkInterface.GetIsNetworkAvailable() ? 1 : 0;
         _watcherService.FolderChangeDetected += OnLocalFolderChangedAsync;
@@ -227,7 +231,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         if (_settingsService.Current.GmailAccountAlertsEnabled &&
             !string.IsNullOrWhiteSpace(account.EmailAddress))
         {
-            _ = TrySendGmailAccountAlertAsync(account.EmailAddress, isConnected: true, account.Id);
+            _ = TrySendLifecycleEmailAsync(account.EmailAddress, account.DisplayName, isConnected: true);
         }
 
         if (folders.Any(f => !f.IsPaused))
@@ -281,7 +285,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         if (_settingsService.Current.GmailAccountAlertsEnabled &&
             !string.IsNullOrWhiteSpace(account.EmailAddress))
         {
-            _ = TrySendGmailAccountAlertAsync(account.EmailAddress, isConnected: true, account.Id);
+            _ = TrySendLifecycleEmailAsync(account.EmailAddress, account.DisplayName, isConnected: true);
         }
 
         if (folders.Any(f => !f.IsPaused))
@@ -351,7 +355,8 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         if (_settingsService.Current.GmailAccountAlertsEnabled &&
             !string.IsNullOrWhiteSpace(disconnectedEmail))
         {
-            await TrySendGmailAccountAlertAsync(disconnectedEmail, isConnected: false, targetId, cancellationToken);
+            var disconnectedName = targetAccount?.DisplayName ?? (isDisconnectingActive ? CurrentAccount.DisplayName : disconnectedEmail);
+            await TrySendLifecycleEmailAsync(disconnectedEmail, disconnectedName, isConnected: false, cancellationToken);
         }
 
         await _driveClient.DisconnectAsync(targetId, cancellationToken);
@@ -2053,47 +2058,44 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         }
     }
 
-    private async Task TrySendGmailAccountAlertAsync(
+    private async Task TrySendLifecycleEmailAsync(
         string recipientEmail,
+        string? recipientName,
         bool isConnected,
-        string? accountKey = null,
         CancellationToken cancellationToken = default)
     {
+        if (_mailerClient is null)
+        {
+            return;
+        }
+
         try
         {
-            var subject = isConnected
-                ? "Custódia: Conta Google conectada com sucesso"
-                : "Custódia: Conta Google desconectada com sucesso";
-            var actionText = isConnected ? "conectada" : "desconectada";
-            var timestamp = DateTimeOffset.Now.ToString("dd/MM/yyyy HH:mm");
-            var safeEmail = System.Net.WebUtility.HtmlEncode(recipientEmail);
-            var safeHost = System.Net.WebUtility.HtmlEncode(Environment.MachineName);
-            var body = $"""
-                <div style="font-family:Inter,Arial,sans-serif;background:#0f172a;color:#e2e8f0;padding:24px;border-radius:10px;">
-                  <h2 style="color:#38bdf8;margin-top:0;">Custódia by TundraLab</h2>
-                  <p>Sua conta Google (<strong>{safeEmail}</strong>) foi <strong>{actionText} com sucesso</strong> no aplicativo Custódia para Linux.</p>
-                  <p style="color:#94a3b8;font-size:13px;">Dispositivo: {safeHost} • Horário: {timestamp}</p>
-                  <p style="color:#94a3b8;font-size:12px;">Seus arquivos. Sempre seguros.</p>
-                </div>
-                """;
+            var language = _settingsService.Current.Language;
+            var actionText = isConnected ? "boas-vindas (conectada)" : "revogação (desconectada)";
+            var sent = await _mailerClient.TrySendLifecycleEmailAsync(
+                recipientEmail,
+                recipientName,
+                isConnected,
+                language,
+                cancellationToken);
 
-            var sent = await _driveClient.TrySendGmailAlertAsync(recipientEmail, subject, body, accountKey, cancellationToken);
             if (sent)
             {
                 await LogAsync(ActivitySeverity.Info, "GmailAlertSent",
-                    $"Aviso enviado por Gmail para {recipientEmail} ({actionText}).",
+                    $"E-mail oficial ({AppsScriptMailerClient.OfficialSenderEmail}) enviado para {recipientEmail} ({actionText}).",
                     null, recipientEmail, CancellationToken.None);
             }
             else
             {
                 await LogAsync(ActivitySeverity.Info, "GmailAlertSkipped",
-                    $"Aviso por Gmail não enviado para {recipientEmail} (Gmail API desativada ou escopo pendente).",
+                    $"E-mail automático não enviado para {recipientEmail} (URL do Web App TundraLab não configurada ou sem rede).",
                     null, recipientEmail, CancellationToken.None);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Gmail account alert did not complete for '{Email}'.", recipientEmail);
+            _logger.LogDebug(ex, "TundraLab lifecycle email did not complete for '{Email}'.", recipientEmail);
         }
     }
 

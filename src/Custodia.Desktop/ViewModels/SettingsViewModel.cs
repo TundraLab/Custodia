@@ -1004,6 +1004,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
                 NotificationSoundEnabled = NotificationSoundEnabled,
                 NotificationSoundTone = NotificationSoundService.GetPresetIdByIndex(SelectedNotificationSoundIndex),
                 GmailAccountAlertsEnabled = GmailAccountAlertsEnabled,
+                MailerWebhookUrl = _settingsService.Current.MailerWebhookUrl,
+                FolderAppearances = new Dictionary<string, FolderAppearanceOverride>(_settingsService.Current.FolderAppearances, StringComparer.Ordinal),
                 MinimizeToTrayOnClose = MinimizeToTrayOnClose,
                 AutoCheckUpdates = AutoCheckUpdates,
                 UpdateCheckIntervalDays = updateIntervalDays,
@@ -1134,15 +1136,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         if (OpenExternalUriCallback is not null)
         {
             await OpenExternalUriCallback.Invoke(new Uri(RepositoryUrl));
-        }
-    }
-
-    [RelayCommand]
-    private async Task OpenEnableGmailApiAsync()
-    {
-        if (OpenExternalUriCallback is not null)
-        {
-            await OpenExternalUriCallback.Invoke(new Uri("https://console.cloud.google.com/apis/library/gmail.googleapis.com"));
         }
     }
 

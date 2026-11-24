@@ -5,6 +5,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using TundraDrive.Core.Configuration;
 using TundraDrive.Core.Drive;
 using TundraDrive.Core.Models;
 using TundraDrive.Core.Persistence;
@@ -49,6 +50,12 @@ public sealed partial class FileHubItemViewModel : ObservableObject, IDisposable
     public bool IsInTrash { get; init; }
     public string? LocalFullPath { get; init; }
     public string RemoteFileId { get; init; } = string.Empty;
+    public string? SyncFolderId { get; init; }
+    public string? AppearanceKey { get; init; }
+    public string OriginalFolderName { get; init; } = string.Empty;
+    public string? CustomAlias { get; init; }
+    public string? CustomColorHex { get; init; }
+    public string? CustomIconKey { get; init; }
     public string ActionLabel { get; init; } = string.Empty;
     public bool CanDownload => !IsFolder && !string.IsNullOrWhiteSpace(RemoteFileId);
     public bool CanPreview => !IsFolder;
@@ -127,6 +134,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private readonly IGoogleDriveClient _driveClient;
     private readonly IDriveSyncService _syncService;
     private readonly FilePreviewService _previewService;
+    private readonly IAppSettingsService? _settingsService;
     private CancellationTokenSource? _previewCts;
     private CancellationTokenSource? _thumbnailCts;
     private CancellationTokenSource? _refreshCts;
@@ -264,6 +272,26 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private string _newFolderName = string.Empty;
 
     [ObservableProperty]
+    private bool _isCustomizeFolderOpen;
+
+    [ObservableProperty]
+    private string _customizeTargetTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _customizeEditAlias = string.Empty;
+
+    [ObservableProperty]
+    private string _customizeEditColorHex = FolderCustomizationPresets.DefaultColorHex;
+
+    [ObservableProperty]
+    private string _customizeEditIconKey = FolderCustomizationPresets.DefaultIconKey;
+
+    private string? _customizeTargetSyncFolderId;
+    private string? _customizeTargetAppearanceKey;
+    public ObservableCollection<FolderColorChoice> CustomizeColorChoices { get; } = [];
+    public ObservableCollection<FolderIconChoice> CustomizeIconChoices { get; } = [];
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasTransferErrorBanner))]
     private string _transferErrorBannerText = string.Empty;
 
@@ -274,6 +302,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(HasSelectedItem))]
     [NotifyPropertyChangedFor(nameof(HasMultipleSelected))]
     [NotifyPropertyChangedFor(nameof(CanPreviewSelected))]
+    [NotifyPropertyChangedFor(nameof(CanCustomizeSelectedFolder))]
     [NotifyPropertyChangedFor(nameof(CanDownloadSelected))]
     [NotifyPropertyChangedFor(nameof(CanOpenSelectedInDrive))]
     [NotifyPropertyChangedFor(nameof(CanTrashSelected))]
@@ -296,6 +325,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     public bool HasSelectedItem => SelectedCount > 0 || SelectedItem is not null;
     public bool HasMultipleSelected => SelectedCount > 1;
     public bool CanPreviewSelected => SelectedCount <= 1 && SelectedItem is { IsFolder: false };
+    public bool CanCustomizeSelectedFolder => SelectedCount <= 1 && SelectedItem is { IsFolder: true, IsInTrash: false };
     public bool CanDownloadSelected => GetEffectiveSelectedItems().Any(i => i.CanDownload);
     public bool CanOpenSelectedInDrive => SelectedItem is not null && !string.IsNullOrWhiteSpace(SelectedItem.RemoteFileId);
     public bool CanTrashSelected => !IsTrashView && GetEffectiveSelectedItems().Any(i => i.CanMoveToTrash);
@@ -330,12 +360,14 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         IGoogleDriveClient driveClient,
         IDriveSyncService syncService,
         FilePreviewService previewService,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        IAppSettingsService? settingsService = null)
     {
         _repository = repository;
         _driveClient = driveClient;
         _syncService = syncService;
         _previewService = previewService;
+        _settingsService = settingsService;
         Loc = localization;
 
         _driveFolderId = "root";
@@ -488,6 +520,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasSelectedItem));
         OnPropertyChanged(nameof(HasMultipleSelected));
         OnPropertyChanged(nameof(CanPreviewSelected));
+        OnPropertyChanged(nameof(CanCustomizeSelectedFolder));
         OnPropertyChanged(nameof(CanDownloadSelected));
         OnPropertyChanged(nameof(CanOpenSelectedInDrive));
         OnPropertyChanged(nameof(CanTrashSelected));
@@ -1454,6 +1487,26 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         return item;
     }
 
+    private FolderAppearanceOverride? ResolveFolderAppearance(LocalSyncFolder? mappedFolder, string? appearanceKey)
+    {
+        if (mappedFolder is not null &&
+            (!string.IsNullOrWhiteSpace(mappedFolder.CustomAlias) ||
+             !string.IsNullOrWhiteSpace(mappedFolder.CustomColorHex) ||
+             !string.IsNullOrWhiteSpace(mappedFolder.CustomIconKey)))
+        {
+            return new FolderAppearanceOverride(mappedFolder.CustomAlias, mappedFolder.CustomColorHex, mappedFolder.CustomIconKey);
+        }
+
+        if (!string.IsNullOrWhiteSpace(appearanceKey) &&
+            _settingsService?.Current.FolderAppearances is { } dict &&
+            dict.TryGetValue(appearanceKey, out var stored))
+        {
+            return stored;
+        }
+
+        return null;
+    }
+
     private FileHubItemViewModel CreateRemoteFolderItem(
         RemoteDriveNode node,
         CultureInfo culture,
@@ -1461,11 +1514,14 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     {
         var folderId = node.Id;
         var folderName = node.Name;
-        var displayName = !string.IsNullOrWhiteSpace(mappedFolder?.CustomAlias)
-            ? mappedFolder!.CustomAlias!.Trim()
+        var appearanceKey = $"drive:{folderId}";
+        var appearance = ResolveFolderAppearance(mappedFolder, appearanceKey);
+
+        var displayName = !string.IsNullOrWhiteSpace(appearance?.Alias)
+            ? appearance!.Alias!.Trim()
             : node.Name;
-        var iconData = FolderCustomizationPresets.ResolveIconSvg(mappedFolder?.CustomIconKey);
-        var normalizedHex = FolderCustomizationPresets.NormalizeColorHex(mappedFolder?.CustomColorHex);
+        var iconData = FolderCustomizationPresets.ResolveIconSvg(appearance?.IconKey);
+        var normalizedHex = FolderCustomizationPresets.NormalizeColorHex(appearance?.ColorHex);
         var iconBrush = !string.IsNullOrWhiteSpace(normalizedHex)
             ? SolidColorBrush.Parse(normalizedHex)
             : BrushMutedGray;
@@ -1473,6 +1529,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         return new FileHubItemViewModel
         {
             Name = displayName,
+            OriginalFolderName = folderName,
             PathDisplay = Loc.Text("FileHubStatusFolder"),
             OriginDisplay = Loc.Text("FileHubStatusFolder"),
             OriginBrush = BrushFolderBlue,
@@ -1482,6 +1539,11 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             IsFolder = true,
             HasLocalFile = false,
             RemoteFileId = folderId,
+            SyncFolderId = mappedFolder?.Id,
+            AppearanceKey = appearanceKey,
+            CustomAlias = appearance?.Alias,
+            CustomColorHex = normalizedHex,
+            CustomIconKey = appearance?.IconKey,
             FileIconData = iconData,
             FileIconBrush = iconBrush,
             ActionLabel = Loc.Text("FileHubOpenFolder"),
@@ -1611,6 +1673,143 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         }
 
         OpenCreateFolder();
+    }
+
+    [RelayCommand]
+    private void OpenCustomizeFolder()
+    {
+        if (SelectedItem is not { IsFolder: true, IsInTrash: false } folder)
+        {
+            return;
+        }
+
+        _customizeTargetSyncFolderId = folder.SyncFolderId;
+        _customizeTargetAppearanceKey = folder.AppearanceKey;
+        CustomizeTargetTitle = string.IsNullOrWhiteSpace(folder.OriginalFolderName) ? folder.Name : folder.OriginalFolderName;
+        CustomizeEditAlias = folder.CustomAlias ?? string.Empty;
+        CustomizeEditColorHex = FolderCustomizationPresets.NormalizeColorHex(folder.CustomColorHex)
+            ?? FolderCustomizationPresets.DefaultColorHex;
+        CustomizeEditIconKey = string.IsNullOrWhiteSpace(folder.CustomIconKey)
+            ? FolderCustomizationPresets.DefaultIconKey
+            : folder.CustomIconKey;
+        RebuildCustomizeChoices();
+        IsCreateFolderOpen = false;
+        IsCustomizeFolderOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelFolderCustomization()
+    {
+        IsCustomizeFolderOpen = false;
+    }
+
+    [RelayCommand]
+    private async Task SaveFolderCustomizationAsync()
+    {
+        await ApplyFolderCustomizationAsync(
+            CustomizeEditAlias,
+            CustomizeEditColorHex,
+            CustomizeEditIconKey);
+    }
+
+    [RelayCommand]
+    private async Task ResetFolderCustomizationAsync()
+    {
+        CustomizeEditAlias = string.Empty;
+        CustomizeEditColorHex = FolderCustomizationPresets.DefaultColorHex;
+        CustomizeEditIconKey = FolderCustomizationPresets.DefaultIconKey;
+        await ApplyFolderCustomizationAsync(null, null, null);
+    }
+
+    private async Task ApplyFolderCustomizationAsync(string? alias, string? colorHex, string? iconKey)
+    {
+        var normalizedAlias = string.IsNullOrWhiteSpace(alias) ? null : alias.Trim();
+        var normalizedColor = FolderCustomizationPresets.NormalizeColorHex(colorHex);
+        var normalizedIcon = string.IsNullOrWhiteSpace(iconKey) ? null : iconKey.Trim();
+
+        if (!string.IsNullOrWhiteSpace(_customizeTargetSyncFolderId))
+        {
+            await _syncService.UpdateFolderCustomizationAsync(
+                _customizeTargetSyncFolderId,
+                normalizedAlias,
+                normalizedColor,
+                normalizedIcon);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_customizeTargetAppearanceKey) && _settingsService is not null)
+        {
+            var appearances = _settingsService.Current.FolderAppearances;
+            if (normalizedAlias is null && normalizedColor is null && normalizedIcon is null)
+            {
+                appearances.Remove(_customizeTargetAppearanceKey);
+            }
+            else
+            {
+                appearances[_customizeTargetAppearanceKey] = new FolderAppearanceOverride(
+                    normalizedAlias,
+                    normalizedColor,
+                    normalizedIcon);
+            }
+
+            await _settingsService.SaveSilentlyAsync(_settingsService.Current);
+        }
+
+        IsCustomizeFolderOpen = false;
+        await RefreshAsync();
+    }
+
+    private void RebuildCustomizeChoices()
+    {
+        var activeBorder = SolidColorBrush.Parse("#F8FAFC");
+        var inactiveBorder = SolidColorBrush.Parse("#334155");
+
+        CustomizeColorChoices.Clear();
+        foreach (var preset in FolderCustomizationPresets.Colors)
+        {
+            var hex = preset.Hex;
+            var isSelected = string.Equals(CustomizeEditColorHex, hex, StringComparison.OrdinalIgnoreCase);
+            CustomizeColorChoices.Add(new FolderColorChoice(
+                hex,
+                SolidColorBrush.Parse(hex),
+                isSelected,
+                isSelected ? activeBorder : inactiveBorder,
+                new RelayCommand(() =>
+                {
+                    CustomizeEditColorHex = hex;
+                    RebuildCustomizeChoices();
+                })));
+        }
+
+        var isEnglish = string.Equals(Loc.CurrentLanguage, "en-US", StringComparison.OrdinalIgnoreCase);
+        CustomizeIconChoices.Clear();
+        foreach (var icon in FolderCustomizationPresets.Icons)
+        {
+            var key = icon.Key;
+            var isSelected = string.Equals(CustomizeEditIconKey, key, StringComparison.OrdinalIgnoreCase);
+            CustomizeIconChoices.Add(new FolderIconChoice(
+                key,
+                TryParseIconGeometry(icon.SvgData),
+                isEnglish ? icon.NameEn : icon.NamePt,
+                isSelected,
+                isSelected ? SolidColorBrush.Parse("#3B82F6") : inactiveBorder,
+                new RelayCommand(() =>
+                {
+                    CustomizeEditIconKey = key;
+                    RebuildCustomizeChoices();
+                })));
+        }
+    }
+
+    private static Geometry? TryParseIconGeometry(string svgData)
+    {
+        try
+        {
+            return Geometry.Parse(svgData);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     [RelayCommand]
@@ -2414,15 +2613,24 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     {
         var isConnected = _driveClient.IsConnected;
         var hasRemote = isConnected && !string.IsNullOrWhiteSpace(remoteFolderId);
-        var iconData = FolderCustomizationPresets.ResolveIconSvg(customizedFolder?.CustomIconKey);
-        var normalizedHex = FolderCustomizationPresets.NormalizeColorHex(customizedFolder?.CustomColorHex);
+        var appearanceKey = !string.IsNullOrWhiteSpace(remoteFolderId)
+            ? $"drive:{remoteFolderId}"
+            : $"local:{Path.GetFullPath(localFullPath)}";
+        var appearance = ResolveFolderAppearance(customizedFolder, appearanceKey);
+
+        var shownName = !string.IsNullOrWhiteSpace(appearance?.Alias)
+            ? appearance!.Alias!.Trim()
+            : displayName;
+        var iconData = FolderCustomizationPresets.ResolveIconSvg(appearance?.IconKey);
+        var normalizedHex = FolderCustomizationPresets.NormalizeColorHex(appearance?.ColorHex);
         var iconBrush = !string.IsNullOrWhiteSpace(normalizedHex)
             ? SolidColorBrush.Parse(normalizedHex)
             : BrushMutedGray;
 
         return new FileHubItemViewModel
         {
-            Name = displayName,
+            Name = shownName,
+            OriginalFolderName = displayName,
             PathDisplay = localFullPath,
             OriginDisplay = Loc.Text("FileHubStatusFolder"),
             OriginBrush = BrushFolderBlue,
@@ -2432,13 +2640,18 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             HasLocalFile = Directory.Exists(localFullPath),
             LocalFullPath = localFullPath,
             RemoteFileId = hasRemote ? remoteFolderId : string.Empty,
+            SyncFolderId = customizedFolder?.Id,
+            AppearanceKey = appearanceKey,
+            CustomAlias = appearance?.Alias,
+            CustomColorHex = normalizedHex,
+            CustomIconKey = appearance?.IconKey,
             FileIconData = iconData,
             FileIconBrush = iconBrush,
             ActionLabel = Loc.Text("FileHubOpenFolder"),
             OpenInDriveLabel = Loc.Text("OpenInDriveButton"),
             CopyNameLabel = Loc.Text("CopyNameMenu"),
             CopyLinkLabel = Loc.Text("CopyDriveLinkMenu"),
-            OpenActionCommand = new AsyncRelayCommand(() => OpenLocalFolderAsync(syncFolderId, subPath, displayName)),
+            OpenActionCommand = new AsyncRelayCommand(() => OpenLocalFolderAsync(syncFolderId, subPath, shownName)),
             OpenInDriveCommand = hasRemote
                 ? new AsyncRelayCommand(() => OpenRemoteInDriveBrowserAsync(remoteFolderId, true))
                 : null,

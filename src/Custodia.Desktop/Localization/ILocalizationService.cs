@@ -235,7 +235,6 @@ public interface ILocalizationService : INotifyPropertyChanged
     string PreviewSoundButton { get; }
     string GmailAccountAlertsCheckbox { get; }
     string GmailAccountAlertsHint { get; }
-    string OpenEnableGmailApiButton { get; }
 
     string NewFolderButton { get; }
     string SyncLocalIntoHereButton { get; }

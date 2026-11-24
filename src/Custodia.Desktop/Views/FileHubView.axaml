@@ -184,6 +184,112 @@
         </Grid>
       </Border>
 
+      <!-- Barra inline de personalização de pasta (apelido, cor e símbolo) -->
+      <Border Classes="SurfaceCard"
+              Padding="14,12"
+              IsVisible="{Binding IsCustomizeFolderOpen}">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding Loc.CustomizeFolderButton}" />
+              <TextBlock Classes="MutedMeta" FontSize="12.5" Text="•" />
+              <TextBlock Classes="MutedMeta" FontSize="12.5" Text="{Binding CustomizeTargetTitle}" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Classes="SecondaryAction"
+                    Padding="8,3"
+                    FontSize="11.5"
+                    Content="✕"
+                    Command="{Binding CancelFolderCustomizationCommand}" />
+          </Grid>
+
+          <Grid ColumnDefinitions="220,*" ColumnSpacing="14">
+            <StackPanel Grid.Column="0" Spacing="4">
+              <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding Loc.CustomizeAliasLabel}" />
+              <TextBox Watermark="{Binding Loc.CustomizeAliasWatermark}" Text="{Binding CustomizeEditAlias}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Spacing="4">
+              <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding Loc.CustomizeColorLabel}" />
+              <ItemsControl ItemsSource="{Binding CustomizeColorChoices}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:FolderColorChoice">
+                    <Button Padding="2"
+                            Margin="0,0,6,2"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Command="{Binding SelectCommand}">
+                      <Border Width="22"
+                              Height="22"
+                              CornerRadius="11"
+                              Background="{Binding Brush}"
+                              BorderBrush="{Binding SelectionBorderBrush}"
+                              BorderThickness="2" />
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Grid>
+
+          <StackPanel Spacing="4">
+            <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding Loc.CustomizeIconLabel}" />
+            <ItemsControl ItemsSource="{Binding CustomizeIconChoices}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:FolderIconChoice">
+                  <Button Padding="8,4"
+                          Margin="0,0,6,4"
+                          Background="#1B2230"
+                          BorderBrush="{Binding SelectionBorderBrush}"
+                          BorderThickness="1"
+                          CornerRadius="6"
+                          Command="{Binding SelectCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <PathIcon Width="13" Height="13"
+                                Foreground="{StaticResource TundraTextPrimary}"
+                                Data="{Binding Geometry}" />
+                      <TextBlock FontSize="11.5"
+                                 VerticalAlignment="Center"
+                                 Text="{Binding Label}" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <WrapPanel Orientation="Horizontal">
+            <Button Classes="PrimaryAction"
+                    Margin="0,0,8,0"
+                    Padding="12,5"
+                    FontSize="12"
+                    Content="{Binding Loc.SaveCustomizationButton}"
+                    Command="{Binding SaveFolderCustomizationCommand}" />
+            <Button Classes="SecondaryAction"
+                    Margin="0,0,8,0"
+                    Padding="10,5"
+                    FontSize="12"
+                    Content="{Binding Loc.ResetCustomizationButton}"
+                    Command="{Binding ResetFolderCustomizationCommand}" />
+            <Button Classes="SecondaryAction"
+                    Padding="10,5"
+                    FontSize="12"
+                    Content="{Binding Loc.CancelButton}"
+                    Command="{Binding CancelFolderCustomizationCommand}" />
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+
       <!-- Banner animado de erro de upload/download -->
       <Border Classes="ErrorPulseBanner"
               Padding="12,9"
@@ -402,6 +508,9 @@
                   <MenuItem Header="{Binding SelectedItem.ActionLabel, FallbackValue=''}"
                             IsVisible="{Binding SelectedItem.CanOpenNormal, FallbackValue=False}"
                             Command="{Binding SelectedItem.OpenActionCommand}" />
+                  <MenuItem Header="{Binding Loc.CustomizeFolderButton}"
+                            IsVisible="{Binding CanCustomizeSelectedFolder}"
+                            Command="{Binding OpenCustomizeFolderCommand}" />
                   <MenuItem Header="{Binding SelectedItem.OpenInDriveLabel, FallbackValue=''}"
                             IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
                             Command="{Binding SelectedItem.OpenInDriveCommand}" />
@@ -412,13 +521,21 @@
                   <MenuItem Header="{Binding SelectedItem.CopyLinkLabel, FallbackValue=''}"
                             IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
                             Command="{Binding SelectedItem.CopyDriveLinkCommand}" />
-                  <MenuItem Header="{Binding Loc.MoveToTrashButton}"
+                  <MenuItem Foreground="#F87171"
+                            FontWeight="SemiBold"
+                            Header="{Binding Loc.MoveToTrashButton}"
                             IsVisible="{Binding CanTrashSelected}"
-                            Command="{Binding TrashSelectedCommand}" />
+                            Command="{Binding TrashSelectedCommand}">
+                    <MenuItem.Icon>
+                      <PathIcon Width="13" Height="13" Foreground="#EF4444" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                    </MenuItem.Icon>
+                  </MenuItem>
                   <MenuItem Header="{Binding Loc.RestoreFromTrashButton}"
                             IsVisible="{Binding CanRestoreSelected}"
                             Command="{Binding RestoreSelectedCommand}" />
-                  <MenuItem Header="{Binding Loc.DeletePermanentlyButton}"
+                  <MenuItem Foreground="#F87171"
+                            FontWeight="SemiBold"
+                            Header="{Binding Loc.DeletePermanentlyButton}"
                             IsVisible="{Binding CanDeleteSelectedPermanently}"
                             Command="{Binding DeleteSelectedPermanentlyCommand}" />
                   <Separator IsVisible="{Binding HasSelectedItem}" />
@@ -440,7 +557,9 @@
                   <MenuItem Header="{Binding Loc.ClearSelectionButton}"
                             IsVisible="{Binding HasSelectedItem}"
                             Click="OnClearSelectionClick" />
-                  <MenuItem Header="{Binding Loc.EmptyTrashButton}"
+                  <MenuItem Foreground="#F87171"
+                            FontWeight="SemiBold"
+                            Header="{Binding Loc.EmptyTrashButton}"
                             IsVisible="{Binding CanEmptyTrash}"
                             Command="{Binding RequestEmptyTrashCommand}" />
                 </ContextMenu>
@@ -505,6 +624,9 @@
                 <MenuItem Header="{Binding SelectedItem.ActionLabel, FallbackValue=''}"
                           IsVisible="{Binding SelectedItem.CanOpenNormal, FallbackValue=False}"
                           Command="{Binding SelectedItem.OpenActionCommand}" />
+                <MenuItem Header="{Binding Loc.CustomizeFolderButton}"
+                          IsVisible="{Binding CanCustomizeSelectedFolder}"
+                          Command="{Binding OpenCustomizeFolderCommand}" />
                 <MenuItem Header="{Binding SelectedItem.OpenInDriveLabel, FallbackValue=''}"
                           IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
                           Command="{Binding SelectedItem.OpenInDriveCommand}" />
@@ -515,13 +637,21 @@
                 <MenuItem Header="{Binding SelectedItem.CopyLinkLabel, FallbackValue=''}"
                           IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
                           Command="{Binding SelectedItem.CopyDriveLinkCommand}" />
-                <MenuItem Header="{Binding Loc.MoveToTrashButton}"
+                <MenuItem Foreground="#F87171"
+                          FontWeight="SemiBold"
+                          Header="{Binding Loc.MoveToTrashButton}"
                           IsVisible="{Binding CanTrashSelected}"
-                          Command="{Binding TrashSelectedCommand}" />
+                          Command="{Binding TrashSelectedCommand}">
+                  <MenuItem.Icon>
+                    <PathIcon Width="13" Height="13" Foreground="#EF4444" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                  </MenuItem.Icon>
+                </MenuItem>
                 <MenuItem Header="{Binding Loc.RestoreFromTrashButton}"
                           IsVisible="{Binding CanRestoreSelected}"
                           Command="{Binding RestoreSelectedCommand}" />
-                <MenuItem Header="{Binding Loc.DeletePermanentlyButton}"
+                <MenuItem Foreground="#F87171"
+                          FontWeight="SemiBold"
+                          Header="{Binding Loc.DeletePermanentlyButton}"
                           IsVisible="{Binding CanDeleteSelectedPermanently}"
                           Command="{Binding DeleteSelectedPermanentlyCommand}" />
                 <Separator IsVisible="{Binding HasSelectedItem}" />
@@ -543,7 +673,9 @@
                 <MenuItem Header="{Binding Loc.ClearSelectionButton}"
                           IsVisible="{Binding HasSelectedItem}"
                           Click="OnClearSelectionClick" />
-                <MenuItem Header="{Binding Loc.EmptyTrashButton}"
+                <MenuItem Foreground="#F87171"
+                          FontWeight="SemiBold"
+                          Header="{Binding Loc.EmptyTrashButton}"
                           IsVisible="{Binding CanEmptyTrash}"
                           Command="{Binding RequestEmptyTrashCommand}" />
               </ContextMenu>

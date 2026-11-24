@@ -139,18 +139,11 @@
             </Grid>
           </StackPanel>
 
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-            <StackPanel Grid.Column="0" Spacing="4">
-              <CheckBox IsChecked="{Binding GmailAccountAlertsEnabled}"
-                        Content="{Binding Loc.GmailAccountAlertsCheckbox}" />
-              <TextBlock Classes="MutedMeta" Margin="28,0,0,0" Text="{Binding Loc.GmailAccountAlertsHint}" TextWrapping="Wrap" />
-            </StackPanel>
-            <Button Grid.Column="1"
-                    Classes="SecondaryAction"
-                    VerticalAlignment="Center"
-                    Content="{Binding Loc.OpenEnableGmailApiButton}"
-                    Command="{Binding OpenEnableGmailApiCommand}" />
-          </Grid>
+          <StackPanel Spacing="4">
+            <CheckBox IsChecked="{Binding GmailAccountAlertsEnabled}"
+                      Content="{Binding Loc.GmailAccountAlertsCheckbox}" />
+            <TextBlock Classes="MutedMeta" Margin="28,0,0,0" Text="{Binding Loc.GmailAccountAlertsHint}" TextWrapping="Wrap" />
+          </StackPanel>
 
           <CheckBox IsChecked="{Binding MinimizeToTrayOnClose}"
                     Content="{Binding Loc.MinimizeToTrayCheckbox}" />
@@ -306,12 +299,6 @@
               <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding Loc.CredentialsFileLabel}" />
-                  <Border Background="#123026"
-                          CornerRadius="4"
-                          Padding="6,2"
-                          IsVisible="{Binding HasCredentialsJson}">
-                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#6EE7B7" Text="{Binding CredentialsStatusBadgeText}" />
-                  </Border>
                   <Border Background="#3B2512"
                           CornerRadius="4"
                           Padding="6,2"

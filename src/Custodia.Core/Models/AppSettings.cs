@@ -1,5 +1,10 @@
 namespace TundraDrive.Core.Models;
 
+public sealed record FolderAppearanceOverride(
+    string? Alias = null,
+    string? ColorHex = null,
+    string? IconKey = null);
+
 public sealed class AppSettings
 {
     public string Language { get; set; } = "pt-BR";
@@ -10,6 +15,8 @@ public sealed class AppSettings
     public bool NotificationSoundEnabled { get; set; } = true;
     public string NotificationSoundTone { get; set; } = "chime";
     public bool GmailAccountAlertsEnabled { get; set; } = true;
+    public string MailerWebhookUrl { get; set; } = string.Empty;
+    public Dictionary<string, FolderAppearanceOverride> FolderAppearances { get; set; } = new(StringComparer.Ordinal);
     public bool MinimizeToTrayOnClose { get; set; } = true;
     public string DownloadDirectory { get; set; } = Configuration.AppPaths.DefaultDownloadDirectory;
     public int SyncIntervalSeconds { get; set; } = 120;

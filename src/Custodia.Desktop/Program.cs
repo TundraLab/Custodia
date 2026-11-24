@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using TundraDrive.Api;
 using TundraDrive.Core.Configuration;
 using TundraDrive.Core.Drive;
+using TundraDrive.Core.Notifications;
 using TundraDrive.Core.Persistence;
 using TundraDrive.Core.Security;
 using TundraDrive.Core.Sync;
@@ -109,6 +110,7 @@ internal static class Program
         services.AddSingleton<ISyncStateRepository, SqliteSyncStateRepository>();
 
         services.AddSingleton<IGoogleDriveClient, GoogleDriveClient>();
+        services.AddSingleton<ITundraMailerClient, AppsScriptMailerClient>();
         services.AddSingleton<LocalFolderWatcherService>();
         services.AddSingleton<IDriveSyncService, DriveSyncService>();
 

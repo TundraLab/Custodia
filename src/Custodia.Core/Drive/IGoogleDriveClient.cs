@@ -26,5 +26,4 @@ public interface IGoogleDriveClient
     Task RestoreFileAsync(string remoteFileId, CancellationToken cancellationToken = default);
     Task DeletePermanentlyAsync(string remoteFileId, CancellationToken cancellationToken = default);
     Task EmptyTrashAsync(CancellationToken cancellationToken = default);
-    Task<bool> TrySendGmailAlertAsync(string recipientEmail, string subject, string htmlBody, string? accountKey = null, CancellationToken cancellationToken = default);
 }

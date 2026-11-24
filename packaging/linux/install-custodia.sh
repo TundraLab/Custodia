@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ==============================================================================
-# Custódia v2.9.1 - Instalador Oficial de Terminal by TundraLab
+# Custódia v2.9.2 - Instalador Oficial de Terminal by TundraLab
 # Autor e Desenvolvedor: Gustavo Henrique Novaes Gomes (@GustaHerin)
 # Licença: Proprietária / Todos os Direitos Reservados
 # ==============================================================================
@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." 2>/dev/null && pwd || pwd)"
 DIST_DIR="${REPO_ROOT}/dist"
 
-VERSION="${CUSTODIA_VERSION:-${TUNDRA_VERSION:-2.9.1}}"
+VERSION="${CUSTODIA_VERSION:-${TUNDRA_VERSION:-2.9.2}}"
 REPO_SLUG="TundraLab/Custodia"
 RELEASE_BASE_URL="https://github.com/${REPO_SLUG}/releases/latest/download"
 RAW_BASE_URL="https://raw.githubusercontent.com/${REPO_SLUG}/main"

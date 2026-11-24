@@ -475,9 +475,8 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["SoundTonePulse"] = "Pulso duplo",
         ["SoundToneMinimal"] = "Clique discreto",
 
-        ["GmailAccountAlertsCheckbox"] = "Enviar aviso no Gmail ao conectar ou desconectar conta",
-        ["GmailAccountAlertsHint"] = "Envia um e-mail para a conta conectada ou desconectada (ative a Gmail API e clique em Reconectar em contas antigas).",
-        ["OpenEnableGmailApiButton"] = "Ativar Gmail API",
+        ["GmailAccountAlertsCheckbox"] = "Enviar e-mail de agradecimento e revogação por contato.tundralab@gmail.com",
+        ["GmailAccountAlertsHint"] = "Envia um e-mail automático de boas-vindas ao conectar e de confirmação ao revogar/desconectar uma conta (via serviço TundraLab, sem usar a Gmail API do usuário).",
 
         ["NewFolderButton"] = "Nova Pasta",
         ["SyncLocalIntoHereButton"] = "Sincronizar Pasta Local Aqui",
@@ -1000,9 +999,8 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["SoundTonePulse"] = "Double pulse",
         ["SoundToneMinimal"] = "Minimal click",
 
-        ["GmailAccountAlertsCheckbox"] = "Send Gmail alert when connecting or disconnecting account",
-        ["GmailAccountAlertsHint"] = "Emails the account being connected or disconnected (enable Gmail API and click Reconnect on older sessions).",
-        ["OpenEnableGmailApiButton"] = "Enable Gmail API",
+        ["GmailAccountAlertsCheckbox"] = "Send welcome and revocation emails from contato.tundralab@gmail.com",
+        ["GmailAccountAlertsHint"] = "Sends an automatic welcome email when connecting and a confirmation email when revoking/disconnecting (via TundraLab mailer, without user Gmail API).",
 
         ["NewFolderButton"] = "New Folder",
         ["SyncLocalIntoHereButton"] = "Sync Local Folder Here",
@@ -1329,7 +1327,6 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string PreviewSoundButton => Text("PreviewSoundButton");
     public string GmailAccountAlertsCheckbox => Text("GmailAccountAlertsCheckbox");
     public string GmailAccountAlertsHint => Text("GmailAccountAlertsHint");
-    public string OpenEnableGmailApiButton => Text("OpenEnableGmailApiButton");
 
     public string NewFolderButton => Text("NewFolderButton");
     public string SyncLocalIntoHereButton => Text("SyncLocalIntoHereButton");
