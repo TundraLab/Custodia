@@ -199,6 +199,7 @@
 
                 <!-- Alternador de contas conectadas -->
                 <ComboBox HorizontalAlignment="Stretch"
+                          FontSize="11.5"
                           IsVisible="{Binding AccountsVm.HasMultipleAccounts}"
                           IsEnabled="{Binding !AccountsVm.IsBusy}"
                           ItemsSource="{Binding AccountsVm.SavedAccounts}"
@@ -344,10 +345,10 @@
 
                 <!-- Armazenamento segmentado + consumo por serviço -->
                 <StackPanel Spacing="6" IsVisible="{Binding AccountsVm.IsConnected}">
-                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                    <TextBlock Grid.Column="0" Classes="MutedMeta" FontSize="11" Text="{Binding Loc.StorageLabel}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="1" FontSize="11" FontWeight="Medium" Foreground="{StaticResource TundraTextPrimary}" Text="{Binding AccountsVm.ShortQuotaText}" />
-                  </Grid>
+                  <StackPanel Spacing="1">
+                    <TextBlock Classes="MutedMeta" FontSize="10.5" Text="{Binding Loc.StorageLabel}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock FontSize="11.5" FontWeight="Medium" Foreground="{StaticResource TundraTextPrimary}" Text="{Binding AccountsVm.ShortQuotaText}" />
+                  </StackPanel>
 
                   <Border Height="6"
                           CornerRadius="3"
