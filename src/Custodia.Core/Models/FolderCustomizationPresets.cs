@@ -23,7 +23,7 @@ public static class FolderCustomizationPresets
 
     public static IReadOnlyList<FolderIconPreset> Icons { get; } =
     [
-        new("folder", "M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z", "Padrão", "Default"),
+        new("folder", "M 3.6,4.6 L 9.8,4.6 L 12.0,6.8 L 20.4,6.8 L 22.0,8.4 L 22.0,18.0 L 20.4,19.6 L 3.6,19.6 L 2.0,18.0 L 2.0,6.2 Z M 4.4,6.4 L 3.8,7.0 L 3.8,17.2 L 4.4,17.8 L 19.6,17.8 L 20.2,17.2 L 20.2,9.2 L 19.6,8.6 L 11.2,8.6 L 9.0,6.4 Z M 8.2,12.0 L 9.5,10.7 L 12.0,13.2 L 14.5,10.7 L 15.8,12.0 L 12.0,15.8 Z", "Padrão", "Default"),
         new("work", "M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z", "Trabalho", "Work"),
         new("code", "M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z", "Código", "Code"),
         new("photo", "M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z", "Fotos", "Photos"),

@@ -25,6 +25,7 @@ public sealed class FileHubBreadcrumbItem
 {
     public string FolderId { get; }
     public string Name { get; }
+    public bool ShowSeparator { get; set; }
     public IRelayCommand SelectCommand { get; }
 
     public FileHubBreadcrumbItem(string folderId, string name, Func<FileHubBreadcrumbItem, Task> onSelect)
@@ -127,7 +128,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private static readonly IBrush BrushImagePink = SolidColorBrush.Parse("#F6A5C0");
     private const string GoogleOneStorageUrl = "https://one.google.com/storage";
 
-    private const string FolderIconSvg = "M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z";
+    private static readonly string FolderIconSvg = FolderCustomizationPresets.ResolveIconSvg(FolderCustomizationPresets.DefaultIconKey);
     private const string SheetIconSvg = "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-2h2v2zm0-4H7v-2h2v2zm0-4H7V7h2v2zm8 8h-6v-2h6v2zm0-4h-6v-2h6v2zm0-4h-6V7h6v2z";
     private const string DocIconSvg = "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z";
     private const string PdfIconSvg = "M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z";
@@ -157,6 +158,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private string _localSubPath = string.Empty;
     private IReadOnlyList<Func<FileHubItemViewModel>> _allPageFactories = [];
     private string _activePageContextLabel = string.Empty;
+    private bool _isBatchUpdatingFiles;
 
     public ILocalizationService Loc { get; }
 
@@ -176,6 +178,10 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<FileHubItemViewModel>? ActiveListFiles => IsGridLayout ? null : Files;
     public ObservableCollection<FileHubItemViewModel>? ActiveGridFiles => IsGridLayout ? Files : null;
+    public ObservableCollection<FileHubItemViewModel> GridFolders { get; } = [];
+    public ObservableCollection<FileHubItemViewModel> GridFileItems { get; } = [];
+    public bool HasGridFolders => GridFolders.Count > 0;
+    public bool HasGridFiles => GridFileItems.Count > 0;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanPreviousPage))]
@@ -207,6 +213,12 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private string _statusSummary = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedItem))]
+    [NotifyPropertyChangedFor(nameof(CanPreviewSelected))]
+    [NotifyPropertyChangedFor(nameof(CanCustomizeSelectedFolder))]
+    [NotifyPropertyChangedFor(nameof(CanRenameSelected))]
+    [NotifyPropertyChangedFor(nameof(CanMoveSelected))]
+    [NotifyPropertyChangedFor(nameof(CanOpenSelectedInDrive))]
     private FileHubItemViewModel? _selectedItem;
 
     [ObservableProperty]
@@ -344,15 +356,18 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     public bool CanNavigateBack => (SelectedSourceFilterIndex == 0 || SelectedSourceFilterIndex == 1) && Breadcrumbs.Count > 1;
     public bool HasSelectedFile => GetEffectiveSelectedItems().Any(i => !i.IsFolder);
     public bool HasSelectedItem => SelectedCount > 0 || SelectedItem is not null;
+    public bool ShowSelectionBar => !IsTrashView && HasSelectedItem;
+    public bool ShowTrashSelectionActions => IsTrashView && HasSelectedItem;
+    public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
     public bool HasMultipleSelected => SelectedCount > 1;
-    public bool CanPreviewSelected => SelectedCount <= 1 && SelectedItem is { IsFolder: false };
-    public bool CanCustomizeSelectedFolder => SelectedCount <= 1 && SelectedItem is { IsFolder: true, IsInTrash: false };
-    public bool CanRenameSelected => !IsTrashView && SelectedCount <= 1 && SelectedItem is not null &&
-                                     (!string.IsNullOrWhiteSpace(SelectedItem.RemoteFileId) || SelectedItem.HasLocalFile);
+    public bool CanPreviewSelected => SelectedCount <= 1 && GetSingleEffectiveSelectedItem() is { IsFolder: false };
+    public bool CanCustomizeSelectedFolder => SelectedCount <= 1 && GetSingleEffectiveSelectedItem() is { IsFolder: true, IsInTrash: false };
+    public bool CanRenameSelected => !IsTrashView && SelectedCount <= 1 && GetSingleEffectiveSelectedItem() is { } single &&
+                                     (!string.IsNullOrWhiteSpace(single.RemoteFileId) || single.HasLocalFile);
     public bool CanMoveSelected => !IsTrashView && GetEffectiveSelectedItems().Any(i =>
                                      !string.IsNullOrWhiteSpace(i.RemoteFileId) || i.HasLocalFile);
     public bool CanDownloadSelected => GetEffectiveSelectedItems().Any(i => i.CanDownload);
-    public bool CanOpenSelectedInDrive => SelectedItem is not null && !string.IsNullOrWhiteSpace(SelectedItem.RemoteFileId);
+    public bool CanOpenSelectedInDrive => GetSingleEffectiveSelectedItem() is { } single && !string.IsNullOrWhiteSpace(single.RemoteFileId);
     public bool CanTrashSelected => !IsTrashView && GetEffectiveSelectedItems().Any(i => i.CanMoveToTrash);
     public bool CanRestoreSelected => IsTrashView && GetEffectiveSelectedItems().Any(i => i.IsInTrash);
     public bool CanDeleteSelectedPermanently => IsTrashView && GetEffectiveSelectedItems().Any(i => i.IsInTrash);
@@ -399,6 +414,13 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         _driveFolderName = Loc.Text("MyDriveLabel");
         _driveBreadcrumbs.Add(new FileHubBreadcrumbItem("root", _driveFolderName, NavigateToBreadcrumbAsync));
         _localBreadcrumbs.Add(new FileHubBreadcrumbItem(LocalRootCrumbId, Loc.Text("FileHubFilterLocal"), NavigateToBreadcrumbAsync));
+        Files.CollectionChanged += (_, _) =>
+        {
+            if (!_isBatchUpdatingFiles)
+            {
+                SyncGridSections();
+            }
+        };
         SyncBreadcrumbsFromActiveMode();
         RebuildFilterOptions();
         ApplyAccount(_syncService.CurrentAccount);
@@ -526,7 +548,37 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         }
 
         SelectedCount = SelectedItems.Count;
+
+        // Keep SelectedItem aligned with checkbox and multi-selection state without breaking hidden ListBox switches.
+        var nextSelected = next.Count == 1
+            ? next[0]
+            : next.Count == 0
+                ? null
+                : SelectedItem is not null && nextSet.Contains(SelectedItem)
+                    ? SelectedItem
+                    : next[^1];
+
+        if (!ReferenceEquals(SelectedItem, nextSelected))
+        {
+            SelectedItem = nextSelected;
+        }
+
         NotifySelectionStateChanged();
+    }
+
+    private FileHubItemViewModel? GetSingleEffectiveSelectedItem()
+    {
+        if (SelectedItems.Count > 1)
+        {
+            return null;
+        }
+
+        if (SelectedItems.Count == 1)
+        {
+            return SelectedItems[0];
+        }
+
+        return SelectedItem;
     }
 
     private List<FileHubItemViewModel> GetEffectiveSelectedItems()
@@ -543,6 +595,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(HasSelectedFile));
         OnPropertyChanged(nameof(HasSelectedItem));
+        OnPropertyChanged(nameof(ShowSelectionBar));
+        OnPropertyChanged(nameof(ShowTrashSelectionActions));
         OnPropertyChanged(nameof(HasMultipleSelected));
         OnPropertyChanged(nameof(CanPreviewSelected));
         OnPropertyChanged(nameof(CanCustomizeSelectedFolder));
@@ -551,8 +605,6 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(CanDownloadSelected));
         OnPropertyChanged(nameof(CanOpenSelectedInDrive));
         OnPropertyChanged(nameof(CanTrashSelected));
-        OnPropertyChanged(nameof(CanRenameSelected));
-        OnPropertyChanged(nameof(CanMoveSelected));
         OnPropertyChanged(nameof(CanRestoreSelected));
         OnPropertyChanged(nameof(CanDeleteSelectedPermanently));
         OnPropertyChanged(nameof(SelectionCountDisplay));
@@ -570,6 +622,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsDriveFilter));
         OnPropertyChanged(nameof(IsLocalFilter));
         OnPropertyChanged(nameof(IsTrashView));
+        OnPropertyChanged(nameof(ShowSelectionBar));
+        OnPropertyChanged(nameof(ShowTrashSelectionActions));
         OnPropertyChanged(nameof(TrashTabDisplay));
         OnPropertyChanged(nameof(CanEmptyTrash));
         OnPropertyChanged(nameof(CanTrashSelected));
@@ -584,7 +638,23 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         }
     }
 
-    partial void OnSearchTextChanged(string value) => OnPropertyChanged(nameof(ShowBreadcrumbs));
+    partial void OnSearchTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(ShowBreadcrumbs));
+        OnPropertyChanged(nameof(HasSearchText));
+    }
+
+    [RelayCommand]
+    private async Task ClearSearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            return;
+        }
+
+        SearchText = string.Empty;
+        await RefreshAsync();
+    }
 
     partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(CanEmptyTrash));
 
@@ -614,9 +684,10 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private async Task PreviewSelectedAsync()
     {
-        if (SelectedItem is { IsFolder: false })
+        var target = GetSingleEffectiveSelectedItem();
+        if (target is { IsFolder: false })
         {
-            await LoadPreviewAsync(SelectedItem, 1);
+            await LoadPreviewAsync(target, 1);
         }
     }
 
@@ -677,12 +748,13 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private async Task OpenSelectedInDriveAsync()
     {
-        if (SelectedItem is null || string.IsNullOrWhiteSpace(SelectedItem.RemoteFileId))
+        var target = GetSingleEffectiveSelectedItem();
+        if (target is null || string.IsNullOrWhiteSpace(target.RemoteFileId))
         {
             return;
         }
 
-        await OpenRemoteInDriveBrowserAsync(SelectedItem.RemoteFileId, SelectedItem.IsFolder);
+        await OpenRemoteInDriveBrowserAsync(target.RemoteFileId, target.IsFolder);
     }
 
     [RelayCommand]
@@ -964,17 +1036,51 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private void DisposeFileItems()
     {
         _thumbnailCts?.Cancel();
-        if (Files.Count == 0)
+        if (Files.Count == 0 && GridFolders.Count == 0 && GridFileItems.Count == 0)
         {
             return;
         }
 
         var oldItems = Files.ToList();
-        Files.Clear();
+        _isBatchUpdatingFiles = true;
+        try
+        {
+            Files.Clear();
+            GridFolders.Clear();
+            GridFileItems.Clear();
+        }
+        finally
+        {
+            _isBatchUpdatingFiles = false;
+        }
+
+        OnPropertyChanged(nameof(HasGridFolders));
+        OnPropertyChanged(nameof(HasGridFiles));
+
         foreach (var old in oldItems)
         {
             old.Dispose();
         }
+    }
+
+    private void SyncGridSections()
+    {
+        GridFolders.Clear();
+        GridFileItems.Clear();
+        foreach (var item in Files)
+        {
+            if (item.IsFolder)
+            {
+                GridFolders.Add(item);
+            }
+            else
+            {
+                GridFileItems.Add(item);
+            }
+        }
+
+        OnPropertyChanged(nameof(HasGridFolders));
+        OnPropertyChanged(nameof(HasGridFiles));
     }
 
     public void Dispose()
@@ -1183,8 +1289,10 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     {
         var active = SelectedSourceFilterIndex == 1 ? _localBreadcrumbs : _driveBreadcrumbs;
         Breadcrumbs.Clear();
-        foreach (var crumb in active)
+        for (var i = 0; i < active.Count; i++)
         {
+            var crumb = active[i];
+            crumb.ShowSeparator = i < active.Count - 1;
             Breadcrumbs.Add(crumb);
         }
 
@@ -1236,10 +1344,20 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         if (totalItems > 0)
         {
             var skip = (CurrentPage - 1) * ItemsPerPage;
-            foreach (var factory in _allPageFactories.Skip(skip).Take(ItemsPerPage))
+            _isBatchUpdatingFiles = true;
+            try
             {
-                Files.Add(factory());
+                foreach (var factory in _allPageFactories.Skip(skip).Take(ItemsPerPage))
+                {
+                    Files.Add(factory());
+                }
             }
+            finally
+            {
+                _isBatchUpdatingFiles = false;
+            }
+
+            SyncGridSections();
         }
 
         IsFolderEmpty = totalItems == 0;

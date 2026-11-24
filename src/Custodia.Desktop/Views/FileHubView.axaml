@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TundraDrive.Desktop.ViewModels"
+             x:Name="FileHubRoot"
              x:Class="TundraDrive.Desktop.Views.FileHubView"
              x:DataType="vm:FileHubViewModel"
              DragDrop.AllowDrop="True">
@@ -23,7 +24,9 @@
           </Border>
         </StackPanel>
 
-        <Button Classes="m3-outlined m3-compact"
+        <Button Classes="m3-text m3-compact"
+                Foreground="{DynamicResource M3Primary}"
+                FontWeight="SemiBold"
                 Content="{Binding Loc.BuyMoreShortButton}"
                 Command="{Binding BuyMoreStorageCommand}" />
       </StackPanel>
@@ -31,24 +34,25 @@
 
     <!-- Breadcrumb bar and segmented source/view controls -->
     <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-      <Border Grid.Column="0" Classes="m3-card" Padding="10,6" MinWidth="200">
-        <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="6">
+      <Border Grid.Column="0"
+              Background="{DynamicResource M3SurfaceContainer}"
+              CornerRadius="20"
+              Padding="8,4"
+              HorizontalAlignment="Left"
+              VerticalAlignment="Center"
+              IsVisible="{Binding ShowBreadcrumbs}">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="4">
           <Button Grid.Column="0"
-                  Classes="m3-outlined m3-compact"
-                  IsEnabled="{Binding CanNavigateBack}"
+                  Classes="m3-text m3-icon"
+                  MinHeight="28"
+                  MinWidth="28"
+                  Padding="5"
+                  IsVisible="{Binding CanNavigateBack}"
                   ToolTip.Tip="{Binding Loc.BackButton}"
                   Command="{Binding NavigateBackCommand}">
-            <StackPanel Orientation="Horizontal" Spacing="4">
-              <PathIcon Width="12" Height="12" Data="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
-              <TextBlock FontSize="12" Text="{Binding Loc.BackButton}" VerticalAlignment="Center" />
-            </StackPanel>
+            <PathIcon Width="13" Height="13" Data="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
           </Button>
-          <Button Grid.Column="1"
-                  Classes="m3-tonal m3-compact"
-                  FontSize="12"
-                  Content="{Binding RootBreadcrumbLabel}"
-                  Command="{Binding NavigateToRootCommand}" />
-          <ScrollViewer Grid.Column="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+          <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding Breadcrumbs}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -59,13 +63,19 @@
                 <DataTemplate x:DataType="vm:FileHubBreadcrumbItem">
                   <StackPanel Orientation="Horizontal" Spacing="2">
                     <Button Classes="m3-text"
-                            MinHeight="0"
-                            Padding="6,3"
+                            MinHeight="28"
+                            Padding="10,4"
                             FontSize="12.5"
+                            FontWeight="Medium"
                             Foreground="{DynamicResource M3OnSurface}"
                             Content="{Binding Name}"
                             Command="{Binding SelectCommand}" />
-                    <TextBlock Text="/" VerticalAlignment="Center" Classes="m3-meta" />
+                    <TextBlock Text="›"
+                               FontSize="13"
+                               VerticalAlignment="Center"
+                               Margin="0,0,2,0"
+                               Classes="m3-meta"
+                               IsVisible="{Binding ShowSeparator}" />
                   </StackPanel>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
@@ -81,7 +91,7 @@
                     Classes.m3-seg-active="{Binding IsDriveFilter}"
                     Command="{Binding SelectDriveFilterCommand}">
               <StackPanel Orientation="Horizontal" Spacing="6">
-                <PathIcon Width="13" Height="13" Data="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" />
+                <PathIcon Width="13" Height="13" Data="{StaticResource TundraCloudSyncGeometry}" />
                 <TextBlock FontSize="12" Text="{Binding Loc.FileHubFilterDrive}" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
@@ -90,7 +100,7 @@
                     Classes.m3-seg-active="{Binding IsLocalFilter}"
                     Command="{Binding SelectLocalFilterCommand}">
               <StackPanel Orientation="Horizontal" Spacing="6">
-                <PathIcon Width="13" Height="13" Data="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+                <PathIcon Width="13" Height="13" Data="{StaticResource TundraFolderGeometry}" />
                 <TextBlock FontSize="12" Text="{Binding Loc.FileHubFilterLocal}" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
@@ -100,7 +110,7 @@
                     ToolTip.Tip="{Binding Loc.OpenTrashTooltip}"
                     Command="{Binding SelectTrashFilterCommand}">
               <StackPanel Orientation="Horizontal" Spacing="6">
-                <PathIcon Width="13" Height="13" Foreground="{DynamicResource M3Error}" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                <PathIcon Width="13" Height="13" Foreground="{DynamicResource M3Error}" Data="{StaticResource TundraTrashGeometry}" />
                 <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3Error}" Text="{Binding TrashTabDisplay}" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
@@ -130,36 +140,69 @@
 
     <!-- Search bar, contextual actions, and inline panels -->
     <StackPanel Grid.Row="2" Spacing="10">
-      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
         <TextBox Grid.Column="0"
                  Watermark="{Binding Loc.SearchFilesWatermark}"
                  Text="{Binding SearchText}"
-                 KeyDown="OnSearchBoxKeyDown" />
+                 KeyDown="OnSearchBoxKeyDown">
+          <TextBox.InnerLeftContent>
+            <PathIcon Width="14" Height="14"
+                      Margin="10,0,0,0"
+                      Foreground="{DynamicResource M3OnSurfaceMuted}"
+                      Data="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+          </TextBox.InnerLeftContent>
+          <TextBox.InnerRightContent>
+            <Button Classes="m3-text m3-icon"
+                    MinWidth="26"
+                    MinHeight="26"
+                    Padding="4"
+                    Margin="0,0,4,0"
+                    FontSize="11.5"
+                    Content="✕"
+                    IsVisible="{Binding HasSearchText}"
+                    ToolTip.Tip="{Binding Loc.ClearSearchTooltip}"
+                    Command="{Binding ClearSearchCommand}" />
+          </TextBox.InnerRightContent>
+        </TextBox>
 
         <Button Grid.Column="1"
-                Classes="m3-outlined"
-                Content="{Binding Loc.SearchButton}"
-                Command="{Binding RefreshCommand}" />
+                Classes="m3-tonal"
+                Width="36"
+                Height="36"
+                Padding="0"
+                ToolTip.Tip="{Binding Loc.RefreshButton}"
+                Command="{Binding RefreshCommand}"
+                IsEnabled="{Binding !IsLoading}">
+          <PathIcon Width="15" Height="15"
+                    Classes.m3-spinning="{Binding IsLoading}"
+                    Data="{StaticResource TundraRefreshGeometry}">
+            <PathIcon.RenderTransform>
+              <RotateTransform />
+            </PathIcon.RenderTransform>
+          </PathIcon>
+        </Button>
 
         <Button Grid.Column="2"
-                Classes="m3-outlined"
-                Content="{Binding Loc.RefreshButton}"
-                Command="{Binding RefreshCommand}"
-                IsEnabled="{Binding !IsLoading}" />
-
-        <Button Grid.Column="3"
                 Classes="m3-tonal"
                 IsVisible="{Binding !IsTrashView}"
-                Content="{Binding Loc.NewFolderButton}"
                 Command="{Binding ToggleCreateFolderCommand}"
-                IsEnabled="{Binding !IsLoading}" />
+                IsEnabled="{Binding !IsLoading}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Width="14" Height="14" Data="{StaticResource TundraFolderGeometry}" />
+            <TextBlock Text="{Binding Loc.NewFolderButton}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
 
-        <Button Grid.Column="4"
+        <Button Grid.Column="3"
                 Classes="m3-filled"
                 IsVisible="{Binding !IsTrashView}"
-                Content="{Binding Loc.UploadFileButton}"
                 Command="{Binding UploadFileCommand}"
-                IsEnabled="{Binding !IsLoading}" />
+                IsEnabled="{Binding !IsLoading}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Width="14" Height="14" Data="{StaticResource TundraUploadGeometry}" />
+            <TextBlock Text="{Binding Loc.UploadFileButton}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
       </Grid>
 
       <!-- Inline folder creation bar -->
@@ -343,7 +386,7 @@
                     Width="15" Height="15"
                     Foreground="{DynamicResource M3ErrorAccent}"
                     VerticalAlignment="Center"
-                    Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z">
+                    Data="{StaticResource TundraAlertGeometry}">
             <PathIcon.RenderTransform>
               <TranslateTransform />
             </PathIcon.RenderTransform>
@@ -363,64 +406,74 @@
         </Grid>
       </Border>
 
-      <!-- Contextual selection bar for active files -->
-      <Border Classes="m3-card"
+      <!-- Contextual selection bar (shown only when items are selected) -->
+      <Border Classes="m3-card-elevated"
               Padding="12,8"
-              IsVisible="{Binding !IsTrashView}">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <WrapPanel Grid.Column="0" Orientation="Horizontal">
-            <Button Classes="m3-outlined m3-compact"
-                    Margin="0,0,6,0"
-                    Content="{Binding Loc.PreviewButton}"
-                    IsEnabled="{Binding CanPreviewSelected}"
-                    Command="{Binding PreviewSelectedCommand}" />
-            <Button Classes="m3-tonal m3-compact"
-                    Margin="0,0,6,0"
-                    Content="{Binding Loc.DownloadButton}"
-                    IsEnabled="{Binding CanDownloadSelected}"
-                    Command="{Binding DownloadSelectedCommand}" />
-            <Button Classes="m3-outlined m3-compact"
-                    Margin="0,0,6,0"
-                    Content="{Binding Loc.OpenInDriveButton}"
-                    IsEnabled="{Binding CanOpenSelectedInDrive}"
-                    Command="{Binding OpenSelectedInDriveCommand}" />
-            <Button Classes="m3-outlined m3-compact"
-                    Margin="0,0,6,0"
-                    Content="{Binding Loc.RenameButton}"
-                    IsEnabled="{Binding CanRenameSelected}"
-                    Command="{Binding OpenRenameCommand}" />
-            <Button Classes="m3-outlined m3-compact"
-                    Margin="0,0,6,0"
-                    Content="{Binding Loc.MoveToFolderButton}"
-                    IsEnabled="{Binding CanMoveSelected}"
-                    Command="{Binding OpenMoveCommand}" />
-            <Button Classes="m3-danger-outlined m3-compact"
-                    Margin="0,0,6,0"
-                    Content="{Binding Loc.MoveToTrashButton}"
-                    IsEnabled="{Binding CanTrashSelected}"
-                    Command="{Binding TrashSelectedCommand}" />
-            <Button Classes="m3-outlined m3-compact"
-                    Margin="0,0,6,0"
-                    Content="{Binding Loc.SelectAllButton}"
-                    IsEnabled="{Binding !IsFolderEmpty}"
-                    Click="OnSelectAllClick" />
-            <Button Classes="m3-text m3-compact"
-                    Content="{Binding Loc.ClearSelectionButton}"
-                    IsVisible="{Binding HasSelectedItem}"
-                    Click="OnClearSelectionClick" />
-          </WrapPanel>
-
-          <Border Grid.Column="1"
+              IsVisible="{Binding ShowSelectionBar}">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+          <Border Grid.Column="0"
                   Background="{DynamicResource M3SecondaryContainer}"
-                  CornerRadius="16"
+                  CornerRadius="14"
                   Padding="10,4"
                   VerticalAlignment="Center"
-                  IsVisible="{Binding HasMultipleSelected}">
+                  IsVisible="{Binding SelectionCountDisplay, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
             <TextBlock FontSize="11.5"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource M3OnSecondaryContainer}"
                        Text="{Binding SelectionCountDisplay}" />
           </Border>
+
+          <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <Button Classes="m3-tonal m3-compact"
+                    Margin="0,0,6,0"
+                    Content="{Binding Loc.PreviewButton}"
+                    IsVisible="{Binding CanPreviewSelected}"
+                    Command="{Binding PreviewSelectedCommand}" />
+            <Button Classes="m3-tonal m3-compact"
+                    Margin="0,0,6,0"
+                    Content="{Binding Loc.DownloadButton}"
+                    IsVisible="{Binding CanDownloadSelected}"
+                    Command="{Binding DownloadSelectedCommand}" />
+            <Button Classes="m3-tonal m3-compact"
+                    Margin="0,0,6,0"
+                    Content="{Binding Loc.CustomizeFolderButton}"
+                    IsVisible="{Binding CanCustomizeSelectedFolder}"
+                    Command="{Binding OpenCustomizeFolderCommand}" />
+            <Button Classes="m3-text m3-compact"
+                    Margin="0,0,6,0"
+                    Content="{Binding Loc.OpenInDriveButton}"
+                    IsVisible="{Binding CanOpenSelectedInDrive}"
+                    Command="{Binding OpenSelectedInDriveCommand}" />
+            <Button Classes="m3-text m3-compact"
+                    Margin="0,0,6,0"
+                    Content="{Binding Loc.RenameButton}"
+                    IsVisible="{Binding CanRenameSelected}"
+                    Command="{Binding OpenRenameCommand}" />
+            <Button Classes="m3-text m3-compact"
+                    Margin="0,0,6,0"
+                    Content="{Binding Loc.MoveToFolderButton}"
+                    IsVisible="{Binding CanMoveSelected}"
+                    Command="{Binding OpenMoveCommand}" />
+            <Button Classes="m3-danger-outlined m3-compact"
+                    Margin="0,0,6,0"
+                    Content="{Binding Loc.MoveToTrashButton}"
+                    IsVisible="{Binding CanTrashSelected}"
+                    Command="{Binding TrashSelectedCommand}" />
+          </WrapPanel>
+
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+            <Button Classes="m3-text m3-compact"
+                    Content="{Binding Loc.SelectAllButton}"
+                    IsEnabled="{Binding !IsFolderEmpty}"
+                    Click="OnSelectAllClick" />
+            <Button Classes="m3-text m3-icon"
+                    MinHeight="28"
+                    MinWidth="28"
+                    FontSize="12"
+                    Content="✕"
+                    ToolTip.Tip="{Binding Loc.ClearSelectionButton}"
+                    Click="OnClearSelectionClick" />
+          </StackPanel>
         </Grid>
       </Border>
 
@@ -429,7 +482,7 @@
               Padding="14,10"
               IsVisible="{Binding IsTrashView}">
         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-          <PathIcon Grid.Column="0" Width="15" Height="15" Foreground="{DynamicResource M3Error}" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+          <PathIcon Grid.Column="0" Width="15" Height="15" Foreground="{DynamicResource M3Error}" Data="{StaticResource TundraTrashGeometry}" />
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
             <TextBlock FontSize="12.5"
                        Foreground="{DynamicResource M3OnErrorContainer}"
@@ -445,21 +498,21 @@
             </Border>
           </StackPanel>
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-            <Button Classes="m3-outlined m3-compact"
+            <Button Classes="m3-text m3-compact"
                     Content="{Binding Loc.SelectAllButton}"
                     IsEnabled="{Binding !IsFolderEmpty}"
                     Click="OnSelectAllClick" />
             <Button Classes="m3-outlined m3-compact"
                     Content="{Binding Loc.PreviewButton}"
-                    IsEnabled="{Binding CanPreviewSelected}"
+                    IsVisible="{Binding CanPreviewSelected}"
                     Command="{Binding PreviewSelectedCommand}" />
             <Button Classes="m3-tonal m3-compact"
                     Content="{Binding Loc.RestoreFromTrashButton}"
-                    IsEnabled="{Binding CanRestoreSelected}"
+                    IsVisible="{Binding CanRestoreSelected}"
                     Command="{Binding RestoreSelectedCommand}" />
             <Button Classes="m3-danger-outlined m3-compact"
                     Content="{Binding Loc.DeletePermanentlyButton}"
-                    IsEnabled="{Binding CanDeleteSelectedPermanently}"
+                    IsVisible="{Binding CanDeleteSelectedPermanently}"
                     Command="{Binding DeleteSelectedPermanentlyCommand}" />
             <Button Classes="m3-danger-tonal m3-compact"
                     Content="{Binding Loc.EmptyTrashButton}"
@@ -496,10 +549,84 @@
 
     <!-- File list/grid surface and side preview panel -->
     <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-      <Border Grid.Column="0" Classes="m3-card" Padding="0" ClipToBounds="True">
-        <Grid>
-          <!-- List layout -->
-          <Grid RowDefinitions="Auto,*" IsVisible="{Binding !IsGridLayout}">
+      <Grid Grid.Column="0" Background="Transparent">
+        <Grid.ContextMenu>
+          <ContextMenu>
+            <MenuItem Header="{Binding SelectedItem.PreviewLabel, FallbackValue=''}"
+                      IsVisible="{Binding CanPreviewSelected}"
+                      Command="{Binding PreviewSelectedCommand}" />
+            <MenuItem Header="{Binding Loc.DownloadButton}"
+                      IsVisible="{Binding CanDownloadSelected}"
+                      Command="{Binding DownloadSelectedCommand}" />
+            <MenuItem Header="{Binding SelectedItem.ActionLabel, FallbackValue=''}"
+                      IsVisible="{Binding SelectedItem.CanOpenNormal, FallbackValue=False}"
+                      Command="{Binding SelectedItem.OpenActionCommand}" />
+            <MenuItem Header="{Binding Loc.CustomizeFolderButton}"
+                      IsVisible="{Binding CanCustomizeSelectedFolder}"
+                      Command="{Binding OpenCustomizeFolderCommand}" />
+            <MenuItem Header="{Binding Loc.RenameButton}"
+                      IsVisible="{Binding CanRenameSelected}"
+                      Command="{Binding OpenRenameCommand}" />
+            <MenuItem Header="{Binding Loc.MoveToFolderButton}"
+                      IsVisible="{Binding CanMoveSelected}"
+                      Command="{Binding OpenMoveCommand}" />
+            <MenuItem Header="{Binding SelectedItem.OpenInDriveLabel, FallbackValue=''}"
+                      IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
+                      Command="{Binding SelectedItem.OpenInDriveCommand}" />
+            <Separator IsVisible="{Binding SelectedItem.CanOpenNormal, FallbackValue=False}" />
+            <MenuItem Header="{Binding SelectedItem.CopyNameLabel, FallbackValue=''}"
+                      IsVisible="{Binding HasSelectedItem}"
+                      Command="{Binding SelectedItem.CopyNameCommand}" />
+            <MenuItem Header="{Binding SelectedItem.CopyLinkLabel, FallbackValue=''}"
+                      IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
+                      Command="{Binding SelectedItem.CopyDriveLinkCommand}" />
+            <MenuItem Foreground="{DynamicResource M3Error}"
+                      FontWeight="SemiBold"
+                      Header="{Binding Loc.MoveToTrashButton}"
+                      IsVisible="{Binding CanTrashSelected}"
+                      Command="{Binding TrashSelectedCommand}">
+              <MenuItem.Icon>
+                <PathIcon Width="13" Height="13" Foreground="{DynamicResource M3ErrorAccent}" Data="{StaticResource TundraTrashGeometry}" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{Binding Loc.RestoreFromTrashButton}"
+                      IsVisible="{Binding CanRestoreSelected}"
+                      Command="{Binding RestoreSelectedCommand}" />
+            <MenuItem Foreground="{DynamicResource M3Error}"
+                      FontWeight="SemiBold"
+                      Header="{Binding Loc.DeletePermanentlyButton}"
+                      IsVisible="{Binding CanDeleteSelectedPermanently}"
+                      Command="{Binding DeleteSelectedPermanentlyCommand}" />
+            <Separator IsVisible="{Binding HasSelectedItem}" />
+            <MenuItem Header="{Binding Loc.NewFolderButton}"
+                      IsVisible="{Binding !IsTrashView}"
+                      Command="{Binding OpenCreateFolderCommand}" />
+            <MenuItem Header="{Binding Loc.UploadFileButton}"
+                      IsVisible="{Binding !IsTrashView}"
+                      Command="{Binding UploadFileCommand}" />
+            <MenuItem Header="{Binding Loc.RefreshButton}"
+                      Command="{Binding RefreshCommand}" />
+            <MenuItem Header="{Binding Loc.BackButton}"
+                      IsVisible="{Binding CanNavigateBack}"
+                      Command="{Binding NavigateBackCommand}" />
+            <Separator IsVisible="{Binding !IsFolderEmpty}" />
+            <MenuItem Header="{Binding Loc.SelectAllButton}"
+                      IsVisible="{Binding !IsFolderEmpty}"
+                      Click="OnSelectAllClick" />
+            <MenuItem Header="{Binding Loc.ClearSelectionButton}"
+                      IsVisible="{Binding HasSelectedItem}"
+                      Click="OnClearSelectionClick" />
+            <MenuItem Foreground="{DynamicResource M3Error}"
+                      FontWeight="SemiBold"
+                      Header="{Binding Loc.EmptyTrashButton}"
+                      IsVisible="{Binding CanEmptyTrash}"
+                      Command="{Binding RequestEmptyTrashCommand}" />
+          </ContextMenu>
+        </Grid.ContextMenu>
+
+        <!-- List layout -->
+        <Border Classes="m3-card" Padding="0" ClipToBounds="True" IsVisible="{Binding !IsGridLayout}">
+          <Grid RowDefinitions="Auto,*">
             <StackPanel Grid.Row="0">
               <Border Padding="16,10">
                 <Grid ColumnDefinitions="28,*,110,90,135" ColumnSpacing="8">
@@ -520,79 +647,6 @@
                      SelectedItem="{Binding SelectedItem}"
                      SelectionChanged="OnFileSelectionChanged"
                      DoubleTapped="OnListDoubleTapped">
-              <ListBox.ContextMenu>
-                <ContextMenu>
-                  <MenuItem Header="{Binding SelectedItem.PreviewLabel, FallbackValue=''}"
-                            IsVisible="{Binding CanPreviewSelected}"
-                            Command="{Binding PreviewSelectedCommand}" />
-                  <MenuItem Header="{Binding Loc.DownloadButton}"
-                            IsVisible="{Binding CanDownloadSelected}"
-                            Command="{Binding DownloadSelectedCommand}" />
-                  <MenuItem Header="{Binding SelectedItem.ActionLabel, FallbackValue=''}"
-                            IsVisible="{Binding SelectedItem.CanOpenNormal, FallbackValue=False}"
-                            Command="{Binding SelectedItem.OpenActionCommand}" />
-                  <MenuItem Header="{Binding Loc.CustomizeFolderButton}"
-                            IsVisible="{Binding CanCustomizeSelectedFolder}"
-                            Command="{Binding OpenCustomizeFolderCommand}" />
-                  <MenuItem Header="{Binding Loc.RenameButton}"
-                            IsVisible="{Binding CanRenameSelected}"
-                            Command="{Binding OpenRenameCommand}" />
-                  <MenuItem Header="{Binding Loc.MoveToFolderButton}"
-                            IsVisible="{Binding CanMoveSelected}"
-                            Command="{Binding OpenMoveCommand}" />
-                  <MenuItem Header="{Binding SelectedItem.OpenInDriveLabel, FallbackValue=''}"
-                            IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
-                            Command="{Binding SelectedItem.OpenInDriveCommand}" />
-                  <Separator IsVisible="{Binding SelectedItem.CanOpenNormal, FallbackValue=False}" />
-                  <MenuItem Header="{Binding SelectedItem.CopyNameLabel, FallbackValue=''}"
-                            IsVisible="{Binding HasSelectedItem}"
-                            Command="{Binding SelectedItem.CopyNameCommand}" />
-                  <MenuItem Header="{Binding SelectedItem.CopyLinkLabel, FallbackValue=''}"
-                            IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
-                            Command="{Binding SelectedItem.CopyDriveLinkCommand}" />
-                  <MenuItem Foreground="{DynamicResource M3Error}"
-                            FontWeight="SemiBold"
-                            Header="{Binding Loc.MoveToTrashButton}"
-                            IsVisible="{Binding CanTrashSelected}"
-                            Command="{Binding TrashSelectedCommand}">
-                    <MenuItem.Icon>
-                      <PathIcon Width="13" Height="13" Foreground="{DynamicResource M3ErrorAccent}" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-                    </MenuItem.Icon>
-                  </MenuItem>
-                  <MenuItem Header="{Binding Loc.RestoreFromTrashButton}"
-                            IsVisible="{Binding CanRestoreSelected}"
-                            Command="{Binding RestoreSelectedCommand}" />
-                  <MenuItem Foreground="{DynamicResource M3Error}"
-                            FontWeight="SemiBold"
-                            Header="{Binding Loc.DeletePermanentlyButton}"
-                            IsVisible="{Binding CanDeleteSelectedPermanently}"
-                            Command="{Binding DeleteSelectedPermanentlyCommand}" />
-                  <Separator IsVisible="{Binding HasSelectedItem}" />
-                  <MenuItem Header="{Binding Loc.NewFolderButton}"
-                            IsVisible="{Binding !IsTrashView}"
-                            Command="{Binding OpenCreateFolderCommand}" />
-                  <MenuItem Header="{Binding Loc.UploadFileButton}"
-                            IsVisible="{Binding !IsTrashView}"
-                            Command="{Binding UploadFileCommand}" />
-                  <MenuItem Header="{Binding Loc.RefreshButton}"
-                            Command="{Binding RefreshCommand}" />
-                  <MenuItem Header="{Binding Loc.BackButton}"
-                            IsVisible="{Binding CanNavigateBack}"
-                            Command="{Binding NavigateBackCommand}" />
-                  <Separator IsVisible="{Binding !IsFolderEmpty}" />
-                  <MenuItem Header="{Binding Loc.SelectAllButton}"
-                            IsVisible="{Binding !IsFolderEmpty}"
-                            Click="OnSelectAllClick" />
-                  <MenuItem Header="{Binding Loc.ClearSelectionButton}"
-                            IsVisible="{Binding HasSelectedItem}"
-                            Click="OnClearSelectionClick" />
-                  <MenuItem Foreground="{DynamicResource M3Error}"
-                            FontWeight="SemiBold"
-                            Header="{Binding Loc.EmptyTrashButton}"
-                            IsVisible="{Binding CanEmptyTrash}"
-                            Command="{Binding RequestEmptyTrashCommand}" />
-                </ContextMenu>
-              </ListBox.ContextMenu>
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:FileHubItemViewModel">
                   <Border Padding="16,10" Background="Transparent">
@@ -628,172 +682,158 @@
               </ListBox.ItemTemplate>
             </ListBox>
           </Grid>
+        </Border>
 
-          <!-- Paginated grid layout -->
-          <ListBox x:Name="GridFilesListBox"
-                   Classes="m3-grid"
-                   SelectionMode="Multiple"
-                   IsVisible="{Binding IsGridLayout}"
-                   Padding="16"
-                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                   ScrollViewer.VerticalScrollBarVisibility="Auto"
-                   ItemsSource="{Binding ActiveGridFiles}"
-                   SelectedItem="{Binding SelectedItem}"
-                   SelectionChanged="OnFileSelectionChanged"
-                   DoubleTapped="OnListDoubleTapped">
-            <ListBox.ContextMenu>
-              <ContextMenu>
-                <MenuItem Header="{Binding SelectedItem.PreviewLabel, FallbackValue=''}"
-                          IsVisible="{Binding CanPreviewSelected}"
-                          Command="{Binding PreviewSelectedCommand}" />
-                <MenuItem Header="{Binding Loc.DownloadButton}"
-                          IsVisible="{Binding CanDownloadSelected}"
-                          Command="{Binding DownloadSelectedCommand}" />
-                <MenuItem Header="{Binding SelectedItem.ActionLabel, FallbackValue=''}"
-                          IsVisible="{Binding SelectedItem.CanOpenNormal, FallbackValue=False}"
-                          Command="{Binding SelectedItem.OpenActionCommand}" />
-                <MenuItem Header="{Binding Loc.CustomizeFolderButton}"
-                          IsVisible="{Binding CanCustomizeSelectedFolder}"
-                          Command="{Binding OpenCustomizeFolderCommand}" />
-                <MenuItem Header="{Binding Loc.RenameButton}"
-                          IsVisible="{Binding CanRenameSelected}"
-                          Command="{Binding OpenRenameCommand}" />
-                <MenuItem Header="{Binding Loc.MoveToFolderButton}"
-                          IsVisible="{Binding CanMoveSelected}"
-                          Command="{Binding OpenMoveCommand}" />
-                <MenuItem Header="{Binding SelectedItem.OpenInDriveLabel, FallbackValue=''}"
-                          IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
-                          Command="{Binding SelectedItem.OpenInDriveCommand}" />
-                <Separator IsVisible="{Binding SelectedItem.CanOpenNormal, FallbackValue=False}" />
-                <MenuItem Header="{Binding SelectedItem.CopyNameLabel, FallbackValue=''}"
-                          IsVisible="{Binding HasSelectedItem}"
-                          Command="{Binding SelectedItem.CopyNameCommand}" />
-                <MenuItem Header="{Binding SelectedItem.CopyLinkLabel, FallbackValue=''}"
-                          IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
-                          Command="{Binding SelectedItem.CopyDriveLinkCommand}" />
-                <MenuItem Foreground="{DynamicResource M3Error}"
-                          FontWeight="SemiBold"
-                          Header="{Binding Loc.MoveToTrashButton}"
-                          IsVisible="{Binding CanTrashSelected}"
-                          Command="{Binding TrashSelectedCommand}">
-                  <MenuItem.Icon>
-                    <PathIcon Width="13" Height="13" Foreground="{DynamicResource M3ErrorAccent}" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-                  </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{Binding Loc.RestoreFromTrashButton}"
-                          IsVisible="{Binding CanRestoreSelected}"
-                          Command="{Binding RestoreSelectedCommand}" />
-                <MenuItem Foreground="{DynamicResource M3Error}"
-                          FontWeight="SemiBold"
-                          Header="{Binding Loc.DeletePermanentlyButton}"
-                          IsVisible="{Binding CanDeleteSelectedPermanently}"
-                          Command="{Binding DeleteSelectedPermanentlyCommand}" />
-                <Separator IsVisible="{Binding HasSelectedItem}" />
-                <MenuItem Header="{Binding Loc.NewFolderButton}"
-                          IsVisible="{Binding !IsTrashView}"
-                          Command="{Binding OpenCreateFolderCommand}" />
-                <MenuItem Header="{Binding Loc.UploadFileButton}"
-                          IsVisible="{Binding !IsTrashView}"
-                          Command="{Binding UploadFileCommand}" />
-                <MenuItem Header="{Binding Loc.RefreshButton}"
-                          Command="{Binding RefreshCommand}" />
-                <MenuItem Header="{Binding Loc.BackButton}"
-                          IsVisible="{Binding CanNavigateBack}"
-                          Command="{Binding NavigateBackCommand}" />
-                <Separator IsVisible="{Binding !IsFolderEmpty}" />
-                <MenuItem Header="{Binding Loc.SelectAllButton}"
-                          IsVisible="{Binding !IsFolderEmpty}"
-                          Click="OnSelectAllClick" />
-                <MenuItem Header="{Binding Loc.ClearSelectionButton}"
-                          IsVisible="{Binding HasSelectedItem}"
-                          Click="OnClearSelectionClick" />
-                <MenuItem Foreground="{DynamicResource M3Error}"
-                          FontWeight="SemiBold"
-                          Header="{Binding Loc.EmptyTrashButton}"
-                          IsVisible="{Binding CanEmptyTrash}"
-                          Command="{Binding RequestEmptyTrashCommand}" />
-              </ContextMenu>
-            </ListBox.ContextMenu>
-            <ListBox.ItemsPanel>
-              <ItemsPanelTemplate>
-                <WrapPanel Orientation="Horizontal" />
-              </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
-            <ListBox.ItemTemplate>
-              <DataTemplate x:DataType="vm:FileHubItemViewModel">
-                <Border Width="184" Height="162" Padding="12" Background="Transparent">
-                  <Grid RowDefinitions="*,Auto" RowSpacing="8">
-                    <!-- Thumbnail or type icon -->
-                    <Border Grid.Row="0"
-                            CornerRadius="12"
-                            ClipToBounds="True"
-                            Background="{DynamicResource M3Surface}">
-                      <Grid>
-                        <Image Source="{Binding ThumbnailBitmap}"
-                               Stretch="UniformToFill"
-                               IsVisible="{Binding HasThumbnail}" />
-
-                        <Border Width="34" Height="34"
-                                CornerRadius="17"
-                                Background="{DynamicResource M3Scrim}"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                IsVisible="{Binding IsVideoFile}">
-                          <PathIcon Width="14" Height="14"
-                                    Foreground="{DynamicResource M3OnSurface}"
-                                    Data="M8 5v14l11-7z" />
-                        </Border>
-
-                        <PathIcon Width="44" Height="44"
-                                  HorizontalAlignment="Center"
+        <!-- Sectioned grid layout (compact folder pills + clean file cards) -->
+        <ScrollViewer IsVisible="{Binding IsGridLayout}"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="18" Margin="0,4,0,8">
+            <StackPanel Spacing="10" IsVisible="{Binding HasGridFolders}">
+              <TextBlock Classes="m3-group-label" Text="{Binding Loc.FileHubFoldersSection}" />
+              <ListBox x:Name="GridFoldersListBox"
+                       Classes="m3-grid m3-grid-folders"
+                       SelectionMode="Multiple"
+                       ItemsSource="{Binding GridFolders}"
+                       SelectionChanged="OnGridFoldersSelectionChanged"
+                       DoubleTapped="OnListDoubleTapped">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:FileHubItemViewModel">
+                    <Border Width="228" MinHeight="56" Padding="12,10" Background="Transparent" ToolTip.Tip="{Binding Name}">
+                      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                        <PathIcon Grid.Column="0"
+                                  Width="22" Height="22"
                                   VerticalAlignment="Center"
                                   Foreground="{Binding FileIconBrush}"
-                                  IsVisible="{Binding !HasThumbnail}"
                                   Data="{Binding FileIconData}" />
 
-                        <CheckBox HorizontalAlignment="Left"
-                                  VerticalAlignment="Top"
-                                  Margin="6"
+                        <TextBlock Grid.Column="1"
+                                   FontSize="13"
+                                   FontWeight="Medium"
+                                   Foreground="{DynamicResource M3OnSurface}"
+                                   VerticalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   MaxLines="2"
+                                   TextTrimming="CharacterEllipsis"
+                                   Text="{Binding Name}" />
+
+                        <CheckBox Grid.Column="2"
+                                  Classes="m3-grid-check"
+                                  Classes.m3-check-visible="{Binding #FileHubRoot.((vm:FileHubViewModel)DataContext).HasSelectedItem, FallbackValue=False}"
+                                  VerticalAlignment="Center"
                                   MinWidth="0" MinHeight="0" Padding="0"
                                   IsChecked="{Binding IsSelected, Mode=OneWay}"
                                   Click="OnItemCheckBoxClick" />
                       </Grid>
                     </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
 
-                    <StackPanel Grid.Row="1" Spacing="2">
-                      <TextBlock FontSize="12.5"
-                                 FontWeight="Medium"
-                                 Foreground="{DynamicResource M3OnSurface}"
-                                 HorizontalAlignment="Center"
-                                 Text="{Binding Name}"
-                                 TextTrimming="CharacterEllipsis" />
-                      <TextBlock Classes="m3-meta"
-                                 FontSize="11"
-                                 HorizontalAlignment="Center"
-                                 Text="{Binding SizeDisplay}"
-                                 IsVisible="{Binding !IsFolder}" />
-                    </StackPanel>
-                  </Grid>
-                </Border>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
+            <StackPanel Spacing="10" IsVisible="{Binding HasGridFiles}">
+              <TextBlock Classes="m3-group-label" Text="{Binding Loc.FileHubFilesSection}" />
+              <ListBox x:Name="GridFilesListBox"
+                       Classes="m3-grid m3-grid-files"
+                       SelectionMode="Multiple"
+                       ItemsSource="{Binding GridFileItems}"
+                       SelectionChanged="OnGridFilesSelectionChanged"
+                       DoubleTapped="OnListDoubleTapped">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:FileHubItemViewModel">
+                    <Border Width="188" Height="174" Padding="10" Background="Transparent" ToolTip.Tip="{Binding Name}">
+                      <Grid RowDefinitions="*,Auto" RowSpacing="8">
+                        <Grid Grid.Row="0">
+                          <Border CornerRadius="10"
+                                  ClipToBounds="True"
+                                  IsVisible="{Binding HasThumbnail}">
+                            <Grid>
+                              <Image Source="{Binding ThumbnailBitmap}"
+                                     Stretch="UniformToFill" />
+                              <Border Width="34" Height="34"
+                                      CornerRadius="17"
+                                      Background="{DynamicResource M3Scrim}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      IsVisible="{Binding IsVideoFile}">
+                                <PathIcon Width="14" Height="14"
+                                          Foreground="{DynamicResource M3OnSurface}"
+                                          Data="M8 5v14l11-7z" />
+                              </Border>
+                            </Grid>
+                          </Border>
 
-          <ProgressBar VerticalAlignment="Top"
-                       Height="3"
-                       CornerRadius="0"
-                       IsIndeterminate="True"
-                       IsHitTestVisible="False"
-                       IsVisible="{Binding IsLoading}" />
+                          <Border Width="64" Height="64"
+                                  CornerRadius="18"
+                                  Background="{DynamicResource M3SurfaceContainerHigh}"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  IsVisible="{Binding !HasThumbnail}">
+                            <PathIcon Width="30" Height="30"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Foreground="{Binding FileIconBrush}"
+                                      Data="{Binding FileIconData}" />
+                          </Border>
 
-          <TextBlock VerticalAlignment="Center"
-                     HorizontalAlignment="Center"
-                     Classes="m3-subtitle"
+                          <CheckBox Classes="m3-grid-check"
+                                    Classes.m3-check-visible="{Binding #FileHubRoot.((vm:FileHubViewModel)DataContext).HasSelectedItem, FallbackValue=False}"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Top"
+                                    Margin="2"
+                                    MinWidth="0" MinHeight="0" Padding="0"
+                                    IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                    Click="OnItemCheckBoxClick" />
+                        </Grid>
+
+                        <StackPanel Grid.Row="1" Spacing="2">
+                          <TextBlock FontSize="12.5"
+                                     FontWeight="Medium"
+                                     Foreground="{DynamicResource M3OnSurface}"
+                                     HorizontalAlignment="Center"
+                                     TextAlignment="Center"
+                                     TextWrapping="Wrap"
+                                     MaxLines="2"
+                                     TextTrimming="CharacterEllipsis"
+                                     Text="{Binding Name}" />
+                          <TextBlock Classes="m3-meta"
+                                     FontSize="11"
+                                     HorizontalAlignment="Center"
+                                     Text="{Binding SizeDisplay}" />
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <ProgressBar VerticalAlignment="Top"
+                     Height="3"
+                     CornerRadius="0"
+                     IsIndeterminate="True"
                      IsHitTestVisible="False"
-                     Text="{Binding EmptyStateText}"
-                     IsVisible="{Binding IsFolderEmpty}" />
-        </Grid>
-      </Border>
+                     IsVisible="{Binding IsLoading}" />
+
+        <TextBlock VerticalAlignment="Center"
+                   HorizontalAlignment="Center"
+                   Classes="m3-subtitle"
+                   IsHitTestVisible="False"
+                   Text="{Binding EmptyStateText}"
+                   IsVisible="{Binding IsFolderEmpty}" />
+      </Grid>
 
       <!-- Side preview panel -->
       <Border Grid.Column="1"

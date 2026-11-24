@@ -121,6 +121,43 @@ public sealed class HeadlessUiAndFeatureTests
         Assert.Equal(Color.Parse("#A8C7FA"), ((ISolidColorBrush)blueObj!).Color);
     }
 
+    [AvaloniaFact]
+    public async Task FileHubView_SeparatesFoldersAndFilesInGrid_AndHidesSelectionBarWhenIdle()
+    {
+        var loc = new LocalizationService();
+        var syncProxy = DispatchProxy.Create<IDriveSyncService, StubDriveSyncProxy>();
+        var driveProxy = DispatchProxy.Create<IGoogleDriveClient, StubDriveClientProxy>();
+        var repoProxy = DispatchProxy.Create<ISyncStateRepository, StubStateRepoProxy>();
+        var settingsService = DispatchProxy.Create<IAppSettingsService, StubSettingsProxy>();
+        var hub = new FileHubViewModel(repoProxy, driveProxy, syncProxy, new FilePreviewService(driveProxy), loc, settingsService);
+
+        var folder = new FileHubItemViewModel { Name = "Artigos", IsFolder = true, RemoteFileId = "f1" };
+        var file = new FileHubItemViewModel { Name = "nota.pdf", IsFolder = false, RemoteFileId = "r1", SizeDisplay = "12 KB" };
+        hub.Files.Add(folder);
+        hub.Files.Add(file);
+
+        Assert.Single(hub.GridFolders);
+        Assert.Single(hub.GridFileItems);
+        Assert.True(hub.HasGridFolders);
+        Assert.True(hub.HasGridFiles);
+        Assert.False(hub.ShowSelectionBar);
+
+        var view = new FileHubView { DataContext = hub };
+        view.Measure(new Size(960, 700));
+        view.Arrange(new Rect(0, 0, 960, 700));
+
+        hub.UpdateSelectedItems([folder]);
+        Assert.True(hub.ShowSelectionBar);
+        Assert.True(hub.CanCustomizeSelectedFolder);
+        Assert.False(hub.CanPreviewSelected);
+
+        hub.SearchText = "artigo";
+        Assert.True(hub.HasSearchText);
+        await hub.ClearSearchCommand.ExecuteAsync(null);
+        Assert.False(hub.HasSearchText);
+        Assert.Equal(string.Empty, hub.SearchText);
+    }
+
     [Fact]
     public async Task SettingsViewModel_SwitchesSubTabs_AndPersistsAccentSelection()
     {

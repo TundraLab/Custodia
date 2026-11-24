@@ -2,6 +2,18 @@
 
 Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [3.0.2] - 2026-11-24
+
+### Alterado
+- **Visual renovado em Meus Arquivos:** a grade agora separa **Pastas** (em cartões horizontais compactos) e **Arquivos** (em cartões limpos com miniaturas ou ícones suaves), exibe a barra de seleção apenas quando há itens marcados e mostra as caixas de seleção somente ao passar o mouse ou selecionar.
+- **Cabeçalho e busca mais enxutos:** barra de caminho simplificada, busca integrada com botão rápido para limpar, filtro de abas mais claro (**Google Drive**, **Sincronizados** e **Lixeira**) e ações principais com destaque visual melhorado.
+- **Seis cores de destaque:** além de Azul e Verde Esmeralda, agora você pode escolher entre **Roxo**, **Âmbar**, **Rosa** e **Ciano** em **Configurações**.
+- **Ícones da barra lateral e bandeja refinados:** novos ícones vetoriais próprios da TundraLab com leitura mais nítida em todo o aplicativo e na bandeja do sistema.
+
+### Corrigido
+- **Pré-visualização mais confiável:** suporte aprimorado para arquivos de texto sem extensão e alternativa automática ao visualizar documentos grandes do Google Workspace.
+- **Preservação de personalizações durante a sincronização inicial:** ajustes de apelido, cor e ícone em pastas recém-vinculadas não são mais sobrescritos enquanto a primeira sincronização acontece em segundo plano.
+
 ## [3.0.1] - 2026-11-24
 
 ### Adicionado

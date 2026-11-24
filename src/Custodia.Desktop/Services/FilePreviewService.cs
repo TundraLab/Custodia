@@ -57,7 +57,22 @@ public sealed class FilePreviewService : IDisposable
     {
         ".txt", ".md", ".json", ".xml", ".cs", ".py", ".js", ".ts", ".jsx", ".tsx",
         ".html", ".css", ".scss", ".por", ".sh", ".bash", ".yml", ".yaml", ".csv",
-        ".log", ".ini", ".conf", ".sql", ".axaml", ".csproj", ".sln", ".gitignore"
+        ".tsv", ".log", ".ini", ".conf", ".cfg", ".properties", ".toml", ".env",
+        ".sql", ".axaml", ".csproj", ".sln", ".gitignore", ".tex", ".bib", ".org",
+        ".rst", ".srt", ".vtt", ".c", ".cpp", ".h", ".hpp", ".java", ".kt", ".go",
+        ".rs", ".rb", ".php", ".swift", ".dart", ".vue", ".svelte", ".ps1", ".bat", ".cmd"
+    };
+
+    private static readonly HashSet<string> NonExportableGoogleWorkspaceMimes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "application/vnd.google-apps.shortcut",
+        "application/vnd.google-apps.form",
+        "application/vnd.google-apps.site",
+        "application/vnd.google-apps.map",
+        "application/vnd.google-apps.fusiontable",
+        "application/vnd.google-apps.jam",
+        "application/vnd.google-apps.drive-sdk",
+        "application/vnd.google-apps.third_party_shortcut"
     };
 
     private readonly IGoogleDriveClient _driveClient;
@@ -85,6 +100,11 @@ public sealed class FilePreviewService : IDisposable
         int pdfPage = 1,
         CancellationToken cancellationToken = default)
     {
+        if (isGoogleWorkspaceDoc && IsNonExportableWorkspaceMime(mimeType))
+        {
+            return new FilePreviewResult(PreviewKind.Unsupported, localFullPath ?? string.Empty);
+        }
+
         var ext = ResolveEffectiveExtension(fileName, mimeType, isGoogleWorkspaceDoc);
         var resolvedPath = localFullPath;
 
@@ -96,23 +116,30 @@ public sealed class FilePreviewService : IDisposable
             }
 
             var safeRemoteId = DriveSyncService.SanitizeRemoteSegment(remoteFileId);
-            var safeCacheName = $"{safeRemoteId}{(string.IsNullOrWhiteSpace(ext) ? ".bin" : ext)}";
-            resolvedPath = Path.Combine(_cacheDirectory, safeCacheName);
-
-            if (!File.Exists(resolvedPath) || new FileInfo(resolvedPath).Length == 0)
+            if (isGoogleWorkspaceDoc)
             {
-                if (isGoogleWorkspaceDoc)
-                {
-                    await _driveClient.ExportFileAsync(remoteFileId, "application/pdf", resolvedPath, null, cancellationToken);
-                }
-                else
+                var exportResult = await ResolveOrExportWorkspacePreviewFileAsync(
+                    remoteFileId,
+                    safeRemoteId,
+                    mimeType,
+                    ext,
+                    cancellationToken);
+                resolvedPath = exportResult.Path;
+                ext = exportResult.Extension;
+            }
+            else
+            {
+                var safeCacheName = $"{safeRemoteId}{(string.IsNullOrWhiteSpace(ext) ? ".bin" : ext)}";
+                resolvedPath = Path.Combine(_cacheDirectory, safeCacheName);
+
+                if (!File.Exists(resolvedPath) || new FileInfo(resolvedPath).Length == 0)
                 {
                     await _driveClient.DownloadFileAsync(remoteFileId, resolvedPath, null, cancellationToken);
                 }
             }
         }
 
-        var cacheKey = !string.IsNullOrWhiteSpace(remoteFileId)
+        var cacheKey = !string.IsNullOrWhiteSpace(remoteFileId) && string.IsNullOrWhiteSpace(localFullPath)
             ? DriveSyncService.SanitizeRemoteSegment(remoteFileId)
             : ComputeFileKey(resolvedPath);
 
@@ -176,10 +203,16 @@ public sealed class FilePreviewService : IDisposable
                     TotalPages: Math.Max(1, totalPages));
             }
 
+            if (string.Equals(ext, ".rtf", StringComparison.OrdinalIgnoreCase))
+            {
+                var rtfText = await ReadTextPreviewAsync(resolvedPath, cancellationToken);
+                return new FilePreviewResult(PreviewKind.Text, resolvedPath, TextContent: rtfText);
+            }
+
             return new FilePreviewResult(PreviewKind.Unsupported, resolvedPath);
         }
 
-        if (TextExtensions.Contains(ext))
+        if (TextExtensions.Contains(ext) || IsLikelyUtf8TextFile(resolvedPath))
         {
             var content = await ReadTextPreviewAsync(resolvedPath, cancellationToken);
             return new FilePreviewResult(PreviewKind.Text, resolvedPath, TextContent: content);
@@ -511,7 +544,9 @@ public sealed class FilePreviewService : IDisposable
     {
         if (isGoogleWorkspaceDoc)
         {
-            return ".pdf";
+            return string.Equals(mimeType, "application/vnd.google-apps.script", StringComparison.OrdinalIgnoreCase)
+                ? ".json"
+                : ".pdf";
         }
 
         var ext = Path.GetExtension(fileName);
@@ -533,6 +568,57 @@ public sealed class FilePreviewService : IDisposable
                 return ".pdf";
             }
 
+            if (string.Equals(mimeType, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", StringComparison.OrdinalIgnoreCase))
+            {
+                return ".docx";
+            }
+
+            if (string.Equals(mimeType, "application/msword", StringComparison.OrdinalIgnoreCase))
+            {
+                return ".doc";
+            }
+
+            if (string.Equals(mimeType, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", StringComparison.OrdinalIgnoreCase))
+            {
+                return ".xlsx";
+            }
+
+            if (string.Equals(mimeType, "application/vnd.ms-excel", StringComparison.OrdinalIgnoreCase))
+            {
+                return ".xls";
+            }
+
+            if (string.Equals(mimeType, "application/vnd.openxmlformats-officedocument.presentationml.presentation", StringComparison.OrdinalIgnoreCase))
+            {
+                return ".pptx";
+            }
+
+            if (string.Equals(mimeType, "application/vnd.ms-powerpoint", StringComparison.OrdinalIgnoreCase))
+            {
+                return ".ppt";
+            }
+
+            if (string.Equals(mimeType, "application/vnd.oasis.opendocument.text", StringComparison.OrdinalIgnoreCase))
+            {
+                return ".odt";
+            }
+
+            if (string.Equals(mimeType, "application/vnd.oasis.opendocument.spreadsheet", StringComparison.OrdinalIgnoreCase))
+            {
+                return ".ods";
+            }
+
+            if (string.Equals(mimeType, "application/vnd.oasis.opendocument.presentation", StringComparison.OrdinalIgnoreCase))
+            {
+                return ".odp";
+            }
+
+            if (string.Equals(mimeType, "application/rtf", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mimeType, "text/rtf", StringComparison.OrdinalIgnoreCase))
+            {
+                return ".rtf";
+            }
+
             if (mimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
             {
                 return mimeType.Contains("png", StringComparison.OrdinalIgnoreCase) ? ".png"
@@ -551,7 +637,13 @@ public sealed class FilePreviewService : IDisposable
                 return ".mp3";
             }
 
-            if (mimeType.StartsWith("text/", StringComparison.OrdinalIgnoreCase))
+            if (mimeType.StartsWith("text/", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mimeType, "application/json", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mimeType, "application/xml", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mimeType, "application/javascript", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mimeType, "application/x-sh", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mimeType, "application/x-yaml", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mimeType, "application/yaml", StringComparison.OrdinalIgnoreCase))
             {
                 return ".txt";
             }
@@ -560,9 +652,112 @@ public sealed class FilePreviewService : IDisposable
         return ext;
     }
 
-    private static string ComputeFileKey(string filePath) =>
-        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(filePath)))
+    internal static bool IsNonExportableWorkspaceMime(string? mimeType) =>
+        !string.IsNullOrWhiteSpace(mimeType) && NonExportableGoogleWorkspaceMimes.Contains(mimeType);
+
+    private async Task<(string Path, string Extension)> ResolveOrExportWorkspacePreviewFileAsync(
+        string remoteFileId,
+        string safeRemoteId,
+        string? mimeType,
+        string initialExtension,
+        CancellationToken cancellationToken)
+    {
+        if (string.Equals(mimeType, "application/vnd.google-apps.script", StringComparison.OrdinalIgnoreCase))
+        {
+            var scriptPath = Path.Combine(_cacheDirectory, $"{safeRemoteId}.json");
+            if (!File.Exists(scriptPath) || new FileInfo(scriptPath).Length == 0)
+            {
+                await _driveClient.ExportFileAsync(remoteFileId, "application/vnd.google-apps.script+json", scriptPath, null, cancellationToken);
+            }
+
+            return (scriptPath, ".json");
+        }
+
+        var pdfPath = Path.Combine(_cacheDirectory, $"{safeRemoteId}{initialExtension}");
+        if (File.Exists(pdfPath) && new FileInfo(pdfPath).Length > 0)
+        {
+            return (pdfPath, ".pdf");
+        }
+
+        var fallbackTextPath = Path.Combine(_cacheDirectory, $"{safeRemoteId}.txt");
+        if (File.Exists(fallbackTextPath) && new FileInfo(fallbackTextPath).Length > 0)
+        {
+            return (fallbackTextPath, ".txt");
+        }
+
+        try
+        {
+            await _driveClient.ExportFileAsync(remoteFileId, "application/pdf", pdfPath, null, cancellationToken);
+            return (pdfPath, ".pdf");
+        }
+        catch when (!cancellationToken.IsCancellationRequested &&
+                    (string.Equals(mimeType, "application/vnd.google-apps.document", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(mimeType, "application/vnd.google-apps.spreadsheet", StringComparison.OrdinalIgnoreCase)))
+        {
+            // Fallback to plain text/CSV when Google Docs or Sheets hit PDF export size limits.
+            var textMime = string.Equals(mimeType, "application/vnd.google-apps.spreadsheet", StringComparison.OrdinalIgnoreCase)
+                ? "text/csv"
+                : "text/plain";
+            var ext = textMime == "text/csv" ? ".csv" : ".txt";
+            var textPath = Path.Combine(_cacheDirectory, $"{safeRemoteId}{ext}");
+            await _driveClient.ExportFileAsync(remoteFileId, textMime, textPath, null, cancellationToken);
+            return (textPath, ext);
+        }
+    }
+
+    private static bool IsLikelyUtf8TextFile(string filePath)
+    {
+        try
+        {
+            var info = new FileInfo(filePath);
+            if (!info.Exists || info.Length == 0 || info.Length > 1024 * 1024)
+            {
+                return false;
+            }
+
+            Span<byte> sample = stackalloc byte[(int)Math.Min(info.Length, 4096)];
+            using var fs = File.OpenRead(filePath);
+            var read = fs.Read(sample);
+            if (read <= 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < read; i++)
+            {
+                var b = sample[i];
+                if (b == 0)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string ComputeFileKey(string filePath)
+    {
+        var fingerprint = filePath;
+        try
+        {
+            var info = new FileInfo(filePath);
+            if (info.Exists)
+            {
+                fingerprint = $"{filePath}|{info.Length}|{info.LastWriteTimeUtc.Ticks}";
+            }
+        }
+        catch
+        {
+        }
+
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(fingerprint)))
             .ToLowerInvariant()[..16];
+    }
 
     private static async Task<int> GetPdfPageCountAsync(string filePath, CancellationToken ct)
     {
@@ -608,34 +803,54 @@ public sealed class FilePreviewService : IDisposable
         var outDir = Path.Combine(_cacheDirectory, "office");
         Directory.CreateDirectory(outDir);
         var targetPdf = Path.Combine(outDir, $"{key}.pdf");
-        if (File.Exists(targetPdf))
+        if (File.Exists(targetPdf) && new FileInfo(targetPdf).Length > 0)
         {
             return targetPdf;
         }
 
-        var loProfile = Path.Combine(_cacheDirectory, "lo_profile");
+        var loProfile = Path.Combine(Path.GetTempPath(), $"custodia-lo-{Guid.NewGuid():N}");
         Directory.CreateDirectory(loProfile);
 
-        await RunToolAsync("soffice",
-        [
-            "--headless",
-            "--norestore",
-            $"-env:UserInstallation=file://{loProfile}",
-            "--convert-to", "pdf",
-            "--outdir", outDir,
-            filePath
-        ], ct);
-
-        var generatedName = Path.ChangeExtension(Path.GetFileName(filePath), ".pdf");
-        var generatedPath = Path.Combine(outDir, generatedName);
-        if (File.Exists(generatedPath))
+        try
         {
-            if (!string.Equals(generatedPath, targetPdf, StringComparison.Ordinal))
-            {
-                File.Move(generatedPath, targetPdf, overwrite: true);
-            }
+            var profileUri = new Uri(loProfile).AbsoluteUri;
+            await RunToolAsync("soffice",
+            [
+                "--invisible",
+                "--nodefault",
+                "--nofirststartwizard",
+                "--headless",
+                "--norestore",
+                $"-env:UserInstallation={profileUri}",
+                "--convert-to", "pdf",
+                "--outdir", outDir,
+                filePath
+            ], ct);
 
-            return targetPdf;
+            var generatedName = Path.ChangeExtension(Path.GetFileName(filePath), ".pdf");
+            var generatedPath = Path.Combine(outDir, generatedName);
+            if (File.Exists(generatedPath) && new FileInfo(generatedPath).Length > 0)
+            {
+                if (!string.Equals(generatedPath, targetPdf, StringComparison.Ordinal))
+                {
+                    File.Move(generatedPath, targetPdf, overwrite: true);
+                }
+
+                return targetPdf;
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(loProfile))
+                {
+                    Directory.Delete(loProfile, recursive: true);
+                }
+            }
+            catch
+            {
+            }
         }
 
         return null;

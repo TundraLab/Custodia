@@ -19,6 +19,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
     private readonly LocalFolderWatcherService _watcherService;
     private readonly ILogger<DriveSyncService> _logger;
     private readonly ITundraMailerClient? _mailerClient;
+    private readonly Func<CancellationToken, Task<bool>>? _connectivityProbe;
 
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _folderLocks = new();
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _folderSyncCancellations = new();
@@ -48,7 +49,8 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         IAuthCredentialManager authManager,
         LocalFolderWatcherService watcherService,
         ILogger<DriveSyncService> logger,
-        ITundraMailerClient? mailerClient = null)
+        ITundraMailerClient? mailerClient = null,
+        Func<CancellationToken, Task<bool>>? connectivityProbe = null)
     {
         _driveClient = driveClient;
         _repository = repository;
@@ -57,8 +59,9 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         _watcherService = watcherService;
         _logger = logger;
         _mailerClient = mailerClient;
+        _connectivityProbe = connectivityProbe;
 
-        _isOnlineFlag = NetworkInterface.GetIsNetworkAvailable() ? 1 : 0;
+        _isOnlineFlag = connectivityProbe is not null || NetworkInterface.GetIsNetworkAvailable() ? 1 : 0;
         _watcherService.FolderChangeDetected += OnLocalFolderChangedAsync;
         _settingsService.SettingsChanged += OnSettingsChanged;
         NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
@@ -634,19 +637,30 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         string? customIconKey,
         CancellationToken cancellationToken = default)
     {
-        var folder = await _repository.GetSyncFolderByIdAsync(folderId, cancellationToken);
-        if (folder is null)
+        var folderLock = _folderLocks.GetOrAdd(folderId, _ => new SemaphoreSlim(1, 1));
+        await folderLock.WaitAsync(cancellationToken);
+        LocalSyncFolder? folder;
+        try
         {
-            return;
+            folder = await _repository.GetSyncFolderByIdAsync(folderId, cancellationToken);
+            if (folder is null)
+            {
+                return;
+            }
+
+            folder.AccountEmail ??= CurrentAccount.EmailAddress?.Trim().ToLowerInvariant();
+            folder.CustomAlias = string.IsNullOrWhiteSpace(customAlias) ? null : customAlias.Trim();
+            folder.CustomColorHex = FolderCustomizationPresets.NormalizeColorHex(customColorHex);
+            folder.CustomIconKey = string.IsNullOrWhiteSpace(customIconKey) ? null : customIconKey.Trim();
+
+            await _repository.UpsertSyncFolderAsync(folder, cancellationToken);
+            await PersistCurrentAccountFoldersProfileAsync(cancellationToken);
+        }
+        finally
+        {
+            folderLock.Release();
         }
 
-        folder.AccountEmail ??= CurrentAccount.EmailAddress?.Trim().ToLowerInvariant();
-        folder.CustomAlias = string.IsNullOrWhiteSpace(customAlias) ? null : customAlias.Trim();
-        folder.CustomColorHex = FolderCustomizationPresets.NormalizeColorHex(customColorHex);
-        folder.CustomIconKey = string.IsNullOrWhiteSpace(customIconKey) ? null : customIconKey.Trim();
-
-        await _repository.UpsertSyncFolderAsync(folder, cancellationToken);
-        await PersistCurrentAccountFoldersProfileAsync(cancellationToken);
         SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
 
         await LogAsync(ActivitySeverity.Info, "FolderCustomized",
@@ -659,16 +673,27 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         SyncMode mode,
         CancellationToken cancellationToken = default)
     {
-        var folder = await _repository.GetSyncFolderByIdAsync(folderId, cancellationToken);
-        if (folder is null)
+        var folderLock = _folderLocks.GetOrAdd(folderId, _ => new SemaphoreSlim(1, 1));
+        await folderLock.WaitAsync(cancellationToken);
+        LocalSyncFolder? folder;
+        try
         {
-            return;
+            folder = await _repository.GetSyncFolderByIdAsync(folderId, cancellationToken);
+            if (folder is null)
+            {
+                return;
+            }
+
+            folder.AccountEmail ??= CurrentAccount.EmailAddress?.Trim().ToLowerInvariant();
+            folder.Mode = mode;
+            await _repository.UpsertSyncFolderAsync(folder, cancellationToken);
+            await PersistCurrentAccountFoldersProfileAsync(cancellationToken);
+        }
+        finally
+        {
+            folderLock.Release();
         }
 
-        folder.AccountEmail ??= CurrentAccount.EmailAddress?.Trim().ToLowerInvariant();
-        folder.Mode = mode;
-        await _repository.UpsertSyncFolderAsync(folder, cancellationToken);
-        await PersistCurrentAccountFoldersProfileAsync(cancellationToken);
         SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
 
         var modeLabel = mode == SyncMode.TwoWay ? "Sincronização Bidirecional" : "Backup Unidirecional";
@@ -682,25 +707,35 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         bool isPaused,
         CancellationToken cancellationToken = default)
     {
-        var folder = await _repository.GetSyncFolderByIdAsync(folderId, cancellationToken);
-        if (folder is null)
+        if (isPaused && _folderSyncCancellations.TryGetValue(folderId, out var activeCts))
         {
-            return;
+            activeCts.Cancel();
         }
 
-        folder.AccountEmail ??= CurrentAccount.EmailAddress?.Trim().ToLowerInvariant();
-        folder.IsPaused = isPaused;
-        folder.State = isPaused ? FolderSyncState.Paused : FolderSyncState.Idle;
-        await _repository.UpsertSyncFolderAsync(folder, cancellationToken);
-        await PersistCurrentAccountFoldersProfileAsync(cancellationToken);
+        var folderLock = _folderLocks.GetOrAdd(folderId, _ => new SemaphoreSlim(1, 1));
+        await folderLock.WaitAsync(cancellationToken);
+        LocalSyncFolder? folder;
+        try
+        {
+            folder = await _repository.GetSyncFolderByIdAsync(folderId, cancellationToken);
+            if (folder is null)
+            {
+                return;
+            }
+
+            folder.AccountEmail ??= CurrentAccount.EmailAddress?.Trim().ToLowerInvariant();
+            folder.IsPaused = isPaused;
+            folder.State = isPaused ? FolderSyncState.Paused : FolderSyncState.Idle;
+            await _repository.UpsertSyncFolderAsync(folder, cancellationToken);
+            await PersistCurrentAccountFoldersProfileAsync(cancellationToken);
+        }
+        finally
+        {
+            folderLock.Release();
+        }
 
         if (isPaused)
         {
-            if (_folderSyncCancellations.TryGetValue(folderId, out var activeCts))
-            {
-                activeCts.Cancel();
-            }
-
             foreach (var item in _transfers.Values)
             {
                 if (string.Equals(item.SyncFolderId, folderId, StringComparison.Ordinal) &&
@@ -2224,6 +2259,13 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
         try
         {
+            if (_connectivityProbe is not null)
+            {
+                var customReachable = await _connectivityProbe(cancellationToken);
+                UpdateOnlineState(customReachable);
+                return customReachable;
+            }
+
             if (!NetworkInterface.GetIsNetworkAvailable())
             {
                 UpdateOnlineState(false);

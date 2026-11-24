@@ -13,12 +13,14 @@ namespace TundraDrive.Desktop.Views;
 public partial class FileHubView : UserControl
 {
     private FileHubViewModel? _observedVm;
+    private bool _isSyncingGridSelection;
 
     public FileHubView()
     {
         InitializeComponent();
         AddHandler(DragDrop.DropEvent, OnFilesDropped);
         ListFilesListBox.AddHandler(PointerPressedEvent, OnFileListPointerPressed, RoutingStrategies.Tunnel);
+        GridFoldersListBox.AddHandler(PointerPressedEvent, OnFileListPointerPressed, RoutingStrategies.Tunnel);
         GridFilesListBox.AddHandler(PointerPressedEvent, OnFileListPointerPressed, RoutingStrategies.Tunnel);
         KeyDown += OnViewKeyDown;
         DataContextChanged += OnFileHubDataContextChanged;
@@ -51,34 +53,150 @@ public partial class FileHubView : UserControl
         }
     }
 
-    private ListBox? GetActiveFilesListBox() =>
-        DataContext is FileHubViewModel { IsGridLayout: true }
-            ? GridFilesListBox
-            : ListFilesListBox;
-
-    private void OnFileListPointerPressed(object? sender, PointerPressedEventArgs e)
+    private IEnumerable<ListBox> GetActiveFilesListBoxes()
     {
-        if (sender is not ListBox listBox ||
-            !e.GetCurrentPoint(listBox).Properties.IsRightButtonPressed ||
-            e.Source is not Visual sourceVisual)
+        if (DataContext is FileHubViewModel { IsGridLayout: true })
+        {
+            return [GridFoldersListBox, GridFilesListBox];
+        }
+
+        return [ListFilesListBox];
+    }
+
+    private ListBox? GetOtherGridListBox(ListBox current)
+    {
+        if (ReferenceEquals(current, GridFoldersListBox))
+        {
+            return GridFilesListBox;
+        }
+
+        if (ReferenceEquals(current, GridFilesListBox))
+        {
+            return GridFoldersListBox;
+        }
+
+        return null;
+    }
+
+    private void ClearListBoxSelection(ListBox listBox)
+    {
+        listBox.SelectedItems?.Clear();
+        listBox.SelectedItem = null;
+    }
+
+    private void SyncGridSelectionToViewModel()
+    {
+        if (_isSyncingGridSelection || DataContext is not FileHubViewModel vm || !vm.IsGridLayout)
         {
             return;
         }
 
-        var container = sourceVisual.FindAncestorOfType<ListBoxItem>();
-        if (container?.DataContext is FileHubItemViewModel item)
+        var combined = new List<FileHubItemViewModel>();
+        if (GridFoldersListBox.SelectedItems is not null)
         {
-            if (!container.IsSelected)
+            combined.AddRange(GridFoldersListBox.SelectedItems.OfType<FileHubItemViewModel>());
+        }
+
+        if (GridFilesListBox.SelectedItems is not null)
+        {
+            combined.AddRange(GridFilesListBox.SelectedItems.OfType<FileHubItemViewModel>());
+        }
+
+        vm.UpdateSelectedItems(combined);
+    }
+
+    private void OnFileListPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not ListBox listBox || e.Source is not Visual sourceVisual)
+        {
+            return;
+        }
+
+        var point = e.GetCurrentPoint(listBox);
+        var container = sourceVisual.FindAncestorOfType<ListBoxItem>();
+        var otherGrid = GetOtherGridListBox(listBox);
+
+        if (point.Properties.IsRightButtonPressed)
+        {
+            if (container?.DataContext is FileHubItemViewModel item)
             {
-                listBox.SelectedItems?.Clear();
-                listBox.SelectedItem = item;
+                if (!container.IsSelected)
+                {
+                    _isSyncingGridSelection = true;
+                    try
+                    {
+                        if (otherGrid is not null)
+                        {
+                            ClearListBoxSelection(otherGrid);
+                        }
+
+                        listBox.SelectedItems?.Clear();
+                        listBox.SelectedItem = item;
+                    }
+                    finally
+                    {
+                        _isSyncingGridSelection = false;
+                    }
+
+                    if (otherGrid is not null)
+                    {
+                        SyncGridSelectionToViewModel();
+                    }
+                }
+            }
+            else
+            {
+                // Right-clicking empty whitespace clears item selection so folder actions stand alone cleanly.
+                ClearAllSelections();
+            }
+
+            return;
+        }
+
+        if (!point.Properties.IsLeftButtonPressed || otherGrid is null)
+        {
+            return;
+        }
+
+        if (container is null)
+        {
+            ClearAllSelections();
+            return;
+        }
+
+        var clickedCheckBox = sourceVisual.FindAncestorOfType<CheckBox>() is not null;
+        var hasMultiModifier = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+        if (!clickedCheckBox && !hasMultiModifier && otherGrid.SelectedItems?.Count > 0)
+        {
+            _isSyncingGridSelection = true;
+            try
+            {
+                ClearListBoxSelection(otherGrid);
+            }
+            finally
+            {
+                _isSyncingGridSelection = false;
             }
         }
-        else
+    }
+
+    private void ClearAllSelections()
+    {
+        _isSyncingGridSelection = true;
+        try
         {
-            // Right-clicking empty whitespace clears item selection so folder actions stand alone cleanly.
-            listBox.SelectedItems?.Clear();
-            listBox.SelectedItem = null;
+            ClearListBoxSelection(ListFilesListBox);
+            ClearListBoxSelection(GridFoldersListBox);
+            ClearListBoxSelection(GridFilesListBox);
+        }
+        finally
+        {
+            _isSyncingGridSelection = false;
+        }
+
+        if (DataContext is FileHubViewModel vm)
+        {
+            vm.UpdateSelectedItems([]);
         }
     }
 
@@ -95,7 +213,11 @@ public partial class FileHubView : UserControl
         vm.UpdateSelectedItems(listBox.SelectedItems.OfType<FileHubItemViewModel>());
     }
 
-    private void OnItemCheckBoxClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnGridFoldersSelectionChanged(object? sender, SelectionChangedEventArgs e) => SyncGridSelectionToViewModel();
+
+    private void OnGridFilesSelectionChanged(object? sender, SelectionChangedEventArgs e) => SyncGridSelectionToViewModel();
+
+    private void OnItemCheckBoxClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not CheckBox checkBox || checkBox.DataContext is not FileHubItemViewModel item)
         {
@@ -120,27 +242,35 @@ public partial class FileHubView : UserControl
         e.Handled = true;
     }
 
-    private void OnSelectAllClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnSelectAllClick(object? sender, RoutedEventArgs e)
     {
-        GetActiveFilesListBox()?.SelectAll();
+        _isSyncingGridSelection = true;
+        try
+        {
+            foreach (var listBox in GetActiveFilesListBoxes())
+            {
+                listBox.SelectAll();
+            }
+        }
+        finally
+        {
+            _isSyncingGridSelection = false;
+        }
+
+        SyncGridSelectionToViewModel();
     }
 
-    private void OnClearSelectionClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var listBox = GetActiveFilesListBox();
-        listBox?.SelectedItems?.Clear();
-        if (listBox is not null)
-        {
-            listBox.SelectedItem = null;
-        }
-    }
+    private void OnClearSelectionClick(object? sender, RoutedEventArgs e) => ClearAllSelections();
 
     private async void OnListDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (DataContext is FileHubViewModel vm && vm.SelectedItem is not null)
+        if (DataContext is not FileHubViewModel vm ||
+            (e.Source as Visual)?.FindAncestorOfType<ListBoxItem>()?.DataContext is not FileHubItemViewModel tappedItem)
         {
-            await vm.ActivateItemAsync(vm.SelectedItem);
+            return;
         }
+
+        await vm.ActivateItemAsync(tappedItem);
     }
 
     private async void OnSearchBoxKeyDown(object? sender, KeyEventArgs e)
@@ -210,17 +340,12 @@ public partial class FileHubView : UserControl
         }
         else if (e.Key == Key.A && e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Source is not TextBox)
         {
-            GetActiveFilesListBox()?.SelectAll();
+            OnSelectAllClick(sender, e);
             e.Handled = true;
         }
         else if (e.Key == Key.Escape && !vm.IsPreviewVisible && vm.HasSelectedItem && e.Source is not TextBox)
         {
-            var listBox = GetActiveFilesListBox();
-            listBox?.SelectedItems?.Clear();
-            if (listBox is not null)
-            {
-                listBox.SelectedItem = null;
-            }
+            ClearAllSelections();
             e.Handled = true;
         }
         else if (e.Key == Key.Escape && vm.IsPreviewVisible)

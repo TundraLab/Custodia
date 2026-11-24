@@ -32,7 +32,7 @@
           <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="6,0,4,16">
             <StackPanel Grid.Column="0" Spacing="3" IsVisible="{Binding !IsSidebarCompact}">
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <Image Source="avares://Custodia/Assets/custodia-icon.png" Width="22" Height="22" />
+                <Image Source="{StaticResource TundraBrandGlyphDrawing}" Width="22" Height="22" />
                 <TextBlock FontSize="17"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource M3OnSurface}"
@@ -59,7 +59,7 @@
               <ListBoxItem ToolTip.Tip="{Binding Loc.NavFileHub}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                   <PathIcon Width="16" Height="16"
-                            Data="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
+                            Data="{StaticResource TundraCloudSyncGeometry}" />
                   <TextBlock FontSize="13.5" Text="{Binding Loc.NavFileHub}" VerticalAlignment="Center" IsVisible="{Binding !IsSidebarCompact}" />
                 </StackPanel>
               </ListBoxItem>
@@ -67,7 +67,7 @@
               <ListBoxItem ToolTip.Tip="{Binding Loc.NavSyncFolders}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                   <PathIcon Width="16" Height="16"
-                            Data="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+                            Data="{StaticResource TundraFolderGeometry}" />
                   <TextBlock FontSize="13.5" Text="{Binding Loc.NavSyncFolders}" VerticalAlignment="Center" IsVisible="{Binding !IsSidebarCompact}" />
                 </StackPanel>
               </ListBoxItem>
@@ -75,7 +75,7 @@
               <ListBoxItem ToolTip.Tip="{Binding Loc.NavTransferQueue}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                   <PathIcon Width="16" Height="16"
-                            Data="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" />
+                            Data="{StaticResource TundraNodesGeometry}" />
                   <TextBlock FontSize="13.5" Text="{Binding Loc.NavTransferQueue}" VerticalAlignment="Center" IsVisible="{Binding !IsSidebarCompact}" />
                 </StackPanel>
               </ListBoxItem>
@@ -83,7 +83,7 @@
               <ListBoxItem ToolTip.Tip="{Binding Loc.NavActivityLogs}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                   <PathIcon Width="16" Height="16"
-                            Data="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
+                            Data="{StaticResource TundraTelemetryGeometry}" />
                   <TextBlock FontSize="13.5" Text="{Binding Loc.NavActivityLogs}" VerticalAlignment="Center" IsVisible="{Binding !IsSidebarCompact}" />
                 </StackPanel>
               </ListBoxItem>
@@ -99,7 +99,7 @@
               <ListBoxItem ToolTip.Tip="{Binding Loc.NavAbout}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                   <PathIcon Width="16" Height="16"
-                            Data="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                            Data="{StaticResource TundraBrandGlyphGeometry}" />
                   <TextBlock FontSize="13.5" Text="{Binding Loc.NavAbout}" VerticalAlignment="Center" IsVisible="{Binding !IsSidebarCompact}" />
                 </StackPanel>
               </ListBoxItem>
@@ -412,7 +412,7 @@
                               Width="12" Height="12"
                               Foreground="{DynamicResource M3Primary}"
                               IsVisible="{Binding IsSidebarGenericSyncing}"
-                              Data="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z">
+                              Data="{StaticResource TundraRefreshGeometry}">
                       <PathIcon.RenderTransform>
                         <RotateTransform />
                       </PathIcon.RenderTransform>
@@ -421,7 +421,7 @@
                               Width="12" Height="12"
                               Foreground="{DynamicResource M3Primary}"
                               IsVisible="{Binding IsSidebarUploading}"
-                              Data="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z">
+                              Data="{StaticResource TundraUploadGeometry}">
                       <PathIcon.RenderTransform>
                         <TranslateTransform />
                       </PathIcon.RenderTransform>
@@ -430,7 +430,7 @@
                               Width="12" Height="12"
                               Foreground="{DynamicResource M3Success}"
                               IsVisible="{Binding IsSidebarDownloading}"
-                              Data="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z">
+                              Data="{StaticResource TundraDownloadGeometry}">
                       <PathIcon.RenderTransform>
                         <TranslateTransform />
                       </PathIcon.RenderTransform>
@@ -439,7 +439,7 @@
                               Width="12" Height="12"
                               Foreground="{DynamicResource M3ErrorAccent}"
                               IsVisible="{Binding IsSidebarDeleting}"
-                              Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z">
+                              Data="{StaticResource TundraTrashGeometry}">
                       <PathIcon.RenderTransform>
                         <TranslateTransform />
                       </PathIcon.RenderTransform>
@@ -448,7 +448,7 @@
                               Width="12" Height="12"
                               Foreground="{DynamicResource M3ErrorAccent}"
                               IsVisible="{Binding IsSidebarError}"
-                              Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z">
+                              Data="{StaticResource TundraAlertGeometry}">
                       <PathIcon.RenderTransform>
                         <TranslateTransform />
                       </PathIcon.RenderTransform>
@@ -546,7 +546,7 @@
                       HorizontalScrollBarVisibility="Disabled">
           <StackPanel Spacing="14">
             <StackPanel Orientation="Horizontal" Spacing="10">
-              <Image Source="avares://Custodia/Assets/custodia-icon.png" Width="28" Height="28" />
+              <Image Source="{StaticResource TundraShieldVaultDrawing}" Width="28" Height="28" />
               <StackPanel Spacing="2" VerticalAlignment="Center">
                 <TextBlock FontSize="18"
                            FontWeight="SemiBold"

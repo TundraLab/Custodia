@@ -618,20 +618,26 @@
     <Setter Property="Padding" Value="0" />
     <Setter Property="Margin" Value="0,0,12,12" />
     <Setter Property="CornerRadius" Value="16" />
-    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainer}" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+
+  <Style Selector="ListBox.m3-grid.m3-grid-folders > ListBoxItem">
+    <Setter Property="Margin" Value="0,0,10,10" />
+    <Setter Property="CornerRadius" Value="14" />
   </Style>
 
   <Style Selector="ListBox.m3-grid > ListBoxItem /template/ ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainer}" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
 
   <Style Selector="ListBox.m3-grid > ListBoxItem:pointerover /template/ ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource M3SurfaceHover}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource M3OutlineVariant}" />
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
 
   <Style Selector="ListBox.m3-grid > ListBoxItem:selected /template/ ContentPresenter">
@@ -642,6 +648,31 @@
   <Style Selector="ListBox.m3-grid > ListBoxItem:selected:pointerover /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource M3SecondaryContainerHover}" />
     <Setter Property="BorderBrush" Value="{DynamicResource M3Primary}" />
+  </Style>
+
+  <Style Selector="CheckBox.m3-grid-check">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.14" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="CheckBox.m3-grid-check.m3-check-visible">
+    <Setter Property="Opacity" Value="0.85" />
+    <Setter Property="IsHitTestVisible" Value="True" />
+  </Style>
+
+  <Style Selector="ListBox.m3-grid > ListBoxItem:pointerover CheckBox.m3-grid-check">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="IsHitTestVisible" Value="True" />
+  </Style>
+
+  <Style Selector="ListBox.m3-grid > ListBoxItem:selected CheckBox.m3-grid-check">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="IsHitTestVisible" Value="True" />
   </Style>
 
   <!-- Card list (sync rules, transfers) -->

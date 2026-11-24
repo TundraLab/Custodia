@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Avalonia.Headless.XUnit;
 using Microsoft.Extensions.Logging.Abstractions;
 using TundraDrive.Api;
 using TundraDrive.Core.Configuration;
@@ -101,7 +102,8 @@ public sealed class Release290FeatureTests
                 settings,
                 auth,
                 watcher,
-                NullLogger<DriveSyncService>.Instance);
+                NullLogger<DriveSyncService>.Instance,
+                connectivityProbe: _ => Task.FromResult(true));
 
             var runningStatesOnChange = new List<bool>();
             var loggedActions = new List<string>();
@@ -432,7 +434,8 @@ public sealed class Release290FeatureTests
                 settings,
                 auth,
                 watcher,
-                NullLogger<DriveSyncService>.Instance);
+                NullLogger<DriveSyncService>.Instance,
+                connectivityProbe: _ => Task.FromResult(true));
 
             var connected1 = await syncService.ConnectAccountAsync(addNewAccount: false);
             accountDir = auth.GetAccountFolderPath(connected1.Id, email);
@@ -857,7 +860,7 @@ public sealed class Release290FeatureTests
         }
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task FileHubViewModel_CustomizesFolderColorAndSymbolViaContextAction()
     {
         var loc = new LocalizationService();
@@ -985,5 +988,144 @@ public sealed class Release290FeatureTests
         Assert.Contains("PRIVACY.md", readme, StringComparison.Ordinal);
         Assert.Contains("TERMS.md", readme, StringComparison.Ordinal);
         Assert.Contains("api-services-user-data-policy", readme, StringComparison.Ordinal);
+    }
+
+    private class ExportFallbackDriveClientProxy : DispatchProxy
+    {
+        public bool FailPdfExport { get; set; }
+        public List<string> ExportedMimeTypes { get; } = [];
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            switch (targetMethod?.Name)
+            {
+                case "get_IsConnected":
+                    return true;
+                case "get_ActiveAccountKey":
+                    return "default";
+                case nameof(IGoogleDriveClient.ExportFileAsync):
+                {
+                    var exportMime = (string)args![1]!;
+                    var destPath = (string)args[2]!;
+                    ExportedMimeTypes.Add(exportMime);
+
+                    if (FailPdfExport && string.Equals(exportMime, "application/pdf", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return Task.FromException(new InvalidOperationException("exportSizeLimitExceeded"));
+                    }
+
+                    Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+                    File.WriteAllText(destPath, "Exported document content");
+                    return Task.CompletedTask;
+                }
+                default:
+                    return null;
+            }
+        }
+    }
+
+    [Fact]
+    public async Task FileHubViewModel_PreviewSelected_WorksViaCheckboxSelectionAndReopen()
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"custodia-doc-{Guid.NewGuid():N}.txt");
+        await File.WriteAllTextAsync(tempFile, "Conteudo de teste do documento");
+
+        try
+        {
+            var loc = new LocalizationService();
+            loc.SetLanguage("pt-BR");
+            var settings = new TempAppSettingsService();
+            var syncProxy = DispatchProxy.Create<IDriveSyncService, StubDriveSyncProxy>();
+            var driveProxy = DispatchProxy.Create<IGoogleDriveClient, StubDriveClientProxy>();
+            var repoProxy = DispatchProxy.Create<ISyncStateRepository, StubStateRepoProxy>();
+
+            var hub = new FileHubViewModel(repoProxy, driveProxy, syncProxy, new FilePreviewService(driveProxy), loc, settings);
+            var docItem = new FileHubItemViewModel
+            {
+                Name = Path.GetFileName(tempFile),
+                IsFolder = false,
+                HasLocalFile = true,
+                LocalFullPath = tempFile,
+                MimeType = "text/plain"
+            };
+
+            hub.UpdateSelectedItems([docItem]);
+            Assert.True(hub.CanPreviewSelected);
+
+            await hub.PreviewSelectedCommand.ExecuteAsync(null);
+            Assert.True(hub.IsPreviewVisible);
+            Assert.True(hub.IsTextPreview);
+            Assert.Contains("Conteudo de teste", hub.PreviewTextContent);
+
+            hub.ClosePreview();
+            Assert.False(hub.IsPreviewVisible);
+
+            await hub.PreviewSelectedCommand.ExecuteAsync(null);
+            Assert.True(hub.IsPreviewVisible);
+            Assert.True(hub.IsTextPreview);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+            {
+                File.Delete(tempFile);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task FilePreviewService_HandlesExtensionlessText_NonExportableWorkspace_AndDocFallback()
+    {
+        var tempNoExt = Path.Combine(Path.GetTempPath(), $"README_{Guid.NewGuid():N}");
+        await File.WriteAllTextAsync(tempNoExt, "Document without extension");
+
+        var driveProxy = DispatchProxy.Create<IGoogleDriveClient, ExportFallbackDriveClientProxy>();
+        var driveState = (ExportFallbackDriveClientProxy)(object)driveProxy;
+        driveState.FailPdfExport = true;
+        using var previewService = new FilePreviewService(driveProxy);
+
+        try
+        {
+            var textResult = await previewService.BuildPreviewAsync(
+                Path.GetFileName(tempNoExt),
+                tempNoExt,
+                string.Empty,
+                isGoogleWorkspaceDoc: false,
+                mimeType: null);
+            Assert.Equal(PreviewKind.Text, textResult.Kind);
+            Assert.Contains("Document without extension", textResult.TextContent);
+
+            var shortcutResult = await previewService.BuildPreviewAsync(
+                "Atalho",
+                null,
+                $"drv-shortcut-{Guid.NewGuid():N}",
+                isGoogleWorkspaceDoc: true,
+                mimeType: "application/vnd.google-apps.shortcut");
+            Assert.Equal(PreviewKind.Unsupported, shortcutResult.Kind);
+            Assert.Empty(driveState.ExportedMimeTypes);
+
+            var docFallbackId = $"drv-largedoc-{Guid.NewGuid():N}";
+            var fallbackResult = await previewService.BuildPreviewAsync(
+                "Documento Grande",
+                null,
+                docFallbackId,
+                isGoogleWorkspaceDoc: true,
+                mimeType: "application/vnd.google-apps.document");
+            Assert.Equal(PreviewKind.Text, fallbackResult.Kind);
+            Assert.Contains("application/pdf", driveState.ExportedMimeTypes);
+            Assert.Contains("text/plain", driveState.ExportedMimeTypes);
+            Assert.Contains("Exported document content", fallbackResult.TextContent);
+            if (!string.IsNullOrWhiteSpace(fallbackResult.LocalFilePath) && File.Exists(fallbackResult.LocalFilePath))
+            {
+                File.Delete(fallbackResult.LocalFilePath);
+            }
+        }
+        finally
+        {
+            if (File.Exists(tempNoExt))
+            {
+                File.Delete(tempNoExt);
+            }
+        }
     }
 }

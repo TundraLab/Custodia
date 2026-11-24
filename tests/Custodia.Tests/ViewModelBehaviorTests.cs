@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using TundraDrive.Core.Drive;
 using TundraDrive.Core.Models;
@@ -14,7 +15,7 @@ namespace TundraDrive.Tests;
 
 public sealed class ViewModelBehaviorTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void TransferQueue_DistinguishesUploadDownloadAndDeleteStates()
     {
         var loc = new LocalizationService();
@@ -96,7 +97,7 @@ public sealed class ViewModelBehaviorTests
         Assert.Equal("Delete", queueVm.Items[0].DirectionDisplay);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task MainWindow_FiltersNoOpSyncCompletedAndDispatchesMissingNotifications()
     {
         var loc = new LocalizationService();

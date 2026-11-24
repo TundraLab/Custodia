@@ -36,7 +36,7 @@
                     Width="16" Height="16"
                     Foreground="{DynamicResource M3ErrorAccent}"
                     VerticalAlignment="Center"
-                    Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z">
+                    Data="{StaticResource TundraAlertGeometry}">
             <PathIcon.RenderTransform>
               <TranslateTransform />
             </PathIcon.RenderTransform>
@@ -86,7 +86,7 @@
                                 Width="15" Height="15"
                                 Foreground="{DynamicResource M3Primary}"
                                 IsVisible="{Binding IsUploadingActive}"
-                                Data="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z">
+                                Data="{StaticResource TundraUploadGeometry}">
                         <PathIcon.RenderTransform>
                           <TranslateTransform />
                         </PathIcon.RenderTransform>
@@ -95,7 +95,7 @@
                                 Width="15" Height="15"
                                 Foreground="{DynamicResource M3Success}"
                                 IsVisible="{Binding IsDownloadingActive}"
-                                Data="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z">
+                                Data="{StaticResource TundraDownloadGeometry}">
                         <PathIcon.RenderTransform>
                           <TranslateTransform />
                         </PathIcon.RenderTransform>
@@ -104,7 +104,7 @@
                                 Width="15" Height="15"
                                 Foreground="{DynamicResource M3ErrorAccent}"
                                 IsVisible="{Binding IsDeletingActive}"
-                                Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z">
+                                Data="{StaticResource TundraTrashGeometry}">
                         <PathIcon.RenderTransform>
                           <TranslateTransform />
                         </PathIcon.RenderTransform>
@@ -113,7 +113,7 @@
                                 Width="15" Height="15"
                                 Foreground="{DynamicResource M3ErrorAccent}"
                                 IsVisible="{Binding IsFailedActive}"
-                                Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z">
+                                Data="{StaticResource TundraAlertGeometry}">
                         <PathIcon.RenderTransform>
                           <TranslateTransform />
                         </PathIcon.RenderTransform>
@@ -124,22 +124,22 @@
                                 Foreground="{DynamicResource M3Primary}"
                                 Opacity="0.82"
                                 IsVisible="{Binding IsUploadingStatic}"
-                                Data="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" />
+                                Data="{StaticResource TundraUploadGeometry}" />
                       <PathIcon Width="15" Height="15"
                                 Foreground="{DynamicResource M3Success}"
                                 Opacity="0.82"
                                 IsVisible="{Binding IsDownloadingStatic}"
-                                Data="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                                Data="{StaticResource TundraDownloadGeometry}" />
                       <PathIcon Width="15" Height="15"
                                 Foreground="{DynamicResource M3ErrorAccent}"
                                 Opacity="0.82"
                                 IsVisible="{Binding IsDeletingStatic}"
-                                Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                                Data="{StaticResource TundraTrashGeometry}" />
                       <PathIcon Width="15" Height="15"
                                 Foreground="{DynamicResource M3ErrorAccent}"
                                 Opacity="0.92"
                                 IsVisible="{Binding IsFailedStatic}"
-                                Data="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+                                Data="{StaticResource TundraAlertGeometry}" />
 
                       <StackPanel Spacing="2">
                         <TextBlock FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurface}" Text="{Binding FileName}" TextWrapping="Wrap" />

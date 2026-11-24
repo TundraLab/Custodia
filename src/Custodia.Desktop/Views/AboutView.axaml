@@ -20,12 +20,18 @@
       <Border Classes="m3-card">
         <StackPanel Spacing="16">
           <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
-            <Image Grid.Column="0"
-                   Source="avares://Custodia/Assets/custodia-icon.png"
-                   Width="64"
-                   Height="64"
-                   VerticalAlignment="Center"
-                   Stretch="Uniform" />
+            <Border Grid.Column="0"
+                    Width="64"
+                    Height="64"
+                    Background="{DynamicResource M3SurfaceContainerHigh}"
+                    CornerRadius="16"
+                    BorderThickness="0"
+                    VerticalAlignment="Center">
+              <Image Source="{StaticResource TundraBrandGlyphDrawing}"
+                     Width="38"
+                     Height="38"
+                     Stretch="Uniform" />
+            </Border>
 
             <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
               <TextBlock FontSize="21" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurface}" Text="Custódia" />
