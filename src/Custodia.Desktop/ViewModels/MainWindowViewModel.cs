@@ -205,6 +205,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
+    private void OpenAccountSettings()
+    {
+        SelectedNavigationIndex = 4;
+    }
+
+    [RelayCommand]
     private void OpenUpdatesFromBanner()
     {
         SelectedNavigationIndex = 5;
@@ -284,15 +290,19 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public string GetTrayStatusLine()
     {
-        var prefix = GetTrayVisualState() switch
-        {
-            TrayVisualState.Uploading => "↑ ",
-            TrayVisualState.Downloading => "↓ ",
-            TrayVisualState.Deleting => "✕ ",
-            TrayVisualState.Syncing => "↻ ",
-            TrayVisualState.Error => "⚠ ",
-            _ => "✓ "
-        };
+        var prefix = !_syncService.CurrentAccount.IsConnected
+            ? "○ "
+            : !_syncService.IsOnline
+                ? "⊘ "
+                : GetTrayVisualState() switch
+                {
+                    TrayVisualState.Uploading => "↑ ",
+                    TrayVisualState.Downloading => "↓ ",
+                    TrayVisualState.Deleting => "✕ ",
+                    TrayVisualState.Syncing => "↻ ",
+                    TrayVisualState.Error => "⚠ ",
+                    _ => "✓ "
+                };
 
         return Loc.Format("TrayStatusFmt", prefix + SidebarSyncStatusText);
     }
@@ -555,21 +565,21 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             _lastProgressTickMs = nowMs;
         }
 
-        var isBrandNewActivity = item.Status is TransferStatus.Queued or TransferStatus.InProgress
-            || (!hasPrev && item.Status == TransferStatus.Completed);
+        var isActiveTransfer = item.Status is TransferStatus.Queued or TransferStatus.InProgress;
 
         Dispatcher.UIThread.Post(() =>
         {
             var prevActive = TransferQueueVm.ActiveCount;
             var prevDirection = TransferQueueVm.ActiveDirection;
+            var prevStatusText = SidebarSyncStatusText;
 
-            if (isBrandNewActivity)
+            if (isActiveTransfer)
             {
                 _heldSidebarErrorUntilMs = 0;
                 _heldSidebarDirection = item.Direction;
-                _sidebarHoldUntilMs = Environment.TickCount64 + 1800;
+                _sidebarHoldUntilMs = Environment.TickCount64 + 1200;
                 var version = ++_sidebarHoldVersion;
-                _ = ReleaseSidebarDirectionHoldAsync(version, 1850);
+                _ = ReleaseSidebarDirectionHoldAsync(version, 1250);
             }
             else if (item.Status == TransferStatus.Failed)
             {
@@ -579,9 +589,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             }
 
             TransferQueueVm.UpsertTransfer(item);
-            RefreshSidebarSyncState();
+            RefreshSidebarSyncState("SidebarMonitoring");
             if (prevActive != TransferQueueVm.ActiveCount
                 || prevDirection != TransferQueueVm.ActiveDirection
+                || !string.Equals(prevStatusText, SidebarSyncStatusText, StringComparison.Ordinal)
                 || item.Status == TransferStatus.Failed)
             {
                 TraySummaryChanged?.Invoke(this, EventArgs.Empty);
@@ -623,7 +634,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void OnActivityLogged(object? sender, SyncActivityLog log)
     {
-        Dispatcher.UIThread.Post(() => ActivityLogsVm.PrependLiveLog(log));
+        Dispatcher.UIThread.Post(() =>
+        {
+            ActivityLogsVm.PrependLiveLog(log);
+            if (log.Action is "SyncCompleted" or "InitialFolderSyncCompleted" or "SyncError" or "UploadFailed" or "DownloadFailed" or "FolderPaused" or "FolderResumed")
+            {
+                RefreshSidebarSyncState("SidebarMonitoring");
+                TraySummaryChanged?.Invoke(this, EventArgs.Empty);
+            }
+        });
         _ = DispatchNotificationForLogAsync(log);
     }
 
@@ -763,15 +782,23 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void RefreshSidebarSyncState(string idleKey = "SidebarReady")
     {
         var account = _syncService.CurrentAccount;
+        var hasActiveWork = _syncService.IsSyncRunning || TransferQueueVm.ActiveCount > 0;
+        if (!hasActiveWork)
+        {
+            _heldSidebarDirection = null;
+            _sidebarHoldUntilMs = 0;
+        }
+
         var activeDirection = TransferQueueVm.ActiveDirection;
-        var heldDirection = activeDirection is null
+        var heldDirection = hasActiveWork
+            && activeDirection is null
             && _heldSidebarDirection is not null
             && Environment.TickCount64 < _sidebarHoldUntilMs
             ? _heldSidebarDirection
             : null;
-        var effectiveDirection = activeDirection ?? heldDirection;
+        var effectiveDirection = hasActiveWork ? (activeDirection ?? heldDirection) : null;
 
-        IsSyncActive = _syncService.IsSyncRunning || TransferQueueVm.ActiveCount > 0 || heldDirection is not null;
+        IsSyncActive = hasActiveWork;
         ActiveSidebarDirection = effectiveDirection;
         OnPropertyChanged(nameof(IsSidebarError));
 

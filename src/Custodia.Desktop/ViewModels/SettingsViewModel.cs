@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -23,9 +24,20 @@ public sealed partial class SettingsAccountItemViewModel : ObservableObject
     public bool IsActive { get; }
     public bool CanSwitch => !IsActive;
     public string ActiveBadgeText { get; }
+    public string JsonBadgeText { get; }
+    public IBrush JsonBadgeBgBrush { get; }
+    public IBrush JsonBadgeFgBrush { get; }
+    public string JsonDetailText { get; }
+    public string AccountFolderDisplay { get; }
     public string SwitchButtonText { get; }
+    public string ReconnectButtonText { get; }
+    public string ReplaceJsonButtonText { get; }
+    public string OpenFolderButtonText { get; }
     public string RevokeButtonText { get; }
     public IAsyncRelayCommand SwitchCommand { get; }
+    public IAsyncRelayCommand ReconnectCommand { get; }
+    public IAsyncRelayCommand ReplaceJsonCommand { get; }
+    public IAsyncRelayCommand OpenFolderCommand { get; }
     public IAsyncRelayCommand RevokeCommand { get; }
 
     [ObservableProperty]
@@ -37,8 +49,13 @@ public sealed partial class SettingsAccountItemViewModel : ObservableObject
     public SettingsAccountItemViewModel(
         DriveAccount account,
         bool isActive,
+        CredentialsFileMetadata? jsonMeta,
+        string accountFolderPath,
         ILocalizationService loc,
         Func<string, Task> onSwitch,
+        Func<string, Task> onReconnect,
+        Func<string, Task> onReplaceJson,
+        Func<string, string, Task> onOpenFolder,
         Func<string, Task> onRevoke)
     {
         Id = account.Id;
@@ -49,16 +66,61 @@ public sealed partial class SettingsAccountItemViewModel : ObservableObject
             : loc.Text("Unlimited");
         QuotaSummary = loc.Format("QuotaUsageFmt", UiConverters.FormatBytes(account.Quota.UsageBytes), limitText);
         IsActive = isActive;
+
+        if (jsonMeta is null)
+        {
+            JsonBadgeText = loc.Text("CredentialsMissingBadge");
+            JsonBadgeBgBrush = SolidColorBrush.Parse("#3B1D1D");
+            JsonBadgeFgBrush = SolidColorBrush.Parse("#FCA5A5");
+            JsonDetailText = loc.Text("AccountJsonMissingDetail");
+        }
+        else if (jsonMeta.IsPerAccount)
+        {
+            JsonBadgeText = loc.Text("AccountJsonCustomBadge");
+            JsonBadgeBgBrush = SolidColorBrush.Parse("#172B3F");
+            JsonBadgeFgBrush = SolidColorBrush.Parse("#93C5FD");
+            JsonDetailText = string.IsNullOrWhiteSpace(jsonMeta.ProjectId)
+                ? jsonMeta.MaskedClientId
+                : $"{jsonMeta.ProjectId} • {jsonMeta.MaskedClientId}";
+        }
+        else
+        {
+            JsonBadgeText = loc.Text("AccountJsonGlobalBadge");
+            JsonBadgeBgBrush = SolidColorBrush.Parse("#1F2937");
+            JsonBadgeFgBrush = SolidColorBrush.Parse("#CBD5E1");
+            JsonDetailText = string.IsNullOrWhiteSpace(jsonMeta.ProjectId)
+                ? jsonMeta.MaskedClientId
+                : $"{jsonMeta.ProjectId} • {jsonMeta.MaskedClientId}";
+        }
+
+        AccountFolderDisplay = CompactHomePath(accountFolderPath);
         ActiveBadgeText = loc.Text("ActiveAccountBadge");
         SwitchButtonText = loc.Text("SwitchToAccountButton");
+        ReconnectButtonText = loc.Text("ReconnectAccountButton");
+        ReplaceJsonButtonText = loc.Text("ReplaceAccountJsonButton");
+        OpenFolderButtonText = loc.Text("OpenAccountFolderButton");
         RevokeButtonText = loc.Text("RevokeAccountButton");
+
         SwitchCommand = new AsyncRelayCommand(() => onSwitch(account.Id));
+        ReconnectCommand = new AsyncRelayCommand(() => onReconnect(account.Id));
+        ReplaceJsonCommand = new AsyncRelayCommand(() => onReplaceJson(account.Id));
+        OpenFolderCommand = new AsyncRelayCommand(() => onOpenFolder(account.Id, account.EmailAddress));
         RevokeCommand = new AsyncRelayCommand(() => onRevoke(account.Id));
 
         if (!string.IsNullOrWhiteSpace(account.PhotoUrl))
         {
             _ = LoadAvatarAsync(account.PhotoUrl);
         }
+    }
+
+    private static string CompactHomePath(string path)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrWhiteSpace(home) && path.StartsWith(home, StringComparison.Ordinal))
+        {
+            return "~" + path[home.Length..];
+        }
+        return path;
     }
 
     private async Task LoadAvatarAsync(string photoUrl)
@@ -220,7 +282,49 @@ public sealed partial class SettingsViewModel : ViewModelBase
     private string _credentialsJsonStatusText = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCredentialsMetadata))]
+    private string _credentialsMetadataText = string.Empty;
+
+    public bool HasCredentialsMetadata => !string.IsNullOrWhiteSpace(CredentialsMetadataText);
+
+    [ObservableProperty]
     private string _credentialsFilePathDisplay = AppPaths.CredentialsFilePath;
+
+    [ObservableProperty]
+    private string _accountsRootDirectoryDisplay = AppPaths.AccountsDirectory;
+
+    [ObservableProperty]
+    private bool _hasDetectedDownloadsJson;
+
+    [ObservableProperty]
+    private string _detectedDownloadsJsonPath = string.Empty;
+
+    [ObservableProperty]
+    private string _detectedDownloadsSummary = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCredentialsFeedback))]
+    private string _credentialsFeedbackMessage = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CredentialsFeedbackBgBrush))]
+    [NotifyPropertyChangedFor(nameof(CredentialsFeedbackBorderBrush))]
+    [NotifyPropertyChangedFor(nameof(CredentialsFeedbackTextBrush))]
+    private bool _isCredentialsFeedbackError;
+
+    public bool HasCredentialsFeedback => !string.IsNullOrWhiteSpace(CredentialsFeedbackMessage);
+
+    public IBrush CredentialsFeedbackBgBrush => IsCredentialsFeedbackError
+        ? SolidColorBrush.Parse("#2A1215")
+        : SolidColorBrush.Parse("#102A22");
+
+    public IBrush CredentialsFeedbackBorderBrush => IsCredentialsFeedbackError
+        ? SolidColorBrush.Parse("#B91C1C")
+        : SolidColorBrush.Parse("#166534");
+
+    public IBrush CredentialsFeedbackTextBrush => IsCredentialsFeedbackError
+        ? SolidColorBrush.Parse("#FECACA")
+        : SolidColorBrush.Parse("#A7F3D0");
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanRevokeCredentialsJson))]
@@ -228,6 +332,24 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _isAddAccountPromptVisible;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPendingAccountRemoval))]
+    [NotifyPropertyChangedFor(nameof(PendingRemoveAccountPromptText))]
+    private string? _pendingRemoveAccountId;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PendingRemoveAccountPromptText))]
+    private string _pendingRemoveAccountEmail = string.Empty;
+
+    [ObservableProperty]
+    private bool _pendingRemoveDeleteFolders;
+
+    public bool HasPendingAccountRemoval => !string.IsNullOrWhiteSpace(PendingRemoveAccountId);
+
+    public string PendingRemoveAccountPromptText => string.IsNullOrWhiteSpace(PendingRemoveAccountEmail)
+        ? Loc.Text("RemoveAccountPromptDefault")
+        : Loc.Format("RemoveAccountPromptFmt", PendingRemoveAccountEmail);
 
     public string CredentialsStatusBadgeText => HasCredentialsJson
         ? Loc.Text("CredentialsActiveBadge")
@@ -415,27 +537,75 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     public void RefreshCredentialsAndAccounts()
     {
-        HasCredentialsJson = _authManager.CredentialsFileExists();
-        CredentialsFilePathDisplay = _authManager.CredentialsFilePath;
+        HasCredentialsJson = File.Exists(_authManager.CredentialsFilePath);
+        CredentialsFilePathDisplay = CompactPath(_authManager.CredentialsFilePath);
+        AccountsRootDirectoryDisplay = CompactPath(_authManager.AccountsDirectoryPath);
+        var globalMeta = _authManager.InspectCredentialsFile();
         CredentialsJsonStatusText = HasCredentialsJson
-            ? Loc.Format("CredentialsJsonStatusReadyFmt", _authManager.CredentialsFilePath)
+            ? Loc.Format("CredentialsJsonStatusReadyFmt", CredentialsFilePathDisplay)
             : Loc.Text("CredentialsJsonStatusMissing");
+        CredentialsMetadataText = globalMeta is not null
+            ? (string.IsNullOrWhiteSpace(globalMeta.ProjectId)
+                ? Loc.Format("CredentialsClientOnlyFmt", globalMeta.MaskedClientId)
+                : Loc.Format("CredentialsProjectClientFmt", globalMeta.ProjectId, globalMeta.MaskedClientId))
+            : string.Empty;
         OnPropertyChanged(nameof(CredentialsStatusBadgeText));
         OnPropertyChanged(nameof(CanRevokeCredentialsJson));
+
+        var candidates = _authManager.FindDownloadsCredentialsCandidates();
+        var topCandidate = candidates.FirstOrDefault(c =>
+            globalMeta is null || !c.MaskedClientId.Equals(globalMeta.MaskedClientId, StringComparison.Ordinal));
+        if (topCandidate is not null)
+        {
+            DetectedDownloadsJsonPath = topCandidate.FilePath;
+            DetectedDownloadsSummary = string.IsNullOrWhiteSpace(topCandidate.ProjectId)
+                ? $"{topCandidate.FileName} ({topCandidate.MaskedClientId})"
+                : $"{topCandidate.FileName} ({topCandidate.ProjectId})";
+            HasDetectedDownloadsJson = true;
+        }
+        else
+        {
+            DetectedDownloadsJsonPath = string.Empty;
+            DetectedDownloadsSummary = string.Empty;
+            HasDetectedDownloadsJson = false;
+        }
 
         ConnectedAccounts.Clear();
         var activeId = _syncService.CurrentAccount.IsConnected ? _syncService.CurrentAccount.Id : null;
         foreach (var account in _syncService.SavedAccounts.Where(a => a.IsConnected))
         {
+            var accountMeta = _authManager.InspectCredentialsFile(account.Id, account.EmailAddress);
+            var accountDir = _authManager.GetAccountFolderPath(account.Id, account.EmailAddress);
             ConnectedAccounts.Add(new SettingsAccountItemViewModel(
                 account,
                 string.Equals(account.Id, activeId, StringComparison.Ordinal),
+                accountMeta,
+                accountDir,
                 Loc,
                 SwitchAccountFromSettingsAsync,
+                ReconnectAccountFromSettingsAsync,
+                ReplaceAccountJsonFromSettingsAsync,
+                OpenAccountFolderFromSettingsAsync,
                 RevokeSingleAccountAsync));
         }
 
         ConnectedAccountsCount = ConnectedAccounts.Count;
+    }
+
+    private void SetCredentialsFeedback(string message, bool isError)
+    {
+        CredentialsFeedbackMessage = message;
+        IsCredentialsFeedbackError = isError;
+    }
+
+    private static string CompactPath(string path)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrWhiteSpace(home) && path.StartsWith(home, StringComparison.Ordinal))
+        {
+            return "~" + path[home.Length..];
+        }
+        return path;
     }
 
     private async Task SwitchAccountFromSettingsAsync(string accountId)
@@ -443,8 +613,16 @@ public sealed partial class SettingsViewModel : ViewModelBase
         IsCredentialsBusy = true;
         try
         {
-            await _syncService.SwitchAccountAsync(accountId);
+            var switched = await _syncService.SwitchAccountAsync(accountId);
             RefreshCredentialsAndAccounts();
+            if (switched is not null)
+            {
+                SetCredentialsFeedback(Loc.Format("SwitchedToFmt", switched.EmailAddress), isError: false);
+            }
+        }
+        catch (Exception ex)
+        {
+            SetCredentialsFeedback(Loc.Format("ConnectErrorFmt", ex.Message), isError: true);
         }
         finally
         {
@@ -452,18 +630,125 @@ public sealed partial class SettingsViewModel : ViewModelBase
         }
     }
 
-    private async Task RevokeSingleAccountAsync(string accountId)
+    private async Task ReconnectAccountFromSettingsAsync(string accountId)
     {
         IsCredentialsBusy = true;
+        SetCredentialsFeedback(Loc.Text("OpeningBrowserAuth"), isError: false);
         try
         {
-            await _syncService.DisconnectAccountAsync(accountId);
+            var reconnected = await _syncService.ReconnectAccountAsync(accountId);
             RefreshCredentialsAndAccounts();
+            SetCredentialsFeedback(Loc.Format("ConnectedAsFmt", reconnected.EmailAddress), isError: false);
+        }
+        catch (OperationCanceledException)
+        {
+            SetCredentialsFeedback(Loc.Text("AuthCancelledMessage"), isError: true);
+        }
+        catch (Exception ex)
+        {
+            SetCredentialsFeedback(Loc.Format("ConnectErrorFmt", ex.Message), isError: true);
         }
         finally
         {
             IsCredentialsBusy = false;
         }
+    }
+
+    private async Task ReplaceAccountJsonFromSettingsAsync(string accountId)
+    {
+        if (PickCredentialsFileCallback is null)
+        {
+            return;
+        }
+
+        var selected = await PickCredentialsFileCallback.Invoke();
+        if (string.IsNullOrWhiteSpace(selected))
+        {
+            return;
+        }
+
+        IsCredentialsBusy = true;
+        SetCredentialsFeedback(Loc.Text("OpeningBrowserAuth"), isError: false);
+        try
+        {
+            var updated = await _syncService.ReconnectAccountAsync(accountId, selected);
+            RefreshCredentialsAndAccounts();
+            SetCredentialsFeedback(Loc.Format("AccountJsonReplacedFmt", updated.EmailAddress), isError: false);
+        }
+        catch (OperationCanceledException)
+        {
+            SetCredentialsFeedback(Loc.Text("AuthCancelledMessage"), isError: true);
+        }
+        catch (Exception ex)
+        {
+            SetCredentialsFeedback(Loc.Format("CredentialsImportErrorFmt", ex.Message), isError: true);
+        }
+        finally
+        {
+            IsCredentialsBusy = false;
+        }
+    }
+
+    private async Task OpenAccountFolderFromSettingsAsync(string accountId, string email)
+    {
+        var dir = _authManager.GetAccountFolderPath(accountId, email);
+        Directory.CreateDirectory(dir);
+        if (OpenLocalFolderCallback is not null)
+        {
+            await OpenLocalFolderCallback.Invoke(dir);
+        }
+    }
+
+    private Task RevokeSingleAccountAsync(string accountId)
+    {
+        var target = ConnectedAccounts.FirstOrDefault(a => string.Equals(a.Id, accountId, StringComparison.Ordinal));
+        PendingRemoveAccountId = accountId;
+        PendingRemoveAccountEmail = target?.EmailAddress ?? string.Empty;
+        PendingRemoveDeleteFolders = false;
+        return Task.CompletedTask;
+    }
+
+    [RelayCommand]
+    private async Task ConfirmRemoveAccountAsync()
+    {
+        if (string.IsNullOrWhiteSpace(PendingRemoveAccountId))
+        {
+            return;
+        }
+
+        var targetId = PendingRemoveAccountId;
+        var deleteFolders = PendingRemoveDeleteFolders;
+        PendingRemoveAccountId = null;
+        PendingRemoveAccountEmail = string.Empty;
+        PendingRemoveDeleteFolders = false;
+
+        IsCredentialsBusy = true;
+        try
+        {
+            await _syncService.DisconnectAccountAsync(targetId, deleteFolderConfiguration: deleteFolders);
+            RefreshCredentialsAndAccounts();
+            SetCredentialsFeedback(
+                deleteFolders
+                    ? Loc.Text("AccountAndFoldersRemovedFeedback")
+                    : Loc.Text("AccountRemovedFoldersKeptFeedback"),
+                isError: false);
+        }
+        catch (Exception ex)
+        {
+            SetCredentialsFeedback(Loc.Format("DisconnectErrorFmt", ex.Message), isError: true);
+        }
+        finally
+        {
+            IsCredentialsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelRemoveAccount()
+    {
+        PendingRemoveAccountId = null;
+        PendingRemoveAccountEmail = string.Empty;
+        PendingRemoveDeleteFolders = false;
     }
 
     [RelayCommand]
@@ -494,13 +779,20 @@ public sealed partial class SettingsViewModel : ViewModelBase
         }
 
         IsCredentialsBusy = true;
+        SetCredentialsFeedback(Loc.Text("OpeningBrowserAuth"), isError: false);
         try
         {
-            await _syncService.ConnectAccountAsync(addNewAccount: true, customCredentialsJsonPath: path);
+            var account = await _syncService.ConnectAccountAsync(addNewAccount: true, customCredentialsJsonPath: path);
             RefreshCredentialsAndAccounts();
+            SetCredentialsFeedback(Loc.Format("ConnectedAsFmt", account.EmailAddress), isError: false);
         }
-        catch
+        catch (OperationCanceledException)
         {
+            SetCredentialsFeedback(Loc.Text("AuthCancelledMessage"), isError: true);
+        }
+        catch (Exception ex)
+        {
+            SetCredentialsFeedback(Loc.Format("ConnectErrorFmt", ex.Message), isError: true);
         }
         finally
         {
@@ -513,13 +805,20 @@ public sealed partial class SettingsViewModel : ViewModelBase
     {
         IsAddAccountPromptVisible = false;
         IsCredentialsBusy = true;
+        SetCredentialsFeedback(Loc.Text("OpeningBrowserAuth"), isError: false);
         try
         {
-            await _syncService.ConnectAccountAsync(addNewAccount: true);
+            var account = await _syncService.ConnectAccountAsync(addNewAccount: true);
             RefreshCredentialsAndAccounts();
+            SetCredentialsFeedback(Loc.Format("ConnectedAsFmt", account.EmailAddress), isError: false);
         }
-        catch
+        catch (OperationCanceledException)
         {
+            SetCredentialsFeedback(Loc.Text("AuthCancelledMessage"), isError: true);
+        }
+        catch (Exception ex)
+        {
+            SetCredentialsFeedback(Loc.Format("ConnectErrorFmt", ex.Message), isError: true);
         }
         finally
         {
@@ -544,11 +843,37 @@ public sealed partial class SettingsViewModel : ViewModelBase
             return;
         }
 
+        await ImportCredentialsFromPathAsync(selected);
+    }
+
+    [RelayCommand]
+    private async Task ImportDetectedDownloadsJsonAsync()
+    {
+        if (string.IsNullOrWhiteSpace(DetectedDownloadsJsonPath))
+        {
+            return;
+        }
+
+        await ImportCredentialsFromPathAsync(DetectedDownloadsJsonPath);
+    }
+
+    public async Task ImportCredentialsFromPathAsync(string sourcePath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            return;
+        }
+
         IsCredentialsBusy = true;
         try
         {
-            await _authManager.ImportCredentialsFileAsync(selected);
+            await _authManager.ImportCredentialsFileAsync(sourcePath);
             RefreshCredentialsAndAccounts();
+            SetCredentialsFeedback(Loc.Text("CredentialsImportedSuccess"), isError: false);
+        }
+        catch (Exception ex)
+        {
+            SetCredentialsFeedback(Loc.Format("CredentialsImportErrorFmt", ex.Message), isError: true);
         }
         finally
         {
@@ -569,6 +894,16 @@ public sealed partial class SettingsViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task OpenAccountsRootFolderAsync()
+    {
+        Directory.CreateDirectory(_authManager.AccountsDirectoryPath);
+        if (OpenLocalFolderCallback is not null)
+        {
+            await OpenLocalFolderCallback.Invoke(_authManager.AccountsDirectoryPath);
+        }
+    }
+
+    [RelayCommand]
     private async Task RevokeCredentialsJsonAsync()
     {
         IsCredentialsBusy = true;
@@ -576,6 +911,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
         {
             await _syncService.RevokeCredentialsFileAsync();
             RefreshCredentialsAndAccounts();
+            SetCredentialsFeedback(Loc.Text("CredentialsJsonRevokedFeedback"), isError: false);
+        }
+        catch (Exception ex)
+        {
+            SetCredentialsFeedback(Loc.Format("CredentialsImportErrorFmt", ex.Message), isError: true);
         }
         finally
         {
@@ -794,6 +1134,15 @@ public sealed partial class SettingsViewModel : ViewModelBase
         if (OpenExternalUriCallback is not null)
         {
             await OpenExternalUriCallback.Invoke(new Uri(RepositoryUrl));
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenEnableGmailApiAsync()
+    {
+        if (OpenExternalUriCallback is not null)
+        {
+            await OpenExternalUriCallback.Invoke(new Uri("https://console.cloud.google.com/apis/library/gmail.googleapis.com"));
         }
     }
 

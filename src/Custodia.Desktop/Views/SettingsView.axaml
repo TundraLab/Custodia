@@ -139,11 +139,18 @@
             </Grid>
           </StackPanel>
 
-          <StackPanel Spacing="4">
-            <CheckBox IsChecked="{Binding GmailAccountAlertsEnabled}"
-                      Content="{Binding Loc.GmailAccountAlertsCheckbox}" />
-            <TextBlock Classes="MutedMeta" Margin="28,0,0,0" Text="{Binding Loc.GmailAccountAlertsHint}" TextWrapping="Wrap" />
-          </StackPanel>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Grid.Column="0" Spacing="4">
+              <CheckBox IsChecked="{Binding GmailAccountAlertsEnabled}"
+                        Content="{Binding Loc.GmailAccountAlertsCheckbox}" />
+              <TextBlock Classes="MutedMeta" Margin="28,0,0,0" Text="{Binding Loc.GmailAccountAlertsHint}" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Classes="SecondaryAction"
+                    VerticalAlignment="Center"
+                    Content="{Binding Loc.OpenEnableGmailApiButton}"
+                    Command="{Binding OpenEnableGmailApiCommand}" />
+          </Grid>
 
           <CheckBox IsChecked="{Binding MinimizeToTrayOnClose}"
                     Content="{Binding Loc.MinimizeToTrayCheckbox}" />
@@ -207,7 +214,7 @@
       </Border>
 
       <!-- Credenciais JSON e Contas Conectadas -->
-      <Border Classes="SurfaceCard">
+      <Border Classes="SurfaceCard" DragDrop.AllowDrop="True">
         <StackPanel Spacing="14">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
@@ -215,15 +222,57 @@
               <TextBlock Classes="MutedMeta" FontSize="12" Text="{Binding Loc.CredentialsAccountsSubtitle}" TextWrapping="Wrap" />
             </StackPanel>
 
-            <Button Grid.Column="1"
-                    Classes="PrimaryAction"
-                    Padding="11,6"
-                    FontSize="12.5"
-                    VerticalAlignment="Center"
-                    Content="{Binding Loc.AddAccountShortButton}"
-                    IsEnabled="{Binding !IsCredentialsBusy}"
-                    Command="{Binding AddAccountFromSettingsCommand}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <Button Classes="SecondaryAction"
+                      Padding="10,6"
+                      FontSize="12"
+                      Content="{Binding Loc.OpenAccountsFolderButton}"
+                      Command="{Binding OpenAccountsRootFolderCommand}" />
+              <Button Classes="PrimaryAction"
+                      Padding="11,6"
+                      FontSize="12.5"
+                      Content="{Binding Loc.AddAccountShortButton}"
+                      IsEnabled="{Binding !IsCredentialsBusy}"
+                      Command="{Binding AddAccountFromSettingsCommand}" />
+            </StackPanel>
           </Grid>
+
+          <!-- Feedback claro de importação / manipulação de conta -->
+          <Border Background="{Binding CredentialsFeedbackBgBrush}"
+                  BorderBrush="{Binding CredentialsFeedbackBorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="6"
+                  Padding="12,9"
+                  IsVisible="{Binding HasCredentialsFeedback}">
+            <TextBlock FontSize="12.5"
+                       FontWeight="Medium"
+                       Foreground="{Binding CredentialsFeedbackTextBrush}"
+                       TextWrapping="Wrap"
+                       Text="{Binding CredentialsFeedbackMessage}" />
+          </Border>
+
+          <!-- Detecção automática de client_secret_*.json em Downloads -->
+          <Border Background="#112238"
+                  BorderBrush="#2563EB"
+                  BorderThickness="1"
+                  CornerRadius="6"
+                  Padding="12,10"
+                  IsVisible="{Binding HasDetectedDownloadsJson}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                <TextBlock FontSize="12.5" FontWeight="SemiBold" Foreground="#93C5FD" Text="{Binding Loc.DetectedDownloadsTitle}" />
+                <TextBlock Classes="MutedMeta" FontFamily="monospace" FontSize="11.5" Text="{Binding DetectedDownloadsSummary}" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+              <Button Grid.Column="1"
+                      Classes="PrimaryAction"
+                      Padding="11,5"
+                      FontSize="12"
+                      VerticalAlignment="Center"
+                      IsEnabled="{Binding !IsCredentialsBusy}"
+                      Content="{Binding Loc.UseDetectedJsonButton}"
+                      Command="{Binding ImportDetectedDownloadsJsonCommand}" />
+            </Grid>
+          </Border>
 
           <Border Background="#13171F"
                   BorderBrush="#334155"
@@ -239,7 +288,7 @@
             </Grid>
           </Border>
 
-          <!-- Cartão de status do arquivo credentials.json (revogação unitária) -->
+          <!-- Cartão do credentials.json global (arrastar e soltar + metadados) -->
           <Border Classes="FlatRow" Background="#13171F" Padding="14,12">
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
               <Border Grid.Column="0"
@@ -254,43 +303,90 @@
                           Data="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" />
               </Border>
 
-              <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+              <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding Loc.CredentialsFileLabel}" />
-                  <TextBlock FontSize="11.5"
-                             FontWeight="Medium"
-                             Foreground="#FCD34D"
-                             VerticalAlignment="Center"
-                             IsVisible="{Binding !HasCredentialsJson}"
-                             Text="{Binding CredentialsStatusBadgeText}" />
+                  <Border Background="#123026"
+                          CornerRadius="4"
+                          Padding="6,2"
+                          IsVisible="{Binding HasCredentialsJson}">
+                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#6EE7B7" Text="{Binding CredentialsStatusBadgeText}" />
+                  </Border>
+                  <Border Background="#3B2512"
+                          CornerRadius="4"
+                          Padding="6,2"
+                          IsVisible="{Binding !HasCredentialsJson}">
+                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#FCD34D" Text="{Binding CredentialsStatusBadgeText}" />
+                  </Border>
                 </StackPanel>
-                <Button Classes="SecondaryAction"
-                        HorizontalAlignment="Left"
-                        Padding="10,4"
-                        FontSize="11.5"
-                        Command="{Binding OpenCredentialsFolderCommand}">
-                  <StackPanel Orientation="Horizontal" Spacing="6">
-                    <PathIcon Width="12" Height="12" Data="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
-                    <TextBlock Text="{Binding Loc.OpenLocalFolderMenu}" VerticalAlignment="Center" />
-                  </StackPanel>
-                </Button>
+
+                <TextBlock Classes="MutedMeta"
+                           FontSize="11.5"
+                           FontFamily="monospace"
+                           Foreground="#93C5FD"
+                           IsVisible="{Binding HasCredentialsMetadata}"
+                           Text="{Binding CredentialsMetadataText}"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="MutedMeta"
+                           FontSize="11"
+                           Text="{Binding Loc.CredentialsDragDropHint}"
+                           TextWrapping="Wrap" />
               </StackPanel>
 
-              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <WrapPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                 <Button Classes="SecondaryAction"
+                        Margin="0,0,6,4"
+                        Padding="10,5"
+                        FontSize="12"
+                        Content="{Binding Loc.OpenLocalFolderMenu}"
+                        Command="{Binding OpenCredentialsFolderCommand}" />
+                <Button Classes="SecondaryAction"
+                        Margin="0,0,6,4"
                         Padding="10,5"
                         FontSize="12"
                         Content="{Binding Loc.ImportCredentialsButton}"
                         IsEnabled="{Binding !IsCredentialsBusy}"
                         Command="{Binding ImportCredentialsJsonCommand}" />
                 <Button Classes="DangerAction"
+                        Margin="0,0,0,4"
                         Padding="11,5"
                         FontSize="12"
                         Content="{Binding Loc.RevokeJsonOnlyButton}"
                         IsEnabled="{Binding CanRevokeCredentialsJson}"
                         Command="{Binding RevokeCredentialsJsonCommand}" />
-              </StackPanel>
+              </WrapPanel>
             </Grid>
+          </Border>
+
+          <!-- Confirmação de remoção de conta com opção de excluir configuração de pastas -->
+          <Border Background="#2A1215"
+                  BorderBrush="#991B1B"
+                  BorderThickness="1"
+                  CornerRadius="6"
+                  Padding="12,10"
+                  IsVisible="{Binding HasPendingAccountRemoval}">
+            <StackPanel Spacing="8">
+              <TextBlock FontSize="12.5"
+                         FontWeight="SemiBold"
+                         Foreground="#FECACA"
+                         TextWrapping="Wrap"
+                         Text="{Binding PendingRemoveAccountPromptText}" />
+              <CheckBox IsChecked="{Binding PendingRemoveDeleteFolders}"
+                        Content="{Binding Loc.DeleteAccountFoldersCheckbox}" />
+              <WrapPanel Orientation="Horizontal">
+                <Button Classes="DangerAction"
+                        Margin="0,0,8,0"
+                        Padding="11,5"
+                        FontSize="12"
+                        Content="{Binding Loc.ConfirmRemoveAccountButton}"
+                        Command="{Binding ConfirmRemoveAccountCommand}" />
+                <Button Classes="SecondaryAction"
+                        Padding="10,5"
+                        FontSize="12"
+                        Content="{Binding Loc.CancelButton}"
+                        Command="{Binding CancelRemoveAccountCommand}" />
+              </WrapPanel>
+            </StackPanel>
           </Border>
 
           <!-- Lista de contas conectadas -->
@@ -321,39 +417,65 @@
                       </Ellipse>
                     </Grid>
 
-                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                      <TextBlock FontSize="13.5" FontWeight="SemiBold" Text="{Binding DisplayName}" />
+                    <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock FontSize="13.5" FontWeight="SemiBold" Text="{Binding DisplayName}" />
+                        <Border CornerRadius="4" Padding="6,2" Background="{Binding JsonBadgeBgBrush}">
+                          <TextBlock FontSize="10.5" FontWeight="SemiBold" Foreground="{Binding JsonBadgeFgBrush}" Text="{Binding JsonBadgeText}" />
+                        </Border>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="4"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding IsActive}">
+                          <PathIcon Width="12" Height="12"
+                                    Foreground="#34D399"
+                                    Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                          <TextBlock FontSize="11.5"
+                                     FontWeight="SemiBold"
+                                     Foreground="#6EE7B7"
+                                     VerticalAlignment="Center"
+                                     Text="{Binding ActiveBadgeText}" />
+                        </StackPanel>
+                      </StackPanel>
                       <TextBlock Classes="MutedMeta" FontSize="12" Text="{Binding EmailAddress}" />
                       <TextBlock Classes="MutedMeta" FontSize="11.5" Text="{Binding QuotaSummary}" />
+                      <TextBlock Classes="MutedMeta" FontSize="11" FontFamily="monospace" Text="{Binding JsonDetailText}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="MutedMeta" FontSize="10.5" FontFamily="monospace" Foreground="#64748B" Text="{Binding AccountFolderDisplay}" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
 
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                      <StackPanel Orientation="Horizontal"
-                                  Spacing="5"
-                                  VerticalAlignment="Center"
-                                  Margin="0,0,4,0"
-                                  IsVisible="{Binding IsActive}">
-                        <PathIcon Width="13" Height="13"
-                                  Foreground="#34D399"
-                                  Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                        <TextBlock FontSize="12"
-                                   FontWeight="SemiBold"
-                                   Foreground="#6EE7B7"
-                                   VerticalAlignment="Center"
-                                   Text="{Binding ActiveBadgeText}" />
-                      </StackPanel>
+                    <WrapPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
                       <Button Classes="SecondaryAction"
+                              Margin="0,0,6,4"
                               Padding="10,5"
                               FontSize="12"
                               IsVisible="{Binding CanSwitch}"
                               Content="{Binding SwitchButtonText}"
                               Command="{Binding SwitchCommand}" />
+                      <Button Classes="SecondaryAction"
+                              Margin="0,0,6,4"
+                              Padding="10,5"
+                              FontSize="12"
+                              Content="{Binding ReconnectButtonText}"
+                              Command="{Binding ReconnectCommand}" />
+                      <Button Classes="SecondaryAction"
+                              Margin="0,0,6,4"
+                              Padding="10,5"
+                              FontSize="12"
+                              Content="{Binding ReplaceJsonButtonText}"
+                              Command="{Binding ReplaceJsonCommand}" />
+                      <Button Classes="SecondaryAction"
+                              Margin="0,0,6,4"
+                              Padding="10,5"
+                              FontSize="12"
+                              Content="{Binding OpenFolderButtonText}"
+                              Command="{Binding OpenFolderCommand}" />
                       <Button Classes="DangerAction"
+                              Margin="0,0,0,4"
                               Padding="11,5"
                               FontSize="12"
                               Content="{Binding RevokeButtonText}"
                               Command="{Binding RevokeCommand}" />
-                    </StackPanel>
+                    </WrapPanel>
                   </Grid>
                 </Border>
               </DataTemplate>

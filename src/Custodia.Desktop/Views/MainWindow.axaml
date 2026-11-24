@@ -136,6 +136,8 @@
                 <ContextMenu>
                   <MenuItem Header="{Binding Loc.AddAccountMenu}"
                             Command="{Binding AccountsVm.AddAccountCommand}" />
+                  <MenuItem Header="{Binding Loc.CredentialsAccountsSectionTitle}"
+                            Command="{Binding OpenAccountSettingsCommand}" />
                   <MenuItem Header="{Binding Loc.RefreshQuotaButton}"
                             IsVisible="{Binding AccountsVm.IsConnected}"
                             Command="{Binding AccountsVm.RefreshCommand}" />
@@ -300,6 +302,43 @@
                             HorizontalContentAlignment="Center"
                             Content="{Binding Loc.AddAccountUseCurrentJson}"
                             Command="{Binding AccountsVm.ContinueWithCurrentJsonCommand}" />
+                  </StackPanel>
+                </Border>
+
+                <!-- Confirmação de desconexão na barra lateral -->
+                <Border Background="#2A1215"
+                        BorderBrush="#991B1B"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="8"
+                        IsVisible="{Binding AccountsVm.IsDisconnectPromptVisible}">
+                  <StackPanel Spacing="6">
+                    <TextBlock FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="#FECACA"
+                               TextWrapping="Wrap"
+                               Text="{Binding Loc.SidebarDisconnectPromptTitle}" />
+                    <CheckBox FontSize="11"
+                              IsChecked="{Binding AccountsVm.DeleteFoldersOnDisconnect}"
+                              Content="{Binding Loc.SidebarDeleteFoldersCheckbox}" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                      <Button Grid.Column="0"
+                              Classes="SecondaryAction"
+                              Padding="6,4"
+                              FontSize="11"
+                              HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Center"
+                              Content="{Binding Loc.CancelButton}"
+                              Command="{Binding AccountsVm.CancelDisconnectCommand}" />
+                      <Button Grid.Column="1"
+                              Classes="DangerAction"
+                              Padding="6,4"
+                              FontSize="11"
+                              HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Center"
+                              Content="{Binding Loc.ConfirmButton}"
+                              Command="{Binding AccountsVm.ConfirmDisconnectCommand}" />
+                    </Grid>
                   </StackPanel>
                 </Border>
 

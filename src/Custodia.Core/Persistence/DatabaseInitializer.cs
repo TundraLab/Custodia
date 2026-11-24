@@ -89,6 +89,7 @@ public static class DatabaseInitializer
             CREATE TABLE IF NOT EXISTS local_sync_folders (
                 id TEXT PRIMARY KEY,
                 account_id TEXT NOT NULL,
+                account_email TEXT NULL,
                 local_path TEXT NOT NULL UNIQUE,
                 remote_folder_id TEXT NOT NULL,
                 remote_folder_name TEXT NOT NULL,
@@ -155,7 +156,7 @@ public static class DatabaseInitializer
                 new CommandDefinition("SELECT name FROM pragma_table_info('local_sync_folders');", cancellationToken: cancellationToken)))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        string[] requiredCols = ["custom_alias", "custom_color_hex", "custom_icon_key"];
+        string[] requiredCols = ["account_email", "custom_alias", "custom_color_hex", "custom_icon_key"];
         foreach (var col in requiredCols)
         {
             if (!existingCols.Contains(col))
@@ -165,5 +166,23 @@ public static class DatabaseInitializer
                     cancellationToken: cancellationToken));
             }
         }
+
+        const string backfillEmailSql = """
+            UPDATE local_sync_folders
+            SET account_email = LOWER((
+                SELECT email_address
+                FROM drive_accounts
+                WHERE id = local_sync_folders.account_id
+            ))
+            WHERE (account_email IS NULL OR account_email = '')
+              AND EXISTS (
+                  SELECT 1
+                  FROM drive_accounts
+                  WHERE id = local_sync_folders.account_id
+                    AND email_address IS NOT NULL
+                    AND email_address <> ''
+              );
+            """;
+        await connection.ExecuteAsync(new CommandDefinition(backfillEmailSql, cancellationToken: cancellationToken));
     }
 }

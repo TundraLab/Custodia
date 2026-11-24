@@ -1,4 +1,4 @@
-# Custódia v2.9.0
+# Custódia v2.9.1
 
 ![Custódia by TundraLab - Seus arquivos. Sempre seguros.](docs/images/custodia-promo.jpg)
 
@@ -81,14 +81,14 @@ chmod +x install-custodia.sh
 
 - **AppImage (`x86_64`, roda direto sem instalar):**
   ```bash
-  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-2.9.0-x86_64.AppImage
-  chmod +x Custodia-2.9.0-x86_64.AppImage
-  ./Custodia-2.9.0-x86_64.AppImage
+  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-2.9.1-x86_64.AppImage
+  chmod +x Custodia-2.9.1-x86_64.AppImage
+  ./Custodia-2.9.1-x86_64.AppImage
   ```
 - **Fedora / RHEL / openSUSE (`.rpm`):**
   ```bash
-  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-2.9.0-1.x86_64.rpm
-  sudo dnf install -y ./Custodia-2.9.0-1.x86_64.rpm
+  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-2.9.1-1.x86_64.rpm
+  sudo dnf install -y ./Custodia-2.9.1-1.x86_64.rpm
   ```
 
 <details>
@@ -100,7 +100,7 @@ chmod +x install-custodia.sh
   - `./install-custodia.sh --appimage`: baixa, valida `SHA-256` e instala o `.AppImage` integrado ao usuário.
   - `./install-custodia.sh --download-only`: baixa `.rpm`, `.AppImage` e `SHA256SUMS.txt` na pasta atual.
   - `./install-custodia.sh --uninstall`: remove a instalação local ou `.rpm` mantendo suas configurações.
-- **AppImage sem FUSE:** `./Custodia-2.9.0-x86_64.AppImage --appimage-extract-and-run`
+- **AppImage sem FUSE:** `./Custodia-2.9.1-x86_64.AppImage --appimage-extract-and-run`
 - **Pacotes opcionais para pré-visualização completa (PDF, Office, áudio e vídeo):**
   - Fedora: `sudo dnf install poppler-utils ghostscript ffmpeg libreoffice ImageMagick`
   - Pop!_OS / Ubuntu: `sudo apt install poppler-utils ghostscript ffmpeg libreoffice imagemagick`

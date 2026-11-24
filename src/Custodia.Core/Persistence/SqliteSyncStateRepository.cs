@@ -135,6 +135,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
             SELECT
                 f.id AS Id,
                 f.account_id AS AccountId,
+                f.account_email AS AccountEmail,
                 f.local_path AS LocalPath,
                 f.remote_folder_id AS RemoteFolderId,
                 f.remote_folder_name AS RemoteFolderName,
@@ -165,6 +166,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
             SELECT
                 f.id AS Id,
                 f.account_id AS AccountId,
+                f.account_email AS AccountEmail,
                 f.local_path AS LocalPath,
                 f.remote_folder_id AS RemoteFolderId,
                 f.remote_folder_name AS RemoteFolderName,
@@ -196,6 +198,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
             SELECT
                 f.id AS Id,
                 f.account_id AS AccountId,
+                f.account_email AS AccountEmail,
                 f.local_path AS LocalPath,
                 f.remote_folder_id AS RemoteFolderId,
                 f.remote_folder_name AS RemoteFolderName,
@@ -227,19 +230,23 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
 
         var effectiveId = !string.IsNullOrWhiteSpace(existingId) ? existingId : folder.Id;
         folder.Id = effectiveId;
+        var normalizedEmail = string.IsNullOrWhiteSpace(folder.AccountEmail)
+            ? null
+            : folder.AccountEmail.Trim().ToLowerInvariant();
 
         const string sql = """
             INSERT INTO local_sync_folders (
-                id, account_id, local_path, remote_folder_id, remote_folder_name,
+                id, account_id, account_email, local_path, remote_folder_id, remote_folder_name,
                 sync_mode, sync_state, is_paused, last_synced_at_utc, last_error_message,
                 custom_alias, custom_color_hex, custom_icon_key
             ) VALUES (
-                @Id, @AccountId, @LocalPath, @RemoteFolderId, @RemoteFolderName,
+                @Id, @AccountId, @AccountEmail, @LocalPath, @RemoteFolderId, @RemoteFolderName,
                 @Mode, @State, @IsPaused, @LastSyncedAtUtc, @LastErrorMessage,
                 @CustomAlias, @CustomColorHex, @CustomIconKey
             )
             ON CONFLICT(id) DO UPDATE SET
                 account_id = excluded.account_id,
+                account_email = COALESCE(excluded.account_email, local_sync_folders.account_email),
                 local_path = excluded.local_path,
                 remote_folder_id = excluded.remote_folder_id,
                 remote_folder_name = excluded.remote_folder_name,
@@ -257,6 +264,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
         {
             Id = effectiveId,
             folder.AccountId,
+            AccountEmail = normalizedEmail,
             folder.LocalPath,
             folder.RemoteFolderId,
             folder.RemoteFolderName,
@@ -271,11 +279,62 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
         }, cancellationToken: cancellationToken));
     }
 
+    public async Task<int> ReattachSyncFoldersByEmailAsync(
+        string accountId,
+        string accountEmail,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(accountId) || string.IsNullOrWhiteSpace(accountEmail))
+        {
+            return 0;
+        }
+
+        await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var normalizedEmail = accountEmail.Trim().ToLowerInvariant();
+        const string sql = """
+            UPDATE local_sync_folders
+            SET account_id = @AccountId,
+                account_email = @AccountEmail
+            WHERE LOWER(account_email) = @AccountEmail
+              AND account_id <> @AccountId;
+            """;
+
+        return await connection.ExecuteAsync(new CommandDefinition(
+            sql,
+            new { AccountId = accountId, AccountEmail = normalizedEmail },
+            cancellationToken: cancellationToken));
+    }
+
     public async Task DeleteSyncFolderAsync(string folderId, CancellationToken cancellationToken = default)
     {
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         const string sql = "DELETE FROM local_sync_folders WHERE id = @FolderId;";
         await connection.ExecuteAsync(new CommandDefinition(sql, new { FolderId = folderId }, cancellationToken: cancellationToken));
+    }
+
+    public async Task DeleteSyncFoldersByAccountAsync(
+        string accountId,
+        string? accountEmail = null,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(accountEmail))
+        {
+            var normalizedEmail = accountEmail.Trim().ToLowerInvariant();
+            const string sqlWithEmail = """
+                DELETE FROM local_sync_folders
+                WHERE account_id = @AccountId
+                   OR LOWER(account_email) = @AccountEmail;
+                """;
+            await connection.ExecuteAsync(new CommandDefinition(
+                sqlWithEmail,
+                new { AccountId = accountId, AccountEmail = normalizedEmail },
+                cancellationToken: cancellationToken));
+            return;
+        }
+
+        const string sqlById = "DELETE FROM local_sync_folders WHERE account_id = @AccountId;";
+        await connection.ExecuteAsync(new CommandDefinition(sqlById, new { AccountId = accountId }, cancellationToken: cancellationToken));
     }
 
     public async Task<IReadOnlyList<TrackedFileEntry>> GetTrackedFilesByFolderAsync(

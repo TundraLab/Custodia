@@ -191,8 +191,6 @@
                        TextWrapping="Wrap"
                        Watermark="{Binding Loc.BugDescriptionWatermark}"
                        Text="{Binding BugDescription}" />
-              <CheckBox IsChecked="{Binding IncludeDiagnostics}"
-                        Content="{Binding Loc.BugIncludeDiagnosticsCheckbox}" />
               <WrapPanel Orientation="Horizontal">
                 <Button Classes="PrimaryAction"
                         Margin="0,0,8,4"

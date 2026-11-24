@@ -470,7 +470,8 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["SoundToneMinimal"] = "Clique discreto",
 
         ["GmailAccountAlertsCheckbox"] = "Enviar aviso no Gmail ao conectar ou desconectar conta",
-        ["GmailAccountAlertsHint"] = "Envia um e-mail de confirmação pela sua própria conta (requer Gmail API habilitada ao autorizar).",
+        ["GmailAccountAlertsHint"] = "Envia um e-mail para a conta conectada ou desconectada (ative a Gmail API e clique em Reconectar em contas antigas).",
+        ["OpenEnableGmailApiButton"] = "Ativar Gmail API",
 
         ["NewFolderButton"] = "Nova Pasta",
         ["SyncLocalIntoHereButton"] = "Sincronizar Pasta Local Aqui",
@@ -497,7 +498,31 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["NotifyInitialFolderSyncTitle"] = "Sincronização inicial concluída",
         ["NotifyUploadFailedTitle"] = "Erro no envio",
         ["MapMultipleFoldersTitle"] = "Selecionar uma ou mais pastas locais",
-        ["MultipleFoldersMappedFmt"] = "{0} pasta(s) mapeada(s) em '{1}'."
+        ["MultipleFoldersMappedFmt"] = "{0} pasta(s) mapeada(s) em '{1}'.",
+
+        ["CredentialsDragDropHint"] = "Você também pode arrastar e soltar o arquivo client_secret_*.json direto nesta área (salvo com permissão 0600).",
+        ["DetectedDownloadsTitle"] = "Arquivo OAuth2 detectado na pasta Downloads",
+        ["UseDetectedJsonButton"] = "Usar este JSON",
+        ["OpenAccountsFolderButton"] = "Pasta das contas",
+        ["CredentialsClientOnlyFmt"] = "Client ID: {0}",
+        ["CredentialsProjectClientFmt"] = "Projeto: {0} • Client ID: {1}",
+        ["AccountJsonMissingDetail"] = "Nenhum JSON OAuth2 encontrado para esta conta.",
+        ["AccountJsonCustomBadge"] = "JSON próprio",
+        ["AccountJsonGlobalBadge"] = "JSON padrão",
+        ["ReconnectAccountButton"] = "Reconectar",
+        ["ReplaceAccountJsonButton"] = "Trocar JSON",
+        ["OpenAccountFolderButton"] = "Pasta",
+        ["AccountJsonReplacedFmt"] = "JSON atualizado e conta {0} reconectada com sucesso.",
+        ["CredentialsJsonRevokedFeedback"] = "Arquivo credentials.json padrão removido.",
+
+        ["RemoveAccountPromptDefault"] = "Remover esta conta conectada?",
+        ["RemoveAccountPromptFmt"] = "Remover a conta {0}? As pastas sincronizadas desta conta ficam salvas caso queira reconectar depois.",
+        ["DeleteAccountFoldersCheckbox"] = "Excluir também as pastas configuradas e personalizações salvas desta conta",
+        ["ConfirmRemoveAccountButton"] = "Confirmar remoção",
+        ["AccountRemovedFoldersKeptFeedback"] = "Conta removida (configuração de pastas salva mantida para o próximo acesso).",
+        ["AccountAndFoldersRemovedFeedback"] = "Conta e configurações de pastas da conta removidas.",
+        ["SidebarDisconnectPromptTitle"] = "Desconectar conta?",
+        ["SidebarDeleteFoldersCheckbox"] = "Apagar pastas configuradas"
     };
 
     private static readonly IReadOnlyDictionary<string, string> EnUs = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -964,7 +989,8 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["SoundToneMinimal"] = "Minimal click",
 
         ["GmailAccountAlertsCheckbox"] = "Send Gmail alert when connecting or disconnecting account",
-        ["GmailAccountAlertsHint"] = "Sends a confirmation email via your Google account (requires Gmail API enabled on consent).",
+        ["GmailAccountAlertsHint"] = "Emails the account being connected or disconnected (enable Gmail API and click Reconnect on older sessions).",
+        ["OpenEnableGmailApiButton"] = "Enable Gmail API",
 
         ["NewFolderButton"] = "New Folder",
         ["SyncLocalIntoHereButton"] = "Sync Local Folder Here",
@@ -991,7 +1017,31 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["NotifyInitialFolderSyncTitle"] = "Initial sync completed",
         ["NotifyUploadFailedTitle"] = "Upload error",
         ["MapMultipleFoldersTitle"] = "Select one or more local folders",
-        ["MultipleFoldersMappedFmt"] = "{0} folder(s) mapped under '{1}'."
+        ["MultipleFoldersMappedFmt"] = "{0} folder(s) mapped under '{1}'.",
+
+        ["CredentialsDragDropHint"] = "You can also drag and drop your client_secret_*.json file here (stored with 0600 permissions).",
+        ["DetectedDownloadsTitle"] = "OAuth2 JSON detected in Downloads folder",
+        ["UseDetectedJsonButton"] = "Use this JSON",
+        ["OpenAccountsFolderButton"] = "Accounts folder",
+        ["CredentialsClientOnlyFmt"] = "Client ID: {0}",
+        ["CredentialsProjectClientFmt"] = "Project: {0} • Client ID: {1}",
+        ["AccountJsonMissingDetail"] = "No OAuth2 JSON found for this account.",
+        ["AccountJsonCustomBadge"] = "Dedicated JSON",
+        ["AccountJsonGlobalBadge"] = "Default JSON",
+        ["ReconnectAccountButton"] = "Reconnect",
+        ["ReplaceAccountJsonButton"] = "Replace JSON",
+        ["OpenAccountFolderButton"] = "Folder",
+        ["AccountJsonReplacedFmt"] = "JSON updated and {0} reconnected successfully.",
+        ["CredentialsJsonRevokedFeedback"] = "Default credentials.json file removed.",
+
+        ["RemoveAccountPromptDefault"] = "Remove this connected account?",
+        ["RemoveAccountPromptFmt"] = "Remove account {0}? Synced folder settings for this account stay saved in case you sign in again.",
+        ["DeleteAccountFoldersCheckbox"] = "Also delete saved sync folder configurations and customizations for this account",
+        ["ConfirmRemoveAccountButton"] = "Confirm removal",
+        ["AccountRemovedFoldersKeptFeedback"] = "Account removed (saved folder configurations kept for next sign-in).",
+        ["AccountAndFoldersRemovedFeedback"] = "Account and its saved folder configurations removed.",
+        ["SidebarDisconnectPromptTitle"] = "Disconnect account?",
+        ["SidebarDeleteFoldersCheckbox"] = "Delete saved folder setup"
     };
 
     public string CurrentLanguage { get; private set; } = "pt-BR";
@@ -1262,6 +1312,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string PreviewSoundButton => Text("PreviewSoundButton");
     public string GmailAccountAlertsCheckbox => Text("GmailAccountAlertsCheckbox");
     public string GmailAccountAlertsHint => Text("GmailAccountAlertsHint");
+    public string OpenEnableGmailApiButton => Text("OpenEnableGmailApiButton");
 
     public string NewFolderButton => Text("NewFolderButton");
     public string SyncLocalIntoHereButton => Text("SyncLocalIntoHereButton");
@@ -1275,6 +1326,16 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string CustomizeIconLabel => Text("CustomizeIconLabel");
     public string SaveCustomizationButton => Text("SaveCustomizationButton");
     public string ResetCustomizationButton => Text("ResetCustomizationButton");
+
+    public string CredentialsDragDropHint => Text("CredentialsDragDropHint");
+    public string DetectedDownloadsTitle => Text("DetectedDownloadsTitle");
+    public string UseDetectedJsonButton => Text("UseDetectedJsonButton");
+    public string OpenAccountsFolderButton => Text("OpenAccountsFolderButton");
+
+    public string DeleteAccountFoldersCheckbox => Text("DeleteAccountFoldersCheckbox");
+    public string ConfirmRemoveAccountButton => Text("ConfirmRemoveAccountButton");
+    public string SidebarDisconnectPromptTitle => Text("SidebarDisconnectPromptTitle");
+    public string SidebarDeleteFoldersCheckbox => Text("SidebarDeleteFoldersCheckbox");
 
     public string TransferDetailLocalPath => Text("TransferDetailLocalPath");
     public string TransferDetailRelativePath => Text("TransferDetailRelativePath");

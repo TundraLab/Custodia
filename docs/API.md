@@ -1,6 +1,6 @@
 # Custódia: Documentação da API REST Local e Integração com Agentes de IA
 
-- Versão da API: `v1` (`2.9.0`)
+- Versão da API: `v1` (`2.9.1`)
 - Endereço padrão: `http://127.0.0.1:5080` (somente loopback local)
 - Especificação OpenAPI: `GET http://127.0.0.1:5080/api/v1/openapi.json`
 - Cópia em PDF: `Custodia-API.pdf` (na raiz do projeto e acoplada em Configurações)

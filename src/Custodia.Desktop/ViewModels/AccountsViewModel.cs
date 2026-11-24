@@ -138,6 +138,12 @@ public sealed partial class AccountsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isAddAccountPromptVisible;
 
+    [ObservableProperty]
+    private bool _isDisconnectPromptVisible;
+
+    [ObservableProperty]
+    private bool _deleteFoldersOnDisconnect;
+
     public Func<Task<string?>>? PickCredentialsFileCallback { get; set; }
     public Func<Uri, Task>? OpenExternalUriCallback { get; set; }
     public Func<string, Task>? CopyTextCallback { get; set; }
@@ -495,15 +501,28 @@ public sealed partial class AccountsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task DisconnectAsync()
+    private void Disconnect()
     {
+        DeleteFoldersOnDisconnect = false;
+        IsDisconnectPromptVisible = !IsDisconnectPromptVisible;
+    }
+
+    [RelayCommand]
+    private async Task ConfirmDisconnectAsync()
+    {
+        var deleteFolders = DeleteFoldersOnDisconnect;
+        IsDisconnectPromptVisible = false;
+        DeleteFoldersOnDisconnect = false;
+
         IsBusy = true;
         StatusMessage = Loc.Text("RevokingTokens");
         try
         {
-            await _syncService.DisconnectAccountAsync();
+            await _syncService.DisconnectAccountAsync(deleteFolderConfiguration: deleteFolders);
             ApplyAccount(_syncService.CurrentAccount);
-            StatusMessage = Loc.Text("DisconnectedSuccess");
+            StatusMessage = deleteFolders
+                ? Loc.Text("AccountAndFoldersRemovedFeedback")
+                : Loc.Text("AccountRemovedFoldersKeptFeedback");
         }
         catch (Exception ex)
         {
@@ -513,6 +532,13 @@ public sealed partial class AccountsViewModel : ViewModelBase
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private void CancelDisconnect()
+    {
+        IsDisconnectPromptVisible = false;
+        DeleteFoldersOnDisconnect = false;
     }
 
     public void SetStorageTrackWidth(double width)

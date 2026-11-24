@@ -16,6 +16,9 @@ public static class AppPaths
     public static string CredentialsFilePath =>
         Path.Combine(ConfigDirectory, "credentials.json");
 
+    public static string AccountsDirectory =>
+        Path.Combine(ConfigDirectory, "contas");
+
     public static string SettingsFilePath =>
         Path.Combine(ConfigDirectory, "settings.json");
 

@@ -13,7 +13,9 @@ public interface ISyncStateRepository
     Task<IReadOnlyList<LocalSyncFolder>> GetSyncFoldersByAccountAsync(string accountId, CancellationToken cancellationToken = default);
     Task<LocalSyncFolder?> GetSyncFolderByIdAsync(string folderId, CancellationToken cancellationToken = default);
     Task UpsertSyncFolderAsync(LocalSyncFolder folder, CancellationToken cancellationToken = default);
+    Task<int> ReattachSyncFoldersByEmailAsync(string accountId, string accountEmail, CancellationToken cancellationToken = default);
     Task DeleteSyncFolderAsync(string folderId, CancellationToken cancellationToken = default);
+    Task DeleteSyncFoldersByAccountAsync(string accountId, string? accountEmail = null, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<TrackedFileEntry>> GetTrackedFilesByFolderAsync(string syncFolderId, CancellationToken cancellationToken = default);
     Task<TrackedFileEntry?> GetTrackedFileAsync(string syncFolderId, string relativePath, CancellationToken cancellationToken = default);

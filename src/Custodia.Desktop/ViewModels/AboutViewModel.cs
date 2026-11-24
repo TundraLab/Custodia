@@ -87,9 +87,6 @@ public sealed partial class AboutViewModel : ViewModelBase
     private string _bugDescription = string.Empty;
 
     [ObservableProperty]
-    private bool _includeDiagnostics = true;
-
-    [ObservableProperty]
     private bool _isSuggestionOpen;
 
     [ObservableProperty]
@@ -622,62 +619,12 @@ public sealed partial class AboutViewModel : ViewModelBase
         return sb.ToString();
     }
 
-    private async Task<string> BuildBugReportMarkdownAsync()
+    private Task<string> BuildBugReportMarkdownAsync()
     {
         var sb = new StringBuilder();
         sb.AppendLine("## O que aconteceu");
         sb.AppendLine(string.IsNullOrWhiteSpace(BugDescription) ? "(descreva o comportamento observado)" : BugDescription.Trim());
-        sb.AppendLine();
-
-        if (IncludeDiagnostics)
-        {
-            var installKind = _updateService?.DetectInstallKind(out _) ?? AppInstallKind.Standalone;
-            var desktop = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? "Linux";
-            var session = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") ?? "unknown";
-            sb.AppendLine("## Ambiente");
-            sb.AppendLine($"- Aplicativo: Custódia v{AppVersionInfo.CurrentVersion} ({installKind})");
-            sb.AppendLine($"- Sistema: {Environment.OSVersion}");
-            sb.AppendLine($"- Desktop: {desktop} ({session})");
-
-            if (_repository is not null)
-            {
-                try
-                {
-                    var recentErrors = await _repository.GetActivityLogsAsync(ActivitySeverity.Warning, null, 10);
-                    if (recentErrors.Count > 0)
-                    {
-                        sb.AppendLine();
-                        sb.AppendLine("## Registros recentes de aviso/erro");
-                        foreach (var log in recentErrors.Take(10))
-                        {
-                            var safeMsg = RedactUserHome(log.Message);
-                            sb.AppendLine($"- [{log.CreatedAtUtc:yyyy-MM-dd HH:mm}] {log.Action}: {safeMsg}");
-                        }
-                    }
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        return sb.ToString();
-    }
-
-    private static string RedactUserHome(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return text;
-        }
-
-        var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (!string.IsNullOrWhiteSpace(userHome))
-        {
-            text = text.Replace(userHome, "~", StringComparison.OrdinalIgnoreCase);
-        }
-
-        return Regex.Replace(text, @"/home/[^/\s]+", "~", RegexOptions.CultureInvariant);
+        return Task.FromResult(sb.ToString());
     }
 
     private async Task OpenGitHubIssueAsync(string title, string body, string label)

@@ -21,8 +21,9 @@ public interface IDriveSyncService
 
     Task InitializeAsync(CancellationToken cancellationToken = default);
     Task<DriveAccount> ConnectAccountAsync(bool addNewAccount = false, string? customCredentialsJsonPath = null, CancellationToken cancellationToken = default);
+    Task<DriveAccount> ReconnectAccountAsync(string accountId, string? customCredentialsJsonPath = null, CancellationToken cancellationToken = default);
     Task<DriveAccount?> SwitchAccountAsync(string accountId, CancellationToken cancellationToken = default);
-    Task DisconnectAccountAsync(string? accountId = null, CancellationToken cancellationToken = default);
+    Task DisconnectAccountAsync(string? accountId = null, bool deleteFolderConfiguration = false, CancellationToken cancellationToken = default);
     Task RevokeCredentialsFileAsync(CancellationToken cancellationToken = default);
     Task RevokeAllAccountsAndCredentialsAsync(CancellationToken cancellationToken = default);
     Task<DriveAccount?> RefreshAccountInfoAsync(CancellationToken cancellationToken = default);

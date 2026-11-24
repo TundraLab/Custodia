@@ -230,6 +230,7 @@ public interface ILocalizationService : INotifyPropertyChanged
     string PreviewSoundButton { get; }
     string GmailAccountAlertsCheckbox { get; }
     string GmailAccountAlertsHint { get; }
+    string OpenEnableGmailApiButton { get; }
 
     string NewFolderButton { get; }
     string SyncLocalIntoHereButton { get; }
@@ -243,4 +244,14 @@ public interface ILocalizationService : INotifyPropertyChanged
     string CustomizeIconLabel { get; }
     string SaveCustomizationButton { get; }
     string ResetCustomizationButton { get; }
+
+    string CredentialsDragDropHint { get; }
+    string DetectedDownloadsTitle { get; }
+    string UseDetectedJsonButton { get; }
+    string OpenAccountsFolderButton { get; }
+
+    string DeleteAccountFoldersCheckbox { get; }
+    string ConfirmRemoveAccountButton { get; }
+    string SidebarDisconnectPromptTitle { get; }
+    string SidebarDeleteFoldersCheckbox { get; }
 }

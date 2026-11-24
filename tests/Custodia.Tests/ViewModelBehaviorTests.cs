@@ -148,6 +148,32 @@ public sealed class ViewModelBehaviorTests
     }
 
     [Fact]
+    public void MainWindow_RefreshSidebarSyncState_ClearsStaleDeletingHoldWhenIdle()
+    {
+        var loc = new LocalizationService();
+        loc.SetLanguage("pt-BR");
+
+        var syncProxy = DispatchProxy.Create<IDriveSyncService, StubDriveSyncProxy>();
+        var queueVm = new TransferQueueViewModel(syncProxy, loc);
+
+        var vm = (MainWindowViewModel)RuntimeHelpers.GetUninitializedObject(typeof(MainWindowViewModel));
+        typeof(MainWindowViewModel).GetField("_syncService", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(vm, syncProxy);
+        typeof(MainWindowViewModel).GetField("<Loc>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(vm, loc);
+        typeof(MainWindowViewModel).GetField("<TransferQueueVm>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(vm, queueVm);
+        typeof(MainWindowViewModel).GetField("_heldSidebarDirection", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(vm, TransferDirection.Delete);
+        typeof(MainWindowViewModel).GetField("_sidebarHoldUntilMs", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(vm, Environment.TickCount64 + 10_000);
+
+        var refreshMethod = typeof(MainWindowViewModel).GetMethod("RefreshSidebarSyncState", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        refreshMethod.Invoke(vm, ["SidebarMonitoring"]);
+
+        Assert.False(vm.IsSyncActive);
+        Assert.Null(vm.ActiveSidebarDirection);
+        Assert.Equal(TrayVisualState.Idle, vm.GetTrayVisualState());
+        Assert.DoesNotContain("Excluindo", vm.GetTrayStatusLine());
+        Assert.Contains("✓", vm.GetTrayStatusLine());
+    }
+
+    [Fact]
     public async Task FileHubViewModel_SupportsMultiSelectAndBatchDownload()
     {
         var loc = new LocalizationService();
@@ -218,8 +244,20 @@ internal class StubAuthProxy : DispatchProxy
             return Exists;
         if (targetMethod?.Name == $"get_{nameof(IAuthCredentialManager.CredentialsFilePath)}")
             return "/tmp/credentials.json";
+        if (targetMethod?.Name == $"get_{nameof(IAuthCredentialManager.AccountsDirectoryPath)}")
+            return "/tmp/contas";
         if (targetMethod?.Name == $"get_{nameof(IAuthCredentialManager.TokensDirectoryPath)}")
             return "/tmp/tokens";
+        if (targetMethod?.Name == nameof(IAuthCredentialManager.GetAccountFolderPath))
+            return "/tmp/contas/test";
+        if (targetMethod?.Name == nameof(IAuthCredentialManager.FindDownloadsCredentialsCandidates))
+            return Array.Empty<DetectedCredentialsCandidate>();
+        if (targetMethod?.Name == nameof(IAuthCredentialManager.LoadAccountSyncFoldersProfileAsync))
+            return Task.FromResult<IReadOnlyList<LocalSyncFolder>>(Array.Empty<LocalSyncFolder>());
+        if (targetMethod?.Name == nameof(IAuthCredentialManager.SaveAccountSyncFoldersProfileAsync)
+            || targetMethod?.Name == nameof(IAuthCredentialManager.DeleteAccountSyncFoldersProfileAsync)
+            || targetMethod?.Name == nameof(IAuthCredentialManager.OrganizeAccountDirectoryAsync))
+            return Task.CompletedTask;
         return null;
     }
 }

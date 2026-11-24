@@ -97,7 +97,7 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
             _serviceGate.Release();
         }
 
-        await _authManager.RevokeAndClearAsync(targetKey, cancellationToken);
+        await _authManager.RevokeAndClearAsync(targetKey, cancellationToken: cancellationToken);
     }
 
     public async Task<DriveAccount> GetAccountInfoAsync(CancellationToken cancellationToken = default)
@@ -596,10 +596,10 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
         string recipientEmail,
         string subject,
         string htmlBody,
+        string? accountKey = null,
         CancellationToken cancellationToken = default)
     {
-        var credential = _activeCredential;
-        if (credential is null || string.IsNullOrWhiteSpace(recipientEmail))
+        if (string.IsNullOrWhiteSpace(recipientEmail))
         {
             return false;
         }
@@ -607,7 +607,21 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(4));
+            cts.CancelAfter(TimeSpan.FromSeconds(8));
+
+            var credential = string.IsNullOrWhiteSpace(accountKey) ||
+                             string.Equals(accountKey, _activeAccountKey, StringComparison.Ordinal)
+                ? _activeCredential
+                : await _authManager.TryRestoreSilentAsync(accountKey, cts.Token);
+
+            credential ??= !string.IsNullOrWhiteSpace(accountKey)
+                ? await _authManager.TryRestoreSilentAsync(accountKey, cts.Token)
+                : null;
+
+            if (credential is null)
+            {
+                return false;
+            }
 
             var accessToken = await credential.GetAccessTokenForRequestAsync(cancellationToken: cts.Token);
             if (string.IsNullOrWhiteSpace(accessToken))
@@ -615,25 +629,9 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
                 return false;
             }
 
-            var cleanEmail = recipientEmail.Replace("\r", string.Empty, StringComparison.Ordinal)
-                .Replace("\n", string.Empty, StringComparison.Ordinal)
-                .Trim();
-            var encodedSubject = $"=?UTF-8?B?{Convert.ToBase64String(Encoding.UTF8.GetBytes(subject))}?=";
-            var mimeMessage =
-                $"From: Custodia <{cleanEmail}>\r\n" +
-                $"To: {cleanEmail}\r\n" +
-                $"Subject: {encodedSubject}\r\n" +
-                "MIME-Version: 1.0\r\n" +
-                "Content-Type: text/html; charset=utf-8\r\n\r\n" +
-                htmlBody;
-
-            var raw = Convert.ToBase64String(Encoding.UTF8.GetBytes(mimeMessage))
-                .Replace('+', '-')
-                .Replace('/', '_')
-                .TrimEnd('=');
-
+            var raw = BuildGmailRawPayload(recipientEmail, subject, htmlBody);
             var payloadJson = JsonSerializer.Serialize(new { raw });
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(4) };
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
             using var req = new HttpRequestMessage(HttpMethod.Post, "https://gmail.googleapis.com/gmail/v1/users/me/messages/send")
             {
                 Content = new StringContent(payloadJson, Encoding.UTF8, "application/json")
@@ -643,7 +641,8 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
             using var resp = await http.SendAsync(req, cts.Token);
             if (!resp.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Gmail alert skipped with HTTP {StatusCode}.", (int)resp.StatusCode);
+                var errBody = await resp.Content.ReadAsStringAsync(cts.Token);
+                _logger.LogWarning("Gmail alert skipped with HTTP {StatusCode}: {Body}", (int)resp.StatusCode, errBody);
                 return false;
             }
 
@@ -654,6 +653,28 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
             _logger.LogWarning(ex, "Could not send Gmail account alert.");
             return false;
         }
+    }
+
+    internal static string BuildGmailRawPayload(string recipientEmail, string subject, string htmlBody)
+    {
+        var cleanEmail = recipientEmail.Replace("\r", string.Empty, StringComparison.Ordinal)
+            .Replace("\n", string.Empty, StringComparison.Ordinal)
+            .Trim();
+        var encodedSubject = $"=?UTF-8?B?{Convert.ToBase64String(Encoding.UTF8.GetBytes(subject))}?=";
+        var bodyBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(htmlBody));
+        var mimeMessage =
+            $"From: Custodia <{cleanEmail}>\r\n" +
+            $"To: {cleanEmail}\r\n" +
+            $"Subject: {encodedSubject}\r\n" +
+            "MIME-Version: 1.0\r\n" +
+            "Content-Type: text/html; charset=utf-8\r\n" +
+            "Content-Transfer-Encoding: base64\r\n\r\n" +
+            bodyBase64;
+
+        return Convert.ToBase64String(Encoding.UTF8.GetBytes(mimeMessage))
+            .Replace('+', '-')
+            .Replace('/', '_')
+            .TrimEnd('=');
     }
 
     private async Task InitializeDriveServiceAsync(UserCredential credential, string accountKey, CancellationToken cancellationToken)

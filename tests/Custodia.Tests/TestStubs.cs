@@ -43,6 +43,8 @@ internal class StubDriveSyncProxy : DispatchProxy
             ConnectCalls.Add(((bool)args![0]!, (string?)args[1]));
             return Task.FromResult(Account);
         }
+        if (targetMethod?.Name == nameof(IDriveSyncService.ReconnectAccountAsync))
+            return Task.FromResult(Account);
         if (targetMethod?.Name == nameof(IDriveSyncService.GetTransferQueueSnapshot))
             return Array.Empty<TransferQueueItem>();
         if (targetMethod?.Name == nameof(IDriveSyncService.GetTransferQueueStats))

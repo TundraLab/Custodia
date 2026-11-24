@@ -616,18 +616,50 @@ public partial class App : Application
             _trayIconAnimator?.SetState(mainVm.GetTrayVisualState());
         }
 
-        // Sync tray menu items on demand, language change, or debounced state transitions (never mutating ToolTipText so top bar never blinks).
+        // Coalesce rapid menu text refreshes on a trailing timer while flushing state transitions immediately so tray status never freezes.
         var lastMenuSyncUtc = DateTimeOffset.MinValue;
-        menu.NeedsUpdate += (_, _) => RefreshTrayMenuTexts();
-        _trayLanguageChangedHandler = (_, _) => RefreshTrayMenuTexts();
+        var lastVisualState = mainVm.GetTrayVisualState();
+        var pendingMenuRefreshTimer = new Avalonia.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(200)
+        };
+        pendingMenuRefreshTimer.Tick += (_, _) =>
+        {
+            pendingMenuRefreshTimer.Stop();
+            lastMenuSyncUtc = DateTimeOffset.UtcNow;
+            lastVisualState = mainVm.GetTrayVisualState();
+            RefreshTrayMenuTexts();
+        };
+
+        menu.NeedsUpdate += (_, _) =>
+        {
+            pendingMenuRefreshTimer.Stop();
+            lastMenuSyncUtc = DateTimeOffset.UtcNow;
+            lastVisualState = mainVm.GetTrayVisualState();
+            RefreshTrayMenuTexts();
+        };
+        _trayLanguageChangedHandler = (_, _) =>
+        {
+            pendingMenuRefreshTimer.Stop();
+            lastMenuSyncUtc = DateTimeOffset.UtcNow;
+            lastVisualState = mainVm.GetTrayVisualState();
+            RefreshTrayMenuTexts();
+        };
         _traySummaryChangedHandler = (_, _) =>
         {
-            _trayIconAnimator?.SetState(mainVm.GetTrayVisualState());
+            var nextState = mainVm.GetTrayVisualState();
+            _trayIconAnimator?.SetState(nextState);
             var now = DateTimeOffset.UtcNow;
-            if ((now - lastMenuSyncUtc).TotalMilliseconds >= 800)
+            if (nextState != lastVisualState || (now - lastMenuSyncUtc).TotalMilliseconds >= 250)
             {
+                pendingMenuRefreshTimer.Stop();
                 lastMenuSyncUtc = now;
+                lastVisualState = nextState;
                 RefreshTrayMenuTexts();
+            }
+            else if (!pendingMenuRefreshTimer.IsEnabled)
+            {
+                pendingMenuRefreshTimer.Start();
             }
         };
         mainVm.Loc.LanguageChanged += _trayLanguageChangedHandler;

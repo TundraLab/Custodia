@@ -79,6 +79,11 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         await ProbeConnectivityAsync(cancellationToken);
 
         SavedAccounts = await _repository.GetAllAccountsAsync(cancellationToken);
+        foreach (var savedAcc in SavedAccounts.Where(a => a.IsConnected))
+        {
+            await _authManager.OrganizeAccountDirectoryAsync(savedAcc.Id, savedAcc.EmailAddress, savedAcc.DisplayName, cancellationToken);
+        }
+
         var targetAccountId = string.IsNullOrWhiteSpace(_settingsService.Current.ActiveAccountId)
             ? "default"
             : _settingsService.Current.ActiveAccountId;
@@ -117,11 +122,12 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             }
 
             CurrentAccount = restored;
+            await _authManager.OrganizeAccountDirectoryAsync(restored.Id, restored.EmailAddress, restored.DisplayName, cancellationToken);
             await _repository.UpsertAccountAsync(restored, cancellationToken);
             await PersistActiveAccountIdAsync(restored.Id, cancellationToken);
             SavedAccounts = await _repository.GetAllAccountsAsync(cancellationToken);
 
-            var folders = await _repository.GetSyncFoldersByAccountAsync(restored.Id, cancellationToken);
+            var folders = await RestoreAndSyncAccountFoldersAsync(restored, cancellationToken);
             foreach (var folder in folders)
             {
                 if (folder.State == FolderSyncState.Syncing)
@@ -164,7 +170,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         var hasCustomJson = !string.IsNullOrWhiteSpace(customCredentialsJsonPath);
         if (hasCustomJson)
         {
-            await _authManager.ImportCredentialsFileAsync(customCredentialsJsonPath!, candidateKey, cancellationToken);
+            await _authManager.ImportCredentialsFileAsync(customCredentialsJsonPath!, candidateKey, cancellationToken: cancellationToken);
         }
 
         DriveAccount account;
@@ -190,7 +196,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         {
             if (hasCustomJson)
             {
-                await _authManager.CopyCredentialsAsync(candidateKey, duplicate.Id, cancellationToken);
+                await _authManager.CopyCredentialsAsync(candidateKey, duplicate.Id, account.EmailAddress, cancellationToken);
                 _authManager.DeleteAccountCredentialsFile(candidateKey);
             }
             await _authManager.CopyTokenAsync(candidateKey, duplicate.Id, cancellationToken);
@@ -199,6 +205,8 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             await _driveClient.SwitchSessionAsync(duplicate.Id, cancellationToken);
         }
 
+        await _authManager.OrganizeAccountDirectoryAsync(account.Id, account.EmailAddress, account.DisplayName, cancellationToken);
+
         CancelAllActiveOperations();
 
         CurrentAccount = account;
@@ -206,7 +214,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         await PersistActiveAccountIdAsync(account.Id, cancellationToken);
         SavedAccounts = await _repository.GetAllAccountsAsync(cancellationToken);
 
-        var folders = await _repository.GetSyncFoldersByAccountAsync(account.Id, cancellationToken);
+        var folders = await RestoreAndSyncAccountFoldersAsync(account, cancellationToken);
         _watcherService.UpdateWatchers(folders);
 
         AccountsListChanged?.Invoke(this, EventArgs.Empty);
@@ -219,13 +227,68 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         if (_settingsService.Current.GmailAccountAlertsEnabled &&
             !string.IsNullOrWhiteSpace(account.EmailAddress))
         {
-            _ = TrySendGmailAccountAlertAsync(account.EmailAddress, isConnected: true);
+            _ = TrySendGmailAccountAlertAsync(account.EmailAddress, isConnected: true, account.Id);
         }
 
         if (folders.Any(f => !f.IsPaused))
         {
             _ = Task.Run(() => TriggerSyncAllAsync(), CancellationToken.None);
         }
+        return account;
+    }
+
+    public async Task<DriveAccount> ReconnectAccountAsync(
+        string accountId,
+        string? customCredentialsJsonPath = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(accountId))
+        {
+            return await ConnectAccountAsync(addNewAccount: false, customCredentialsJsonPath, cancellationToken);
+        }
+
+        var existing = (await _repository.GetAllAccountsAsync(cancellationToken))
+            .FirstOrDefault(a => string.Equals(a.Id, accountId, StringComparison.Ordinal));
+        var knownEmail = existing?.EmailAddress;
+
+        if (!string.IsNullOrWhiteSpace(customCredentialsJsonPath))
+        {
+            await _authManager.ImportCredentialsFileAsync(customCredentialsJsonPath, accountId, knownEmail, cancellationToken);
+        }
+
+        await _authManager.DeleteLocalTokenAsync(accountId, cancellationToken);
+        var account = await _driveClient.ConnectInteractiveAsync(accountId, cancellationToken);
+        account.Id = accountId;
+
+        await _authManager.OrganizeAccountDirectoryAsync(account.Id, account.EmailAddress, account.DisplayName, cancellationToken);
+        CancelAllActiveOperations();
+
+        CurrentAccount = account;
+        await _repository.UpsertAccountAsync(account, cancellationToken);
+        await PersistActiveAccountIdAsync(account.Id, cancellationToken);
+        SavedAccounts = await _repository.GetAllAccountsAsync(cancellationToken);
+
+        var folders = await RestoreAndSyncAccountFoldersAsync(account, cancellationToken);
+        _watcherService.UpdateWatchers(folders);
+
+        AccountsListChanged?.Invoke(this, EventArgs.Empty);
+        AccountChanged?.Invoke(this, account);
+        SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
+
+        await LogAsync(ActivitySeverity.Success, "AccountConnect",
+            $"Conta Google reconectada: {account.EmailAddress}.", null, null, cancellationToken);
+
+        if (_settingsService.Current.GmailAccountAlertsEnabled &&
+            !string.IsNullOrWhiteSpace(account.EmailAddress))
+        {
+            _ = TrySendGmailAccountAlertAsync(account.EmailAddress, isConnected: true, account.Id);
+        }
+
+        if (folders.Any(f => !f.IsPaused))
+        {
+            _ = Task.Run(() => TriggerSyncAllAsync(), CancellationToken.None);
+        }
+
         return account;
     }
 
@@ -250,11 +313,12 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             ?? await _driveClient.ConnectInteractiveAsync(accountId, cancellationToken);
 
         CurrentAccount = restored;
+        await _authManager.OrganizeAccountDirectoryAsync(restored.Id, restored.EmailAddress, restored.DisplayName, cancellationToken);
         await _repository.UpsertAccountAsync(restored, cancellationToken);
         await PersistActiveAccountIdAsync(restored.Id, cancellationToken);
         SavedAccounts = await _repository.GetAllAccountsAsync(cancellationToken);
 
-        var folders = await _repository.GetSyncFoldersByAccountAsync(restored.Id, cancellationToken);
+        var folders = await RestoreAndSyncAccountFoldersAsync(restored, cancellationToken);
         _watcherService.UpdateWatchers(folders);
 
         AccountsListChanged?.Invoke(this, EventArgs.Empty);
@@ -269,60 +333,79 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
     public async Task DisconnectAccountAsync(
         string? accountId = null,
+        bool deleteFolderConfiguration = false,
         CancellationToken cancellationToken = default)
     {
         var targetId = string.IsNullOrWhiteSpace(accountId) ? CurrentAccount.Id : accountId;
-        var disconnectedEmail = CurrentAccount.EmailAddress;
+        var isDisconnectingActive = string.Equals(targetId, CurrentAccount.Id, StringComparison.Ordinal);
+        var savedList = await _repository.GetAllAccountsAsync(cancellationToken);
+        var targetAccount = savedList.FirstOrDefault(a => string.Equals(a.Id, targetId, StringComparison.Ordinal));
+        var disconnectedEmail = targetAccount?.EmailAddress ?? (isDisconnectingActive ? CurrentAccount.EmailAddress : string.Empty);
 
-        CancelAllActiveOperations();
-        _watcherService.UpdateWatchers([]);
+        if (isDisconnectingActive)
+        {
+            CancelAllActiveOperations();
+            _watcherService.UpdateWatchers([]);
+        }
 
         if (_settingsService.Current.GmailAccountAlertsEnabled &&
             !string.IsNullOrWhiteSpace(disconnectedEmail))
         {
-            await TrySendGmailAccountAlertAsync(disconnectedEmail, isConnected: false, cancellationToken);
+            await TrySendGmailAccountAlertAsync(disconnectedEmail, isConnected: false, targetId, cancellationToken);
         }
 
         await _driveClient.DisconnectAsync(targetId, cancellationToken);
+        await _authManager.RevokeAndClearAsync(targetId, disconnectedEmail, purgeFolderConfig: deleteFolderConfiguration, cancellationToken);
+        if (deleteFolderConfiguration)
+        {
+            await _repository.DeleteSyncFoldersByAccountAsync(targetId, disconnectedEmail, cancellationToken);
+        }
         await _repository.DeleteAccountAsync(targetId, cancellationToken);
 
         SavedAccounts = await _repository.GetAllAccountsAsync(cancellationToken);
 
-        DriveAccount? fallbackAccount = null;
-        foreach (var candidate in SavedAccounts)
+        if (isDisconnectingActive)
         {
-            if (candidate.IsConnected && await _authManager.HasStoredTokenAsync(candidate.Id))
+            DriveAccount? fallbackAccount = null;
+            foreach (var candidate in SavedAccounts)
             {
-                fallbackAccount = await _driveClient.TryRestoreSessionAsync(candidate.Id, cancellationToken);
-                if (fallbackAccount is not null)
+                if (candidate.IsConnected && await _authManager.HasStoredTokenAsync(candidate.Id))
                 {
-                    break;
+                    fallbackAccount = await _driveClient.TryRestoreSessionAsync(candidate.Id, cancellationToken);
+                    if (fallbackAccount is not null)
+                    {
+                        break;
+                    }
                 }
             }
-        }
 
-        if (fallbackAccount is not null)
-        {
-            CurrentAccount = fallbackAccount;
-            await _repository.UpsertAccountAsync(fallbackAccount, cancellationToken);
-            await PersistActiveAccountIdAsync(fallbackAccount.Id, cancellationToken);
-            var fallbackFolders = await _repository.GetSyncFoldersByAccountAsync(fallbackAccount.Id, cancellationToken);
-            _watcherService.UpdateWatchers(fallbackFolders);
-        }
-        else
-        {
-            CurrentAccount = new DriveAccount
+            if (fallbackAccount is not null)
             {
-                Id = "default",
-                IsConnected = false
-            };
-            await PersistActiveAccountIdAsync("default", cancellationToken);
+                CurrentAccount = fallbackAccount;
+                await _authManager.OrganizeAccountDirectoryAsync(fallbackAccount.Id, fallbackAccount.EmailAddress, fallbackAccount.DisplayName, cancellationToken);
+                await _repository.UpsertAccountAsync(fallbackAccount, cancellationToken);
+                await PersistActiveAccountIdAsync(fallbackAccount.Id, cancellationToken);
+                var fallbackFolders = await _repository.GetSyncFoldersByAccountAsync(fallbackAccount.Id, cancellationToken);
+                _watcherService.UpdateWatchers(fallbackFolders);
+            }
+            else
+            {
+                CurrentAccount = new DriveAccount
+                {
+                    Id = "default",
+                    IsConnected = false
+                };
+                await PersistActiveAccountIdAsync("default", cancellationToken);
+            }
         }
 
         SavedAccounts = await _repository.GetAllAccountsAsync(cancellationToken);
         AccountsListChanged?.Invoke(this, EventArgs.Empty);
-        AccountChanged?.Invoke(this, CurrentAccount);
-        SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
+        if (isDisconnectingActive)
+        {
+            AccountChanged?.Invoke(this, CurrentAccount);
+            SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
+        }
 
         await LogAsync(ActivitySeverity.Info, "AccountDisconnect",
             string.IsNullOrWhiteSpace(disconnectedEmail)
@@ -436,6 +519,67 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         await _settingsService.SaveAsync(current, cancellationToken);
     }
 
+    private async Task<IReadOnlyList<LocalSyncFolder>> RestoreAndSyncAccountFoldersAsync(
+        DriveAccount account,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(account.EmailAddress))
+        {
+            await _repository.ReattachSyncFoldersByEmailAsync(account.Id, account.EmailAddress, cancellationToken);
+        }
+
+        var existingFolders = (await _repository.GetSyncFoldersByAccountAsync(account.Id, cancellationToken)).ToList();
+        var knownPaths = existingFolders
+            .Select(f => Path.GetFullPath(f.LocalPath))
+            .ToHashSet(StringComparer.Ordinal);
+
+        var profileFolders = await _authManager.LoadAccountSyncFoldersProfileAsync(account.Id, account.EmailAddress, cancellationToken);
+        foreach (var saved in profileFolders)
+        {
+            if (string.IsNullOrWhiteSpace(saved.LocalPath))
+            {
+                continue;
+            }
+
+            var fullPath = Path.GetFullPath(saved.LocalPath);
+            if (knownPaths.Contains(fullPath))
+            {
+                continue;
+            }
+
+            Directory.CreateDirectory(fullPath);
+            saved.Id = Guid.NewGuid().ToString("N");
+            saved.AccountId = account.Id;
+            saved.AccountEmail = account.EmailAddress?.Trim().ToLowerInvariant();
+            saved.LocalPath = fullPath;
+            await _repository.UpsertSyncFolderAsync(saved, cancellationToken);
+            existingFolders.Add(saved);
+            knownPaths.Add(fullPath);
+        }
+
+        var latest = await _repository.GetSyncFoldersByAccountAsync(account.Id, cancellationToken);
+        await _authManager.SaveAccountSyncFoldersProfileAsync(account.Id, account.EmailAddress, latest, cancellationToken);
+        return latest;
+    }
+
+    private async Task PersistCurrentAccountFoldersProfileAsync(CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(CurrentAccount.Id) || string.IsNullOrWhiteSpace(CurrentAccount.EmailAddress))
+        {
+            return;
+        }
+
+        try
+        {
+            var folders = await _repository.GetSyncFoldersByAccountAsync(CurrentAccount.Id, cancellationToken);
+            await _authManager.SaveAccountSyncFoldersProfileAsync(CurrentAccount.Id, CurrentAccount.EmailAddress, folders, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not update per-account sync folder profile.");
+        }
+    }
+
     public async Task<LocalSyncFolder> AddSyncFolderAsync(
         string localPath,
         string remoteFolderId,
@@ -450,6 +594,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         {
             Id = Guid.NewGuid().ToString("N"),
             AccountId = CurrentAccount.Id,
+            AccountEmail = CurrentAccount.EmailAddress?.Trim().ToLowerInvariant(),
             LocalPath = fullLocalPath,
             RemoteFolderId = string.IsNullOrWhiteSpace(remoteFolderId) ? "root" : remoteFolderId,
             RemoteFolderName = string.IsNullOrWhiteSpace(remoteFolderName) ? "Meus Arquivos" : remoteFolderName,
@@ -459,6 +604,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         };
 
         await _repository.UpsertSyncFolderAsync(folder, cancellationToken);
+        await PersistCurrentAccountFoldersProfileAsync(cancellationToken);
         _pendingInitialSyncFolders[folder.Id] = 1;
         var allFolders = await GetSyncFoldersAsync(cancellationToken);
         _watcherService.UpdateWatchers(allFolders);
@@ -489,11 +635,13 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             return;
         }
 
+        folder.AccountEmail ??= CurrentAccount.EmailAddress?.Trim().ToLowerInvariant();
         folder.CustomAlias = string.IsNullOrWhiteSpace(customAlias) ? null : customAlias.Trim();
         folder.CustomColorHex = FolderCustomizationPresets.NormalizeColorHex(customColorHex);
         folder.CustomIconKey = string.IsNullOrWhiteSpace(customIconKey) ? null : customIconKey.Trim();
 
         await _repository.UpsertSyncFolderAsync(folder, cancellationToken);
+        await PersistCurrentAccountFoldersProfileAsync(cancellationToken);
         SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
 
         await LogAsync(ActivitySeverity.Info, "FolderCustomized",
@@ -512,8 +660,10 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             return;
         }
 
+        folder.AccountEmail ??= CurrentAccount.EmailAddress?.Trim().ToLowerInvariant();
         folder.Mode = mode;
         await _repository.UpsertSyncFolderAsync(folder, cancellationToken);
+        await PersistCurrentAccountFoldersProfileAsync(cancellationToken);
         SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
 
         var modeLabel = mode == SyncMode.TwoWay ? "Sincronização Bidirecional" : "Backup Unidirecional";
@@ -533,9 +683,11 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             return;
         }
 
+        folder.AccountEmail ??= CurrentAccount.EmailAddress?.Trim().ToLowerInvariant();
         folder.IsPaused = isPaused;
         folder.State = isPaused ? FolderSyncState.Paused : FolderSyncState.Idle;
         await _repository.UpsertSyncFolderAsync(folder, cancellationToken);
+        await PersistCurrentAccountFoldersProfileAsync(cancellationToken);
 
         if (isPaused)
         {
@@ -573,6 +725,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
         _pendingInitialSyncFolders.TryRemove(folderId, out _);
         await _repository.DeleteSyncFolderAsync(folderId, cancellationToken);
+        await PersistCurrentAccountFoldersProfileAsync(cancellationToken);
         var folders = await GetSyncFoldersAsync(cancellationToken);
         _watcherService.UpdateWatchers(folders);
         SyncFoldersChanged?.Invoke(this, EventArgs.Empty);
@@ -1903,6 +2056,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
     private async Task TrySendGmailAccountAlertAsync(
         string recipientEmail,
         bool isConnected,
+        string? accountKey = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -1923,7 +2077,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                 </div>
                 """;
 
-            var sent = await _driveClient.TrySendGmailAlertAsync(recipientEmail, subject, body, cancellationToken);
+            var sent = await _driveClient.TrySendGmailAlertAsync(recipientEmail, subject, body, accountKey, cancellationToken);
             if (sent)
             {
                 await LogAsync(ActivitySeverity.Info, "GmailAlertSent",

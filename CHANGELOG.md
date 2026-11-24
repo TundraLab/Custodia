@@ -2,6 +2,18 @@
 
 Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [2.9.1] - 2026-11-24
+
+### Alterado
+- **Ícone e menu dinâmicos na bandeja redesenhados:** animação pulsante com variação real de tamanho (56% a 100%) e glifos centralizados de alto contraste (`↑` azul, `↓` verde, `✕` vermelho, setas circulares `↻` e alerta `!`) para leitura clara na barra superior do sistema.
+- **Gestão visual de `credentials.json` e contas por diretório próprio:** armazenamento organizado em `~/.config/custodia/contas/<email>/`, detecção automática na pasta Downloads, suporte a arrastar e soltar `.json` em **Configurações**, visualização do `Project ID` / `Client ID` e ações rápidas por conta (`Alternar`, `Reconectar`, `Trocar JSON`, `Pasta`, `Revogar`).
+- **Configuração de pastas salva por conta:** as pastas mapeadas permanecem vinculadas ao e-mail da conta caso ela seja removida e adicionada novamente, com opção explícita para excluir essa configuração durante a remoção.
+- **Relato de erro sem anexo automático:** formulários da aba **Sobre** enviam apenas o que o usuário preencher.
+
+### Corrigido
+- **Status travado no menu da bandeja com fila zerada:** limpeza imediata de direções temporárias quando não há sincronização ou transferências ativas e timer coalescente no menu nativo para evitar que status antigos (como `✕ Excluindo arquivo...`) fiquem congelados na barra de notificação.
+- **Envio de avisos no Gmail ao conectar, reconectar ou desconectar:** resolução da credencial por conta alvo (inclusive secundárias), codificação Base64 UTF-8 do corpo HTML, timeout ampliado para 8s e atalho **Ativar Gmail API** em **Configurações**.
+
 ## [2.9.0] - 2026-11-24
 
 ### Adicionado
