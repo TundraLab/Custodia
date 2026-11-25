@@ -2,6 +2,15 @@
 
 Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [3.0.5] - 2026-11-25
+
+### Adicionado
+- **Envios, downloads e sincronizações simultâneos:** agora você pode enviar vários arquivos ou pastas inteiras de uma só vez, baixar múltiplos arquivos ou pastas do Google Drive em paralelo e sincronizar diversas pastas ao mesmo tempo.
+
+### Alterado
+- **Indicador animado em Pastas de Sincronização:** a bolinha estática foi substituída por um emblema animado com pulso contínuo quando a pasta está sendo monitorada e animação de rotação durante a sincronização.
+- **Etiqueta mais limpa na Fila de Transferências:** removido o selo antigo com pontos e texto duplicado, exibindo apenas o horário e um chip de direção e status no estilo Material Design 3.
+
 ## [3.0.4] - 2026-11-25
 
 ### Adicionado
