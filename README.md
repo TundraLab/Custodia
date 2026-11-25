@@ -26,9 +26,20 @@
 ## Qualidade
 
 - **Build e distribuição:** compilação limpa em `.NET 10.0` para Linux `x86_64` com empacotamento nativo `.rpm` e `.AppImage` verificado por SHA-256
-- **Suíte de testes:** **56 testes unitários xUnit aprovados (`0` falhas)** cobrindo motor de sincronização, fila de transferências, persistência SQLite, isolamento de contas OAuth2, atualizador, sanitização de suporte, aceite de termos/privacidade e e-mails de ciclo de vida
+- **Suíte de testes:** **66 testes unitários xUnit aprovados (`0` falhas)** cobrindo motor de sincronização, fila de transferências, persistência SQLite, isolamento de contas OAuth2, atualizador, sanitização de suporte, aceite de termos/privacidade e e-mails de ciclo de vida
 - **Plataforma principal:** Linux `x86_64` (Fedora Workstation/KDE, Pop!_OS GNOME/COSMIC e KDE Plasma 5/6)
 - **Documentação técnica:** OpenAPI `3.0.3` em tempo real (`GET /api/v1/openapi.json`), guia [docs/API.md](docs/API.md), [Custodia-API.pdf](Custodia-API.pdf) e histórico completo em [CHANGELOG.md](CHANGELOG.md)
+
+## Documentação
+
+| Guia | Conteúdo |
+| :--- | :--- |
+| **[Configuração OAuth2](docs/OAUTH_SETUP.md)** | Passo a passo ilustrado para criar o `credentials.json` no Google Cloud Console e conectar sua conta |
+| **[Compatibilidade Linux](docs/COMPATIBILITY.md)** | Matriz de recursos testados vs. suportados em GNOME, KDE Plasma 5/6, COSMIC, Wayland e X11 |
+| **[Segurança e Privacidade](docs/SECURITY.md)** | Modelo BYO-OAuth2, permissões `0700`/`0600`, renovação de tokens e superfície da API local |
+| **[Perguntas Frequentes (FAQ)](docs/FAQ.md)** | Modo offline, política de conflitos, restauração da Lixeira, múltiplas contas e remoção total |
+| **[Solução de Problemas](docs/TROUBLESHOOTING.md)** | Diagnóstico para `.rpm`, `.AppImage`/FUSE, bandeja no GNOME, D-Bus, erro `403` e pré-visualização |
+| **[API REST Local](docs/API.md)** | Endpoints em `127.0.0.1:5080`, OpenAPI `3.0.3`, exemplos em Python e integração com agentes de IA |
 
 ## Prévia visual
 
@@ -50,7 +61,7 @@
 
 ## Sistemas e formatos
 
-- Testado em **Fedora** e **Pop!_OS** (incluindo hardware modesto), com suporte aos ambientes GNOME, COSMIC e KDE Plasma 5/6.
+- Testado em **Fedora** e **Pop!_OS** (incluindo hardware modesto), com suporte aos ambientes **GNOME**, **COSMIC** e **KDE Plasma 5/6** — veja a matriz completa em **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)**.
 - **Formatos distribuídos:** pacote nativo **`.rpm`** (Fedora / RHEL / openSUSE) e **`.AppImage` (`x86_64`)** independente com o runtime `.NET 10` embutido (Pop!_OS, Ubuntu, Debian e demais distribuições Linux, sem instalar dependências do `.NET`), ambos verificados por **SHA-256** (`SHA256SUMS.txt`).
 
 ## O que o aplicativo faz
@@ -154,86 +165,20 @@ chmod +x install-custodia.sh
 
 ## Como configurar o Google Drive (`credentials.json`)
 
-Para conectar sua conta diretamente ao Google sem servidores intermediários, crie suas credenciais OAuth2 Desktop no Google Cloud Console.
+Para conectar sua conta diretamente ao Google sem servidores intermediários, crie suas credenciais OAuth2 Desktop no Google Cloud Console:
 
-### Passo 1: Ativar a Google Drive API
-1. Abra o [Google Cloud Console (Google Drive API)](https://console.cloud.google.com/apis/library/drive.googleapis.com).
-2. Crie ou selecione um projeto no topo da página.
-3. Clique em **Ativar** (*Enable*). Depois de ativa, a tela mostra **API ativada** e o botão **Gerenciar**. *(Não é necessário ativar a Gmail API no projeto.)*
+1. Ative a **Google Drive API** no seu projeto do Google Cloud Console.
+2. Configure a **Tela de permissão OAuth** (*Google Auth Platform* → **Externo**).
+3. Adicione seu e-mail em **Público-alvo → Usuários de teste** *(obrigatório enquanto o app estiver em modo Testando)*.
+4. Em **Clientes → + Criar cliente**, escolha **App para computador** (*Desktop app*) e baixe o arquivo `client_secret_*.json`.
+5. Importe o JSON no Custódia (detectado automaticamente em `~/Downloads` ou via arrastar e soltar em **Configurações**) e autorize no navegador.
 
-![Google Drive API ativada](docs/images/01-google-drive-api.png)
-
-### Passo 2: Abrir o menu de Credenciais OAuth
-1. No menu lateral esquerdo, acesse **APIs e serviços > Credenciais** (ou abra [Credenciais](https://console.cloud.google.com/apis/credentials)).
-2. Clique em **+ Criar credenciais** no topo e escolha **ID do cliente OAuth**:
-
-![Menu Criar credenciais](docs/images/02-criar-credenciais-menu.png)
-
-Se escolher **Ajude-me a escolher**, marque **Google Drive API** e **Dados do usuário** (*User data*):
-
-![Tipo de credencial Dados do usuário](docs/images/03-tipo-credencial-dados-usuario.png)
-
-3. Se aparecer o aviso *"Para criar um ID do cliente OAuth, primeiro é preciso configurar sua tela de permissão"*, clique em **Configurar tela de consentimento**:
-
-![Configurar tela de consentimento](docs/images/02b-configurar-tela-consentimento.png)
-
-4. Na tela seguinte (**Branding**), clique em **Vamos começar** para abrir a configuração:
-
-![Tela inicial do Google Auth Platform Vamos começar](docs/images/02c-branding-vamos-comecar.png)
-
-### Passo 3: Configurar a Tela de permissão OAuth (primeira vez do projeto)
-Se for a primeira credencial do projeto, o Google pede a configuração da tela de consentimento (**Google Auth Platform**):
-1. Em **Informações do app**, coloque o nome (por exemplo, `Custódia`) e seu e-mail de suporte. Clique em **Avançar**.
-2. Em **Público**, escolha **Externo** (*External*) e clique em **Avançar**.
-3. Em **Dados de contato**, informe seu e-mail novamente e clique em **Avançar**.
-4. Aceite os termos e clique em **Criar**.
-
-![Configuração da tela de permissão OAuth](docs/images/04-tela-permissao-oauth.png)
-
-### Passo 4: Adicionar seu e-mail em Usuários de teste (obrigatório)
-Enquanto o aplicativo estiver em modo **Testando** (*Testing*), o Google bloqueia logins (`Erro 403: access_denied`) de qualquer conta fora da lista de testadores.
-1. No menu esquerdo do **Google Auth Platform**, clique em **Público-alvo** ([abrir página](https://console.cloud.google.com/auth/audience)).
-2. Desça até **Usuários de teste** e clique em **+ Add users**:
-
-![Público-alvo e botão Add users](docs/images/05-publico-alvo-add-users.png)
-
-3. Informe o endereço Google que você vai usar no Custódia e clique em **Salvar**:
-
-![Adicionar usuários de teste](docs/images/06-adicionar-usuarios-modal.png)
-
-### Passo 5: Selecionar "App para computador" e baixar o JSON
-1. No menu esquerdo, clique em **Clientes** e depois em **+ Criar cliente**:
-
-![Menu Clientes e botão Criar cliente](docs/images/07a-clientes-criar-cliente.png)
-
-2. Em **Tipo de aplicativo**, selecione **App para computador** (*Desktop app*):
-
-![Criar ID do cliente do OAuth](docs/images/07-criar-cliente-oauth.png)
-
-3. Coloque `Custódia` no campo **Nome** e clique em **Criar**.
-4. Na janela **Cliente OAuth criado**, clique em **Baixar o JSON** (`client_secret_...json`):
-
-![Janela Cliente OAuth criado com botão Baixar o JSON](docs/images/07b-cliente-oauth-criado-json.png)
-
-### Passo 6: Importar no Custódia e conectar
-1. Abra o Custódia (em **Configurações** o app já detecta automaticamente arquivos em `~/Downloads` e também aceita arrastar e soltar o `.json`, ou use o cartão no rodapé da barra lateral).
-2. Importe o JSON baixado e clique em **Conectar**.
-3. No navegador oficial do Google que abrir:
-   - Escolha a conta cadastrada no **Passo 4**:
-
-![Escolha uma conta Google para prosseguir para o Custódia](docs/images/09-google-escolher-conta.png)
-
-   - Na tela *"O Google não verificou este app"*, clique em **Continuar**:
-
-![Aviso O Google não verificou este app, clique em Continuar](docs/images/10-google-nao-verificou-app.png)
-
-   - Confirme o acesso ao Google Drive clicando em **Continuar**:
-
-![Confirmar permissões do Custódia no Google Drive](docs/images/11-google-confirmar-permissoes.png)
-
-4. Depois de autorizar, use **Meus Arquivos** para navegar, criar pastas, enviar arquivos e personalizar pastas com o botão direito, e **Pastas de Sincronização** para mapear diretórios do PC ao Google Drive.
+> **Guia completo com capturas de tela de cada etapa:** **[docs/OAUTH_SETUP.md](docs/OAUTH_SETUP.md)**  
+> Enfrentando erro `403: access_denied` ou problemas na bandeja/AppImage? Consulte **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** e **[docs/FAQ.md](docs/FAQ.md)**.
 
 ## Segurança e Privacidade
+
+Consulte a arquitetura completa em **[docs/SECURITY.md](docs/SECURITY.md)**.
 
 - **Isolamento local e permissões restritas (`0700` / `0600`):**
   - `~/.config/custodia/settings.json`: preferências gerais e personalizações visuais de pastas.
