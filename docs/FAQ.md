@@ -80,3 +80,12 @@ Nenhum arquivo, token ou credencial é enviado para servidores da TundraLab. Par
    rm -rf ~/.config/custodia ~/.local/share/custodia ~/.cache/custodia
    ```
    *(Seus arquivos pessoais nas pastas sincronizadas e no Google Drive não são apagados por esse comando.)*
+
+---
+
+## 9. Movi ou renomeei uma pasta e apareceram várias exclusões na fila — perdi meus arquivos?
+
+**Não.** Durante a sincronização, **nada é excluído permanentemente** — todo item removido ou movido de lugar vai exclusivamente para a **Lixeira**.
+
+- Como o motor compara arquivos pelo caminho relativo (`relPath`), mover ou renomear uma pasta com muitos arquivos entre diretórios sincronizados faz o Custódia enviar os caminhos antigos para a **Lixeira** (do Google Drive ou do sistema) e sincronizar os arquivos novamente no novo destino.
+- Exclusões definitivas só acontecem se você abrir a aba **Lixeira** (ou usar o endpoint `DELETE` com `permanent=true`) e confirmar a remoção permanente manualmente.
