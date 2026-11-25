@@ -7,6 +7,7 @@ using TundraDrive.Core.Models;
 using TundraDrive.Core.Sync;
 using TundraDrive.Desktop.Converters;
 using TundraDrive.Desktop.Localization;
+using TundraDrive.Desktop.Services;
 
 namespace TundraDrive.Desktop.ViewModels;
 
@@ -314,23 +315,16 @@ public sealed partial class TransferItemViewModel : ViewModelBase
 
     public bool CanCancel => Status is TransferStatus.Queued or TransferStatus.InProgress;
 
-    private static readonly IBrush BrushProgress = SolidColorBrush.Parse("#A8C7FA");
-    private static readonly IBrush BrushDownload = SolidColorBrush.Parse("#6DD58C");
-    private static readonly IBrush BrushCompleted = SolidColorBrush.Parse("#6DD58C");
-    private static readonly IBrush BrushFailed = SolidColorBrush.Parse("#F28B82");
-    private static readonly IBrush BrushCancelled = SolidColorBrush.Parse("#8E9099");
-    private static readonly IBrush BrushDefault = SolidColorBrush.Parse("#44474F");
-
     public IBrush TransferProgressBrush => Status switch
     {
-        TransferStatus.Failed => BrushFailed,
-        TransferStatus.Cancelled => BrushCancelled,
+        TransferStatus.Failed => ThemeAccentService.ResolveThemeBrush("#F28B82", "#B3261E"),
+        TransferStatus.Cancelled => ThemeAccentService.ResolveThemeBrush("#8E9099", "#74777F"),
         _ => Direction switch
         {
-            TransferDirection.Upload => BrushProgress,
-            TransferDirection.Download => BrushDownload,
-            TransferDirection.Delete => BrushFailed,
-            _ => BrushProgress
+            TransferDirection.Upload => ThemeAccentService.ResolveThemeBrush("#A8C7FA", "#0B57D0"),
+            TransferDirection.Download => ThemeAccentService.ResolveThemeBrush("#6DD58C", "#146C2E"),
+            TransferDirection.Delete => ThemeAccentService.ResolveThemeBrush("#F28B82", "#B3261E"),
+            _ => ThemeAccentService.ResolveThemeBrush("#A8C7FA", "#0B57D0")
         }
     };
 
@@ -338,15 +332,21 @@ public sealed partial class TransferItemViewModel : ViewModelBase
     {
         TransferStatus.InProgress => Direction switch
         {
-            TransferDirection.Download => BrushDownload,
-            TransferDirection.Delete => BrushFailed,
-            _ => BrushProgress
+            TransferDirection.Download => ThemeAccentService.ResolveThemeBrush("#6DD58C", "#146C2E"),
+            TransferDirection.Delete => ThemeAccentService.ResolveThemeBrush("#F28B82", "#B3261E"),
+            _ => ThemeAccentService.ResolveThemeBrush("#A8C7FA", "#0B57D0")
         },
-        TransferStatus.Completed => BrushCompleted,
-        TransferStatus.Failed => BrushFailed,
-        TransferStatus.Cancelled => BrushCancelled,
-        _ => BrushDefault
+        TransferStatus.Completed => ThemeAccentService.ResolveThemeBrush("#6DD58C", "#146C2E"),
+        TransferStatus.Failed => ThemeAccentService.ResolveThemeBrush("#F28B82", "#B3261E"),
+        TransferStatus.Cancelled => ThemeAccentService.ResolveThemeBrush("#8E9099", "#74777F"),
+        _ => ThemeAccentService.ResolveThemeBrush("#44474F", "#C4C6D0")
     };
+
+    internal void RefreshThemeBrushes()
+    {
+        OnPropertyChanged(nameof(TransferProgressBrush));
+        OnPropertyChanged(nameof(AccentBorderBrush));
+    }
 
     [RelayCommand]
     private void Cancel() => _parent.CancelTransfer(Id);
@@ -444,6 +444,15 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
             }
             UpdateCounters();
         };
+
+        ThemeAccentService.ThemeChanged += (_, _) =>
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                foreach (var item in Items)
+                {
+                    item.RefreshThemeBrushes();
+                }
+            });
 
         ReloadSnapshot();
     }

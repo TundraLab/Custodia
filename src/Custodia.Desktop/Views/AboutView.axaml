@@ -44,7 +44,7 @@
                     CornerRadius="16"
                     BorderThickness="0"
                     VerticalAlignment="Center">
-              <Image Source="{StaticResource TundraBrandGlyphDrawing}"
+              <Image Source="{DynamicResource TundraBrandGlyphDrawing}"
                      Width="34"
                      Height="34"
                      Stretch="Uniform" />

@@ -7,6 +7,7 @@ using TundraDrive.Core.Models;
 using TundraDrive.Core.Sync;
 using TundraDrive.Desktop.Converters;
 using TundraDrive.Desktop.Localization;
+using TundraDrive.Desktop.Services;
 
 namespace TundraDrive.Desktop.ViewModels;
 
@@ -168,11 +169,10 @@ public sealed partial class SyncFolderItemViewModel : ViewModelBase
     public Geometry EditIconPreviewGeometry =>
         Geometry.Parse(FolderCustomizationPresets.ResolveIconSvg(EditIconKey));
 
-    private static readonly IBrush BrushChoiceSelected = SolidColorBrush.Parse("#E2E2E9");
-    private static readonly IBrush BrushChoiceDefault = SolidColorBrush.Parse("#44474F");
-
     private void RebuildCustomizationOptions()
     {
+        var choiceSelected = ThemeAccentService.ResolveThemeBrush("#E2E2E9", "#1A1C20");
+        var choiceDefault = ThemeAccentService.ResolveThemeBrush("#44474F", "#C4C6D0");
         var isEn = string.Equals(Loc.CurrentLanguage, "en-US", StringComparison.OrdinalIgnoreCase);
 
         ColorChoices.Clear();
@@ -184,7 +184,7 @@ public sealed partial class SyncFolderItemViewModel : ViewModelBase
                 hex,
                 SolidColorBrush.Parse(hex),
                 isSelected,
-                isSelected ? BrushChoiceSelected : BrushChoiceDefault,
+                isSelected ? choiceSelected : choiceDefault,
                 new RelayCommand(() =>
                 {
                     EditColorHex = hex;
@@ -202,7 +202,7 @@ public sealed partial class SyncFolderItemViewModel : ViewModelBase
                 Geometry.Parse(icon.SvgData),
                 isEn ? icon.NameEn : icon.NamePt,
                 isSelected,
-                isSelected ? BrushChoiceSelected : BrushChoiceDefault,
+                isSelected ? choiceSelected : choiceDefault,
                 new RelayCommand(() =>
                 {
                     EditIconKey = key;
@@ -247,11 +247,20 @@ public sealed partial class SyncFolderItemViewModel : ViewModelBase
 
     public IBrush AccentBorderBrush => State switch
     {
-        FolderSyncState.Syncing => SolidColorBrush.Parse("#A8C7FA"),
-        FolderSyncState.Paused => SolidColorBrush.Parse("#8E9099"),
-        FolderSyncState.Error => SolidColorBrush.Parse("#F28B82"),
-        _ => SolidColorBrush.Parse("#6DD58C")
+        FolderSyncState.Syncing => ThemeAccentService.ResolveThemeBrush("#A8C7FA", "#0B57D0"),
+        FolderSyncState.Paused => ThemeAccentService.ResolveThemeBrush("#8E9099", "#74777F"),
+        FolderSyncState.Error => ThemeAccentService.ResolveThemeBrush("#F28B82", "#B3261E"),
+        _ => ThemeAccentService.ResolveThemeBrush("#6DD58C", "#146C2E")
     };
+
+    public void RefreshThemeBrushes()
+    {
+        OnPropertyChanged(nameof(AccentBorderBrush));
+        if (IsCustomizing)
+        {
+            RebuildCustomizationOptions();
+        }
+    }
 
     [RelayCommand]
     private Task SyncNowAsync() => _parent.SyncSingleFolderAsync(Id);
@@ -333,13 +342,13 @@ public sealed partial class SyncFoldersViewModel : ViewModelBase
     private string _storageAlertMessage = string.Empty;
 
     [ObservableProperty]
-    private IBrush _storageProgressBrush = SolidColorBrush.Parse("#A8C7FA");
+    private IBrush _storageProgressBrush = ThemeAccentService.ResolveThemeBrush("#A8C7FA", "#0B57D0");
 
     [ObservableProperty]
-    private IBrush _storageAlertBorderBrush = SolidColorBrush.Parse("#44474F");
+    private IBrush _storageAlertBorderBrush = ThemeAccentService.ResolveThemeBrush("#44474F", "#C4C6D0");
 
     [ObservableProperty]
-    private IBrush _storageAlertTextBrush = SolidColorBrush.Parse("#F5C26B");
+    private IBrush _storageAlertTextBrush = ThemeAccentService.ResolveThemeBrush("#F5C26B", "#9A5B00");
 
     [ObservableProperty]
     private string _statusMessage = string.Empty;
@@ -428,6 +437,18 @@ public sealed partial class SyncFoldersViewModel : ViewModelBase
             OnPropertyChanged(nameof(SelectedModeToggleLabel));
         };
 
+        ThemeAccentService.ThemeChanged += (_, _) =>
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                ApplyAccount(_lastAccount);
+                foreach (var folder in Folders)
+                {
+                    folder.RefreshThemeBrushes();
+                }
+            });
+        };
+
         ApplyAccount(_syncService.CurrentAccount);
     }
 
@@ -483,18 +504,18 @@ public sealed partial class SyncFoldersViewModel : ViewModelBase
                 ? Loc.Format("StorageWarningFmt", account.Quota.UsagePercentage)
                 : string.Empty;
         StorageProgressBrush = isFull
-            ? SolidColorBrush.Parse("#F28B82")
+            ? ThemeAccentService.ResolveThemeBrush("#F28B82", "#B3261E")
             : HasStorageAlert
-                ? SolidColorBrush.Parse("#F5C26B")
-                : SolidColorBrush.Parse("#A8C7FA");
+                ? ThemeAccentService.ResolveThemeBrush("#F5C26B", "#9A5B00")
+                : ThemeAccentService.ResolveThemeBrush("#A8C7FA", "#0B57D0");
         StorageAlertBorderBrush = isFull
-            ? SolidColorBrush.Parse("#F28B82")
+            ? ThemeAccentService.ResolveThemeBrush("#F28B82", "#B3261E")
             : HasStorageAlert
-                ? SolidColorBrush.Parse("#F5C26B")
-                : SolidColorBrush.Parse("#44474F");
+                ? ThemeAccentService.ResolveThemeBrush("#F5C26B", "#9A5B00")
+                : ThemeAccentService.ResolveThemeBrush("#44474F", "#C4C6D0");
         StorageAlertTextBrush = isFull
-            ? SolidColorBrush.Parse("#FFB4AB")
-            : SolidColorBrush.Parse("#F5C26B");
+            ? ThemeAccentService.ResolveThemeBrush("#FFB4AB", "#BA1A1A")
+            : ThemeAccentService.ResolveThemeBrush("#F5C26B", "#9A5B00");
 
         UpdateSegmentedBarWidths(account);
     }

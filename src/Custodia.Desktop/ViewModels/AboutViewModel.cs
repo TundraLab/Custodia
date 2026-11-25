@@ -14,14 +14,12 @@ using TundraDrive.Core.Models;
 using TundraDrive.Core.Persistence;
 using TundraDrive.Core.Updates;
 using TundraDrive.Desktop.Localization;
+using TundraDrive.Desktop.Services;
 
 namespace TundraDrive.Desktop.ViewModels;
 
 public sealed partial class AboutViewModel : ViewModelBase
 {
-    private static readonly IBrush BrushPrimary = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#E2E2E9"));
-    private static readonly IBrush BrushError = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#FFB4AB"));
-
     private readonly IAppUpdateService? _updateService;
     private readonly IAppSettingsService? _settingsService;
     private readonly ISyncStateRepository? _repository;
@@ -77,7 +75,9 @@ public sealed partial class AboutViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(UpdateStatusBrush))]
     private bool _isUpdateError;
 
-    public IBrush UpdateStatusBrush => IsUpdateError ? BrushError : BrushPrimary;
+    public IBrush UpdateStatusBrush => IsUpdateError
+        ? ThemeAccentService.ResolveThemeBrush("#FFB4AB", "#B3261E")
+        : ThemeAccentService.ResolveThemeBrush("#E2E2E9", "#1A1C20");
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBugMode))]
@@ -186,6 +186,9 @@ public sealed partial class AboutViewModel : ViewModelBase
             OnPropertyChanged(nameof(PreviewDiagnosticsButtonText));
             RefreshLocalizedStatusFromCache();
         };
+
+        ThemeAccentService.ThemeChanged += (_, _) =>
+            Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(UpdateStatusBrush)));
     }
 
     public void RefreshLastCheckSummary()

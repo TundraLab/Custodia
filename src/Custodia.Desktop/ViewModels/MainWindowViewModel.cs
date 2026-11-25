@@ -62,10 +62,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(SidebarSyncAccentBrush))]
     private TransferDirection? _activeSidebarDirection;
 
-    private static readonly IBrush SidebarAccentUpload = SolidColorBrush.Parse("#A8C7FA");
-    private static readonly IBrush SidebarAccentDownload = SolidColorBrush.Parse("#6DD58C");
-    private static readonly IBrush SidebarAccentDelete = SolidColorBrush.Parse("#F28B82");
-
     public bool IsSidebarUploading => IsSyncActive && ActiveSidebarDirection == TransferDirection.Upload;
     public bool IsSidebarDownloading => IsSyncActive && ActiveSidebarDirection == TransferDirection.Download;
     public bool IsSidebarDeleting => IsSyncActive && ActiveSidebarDirection == TransferDirection.Delete;
@@ -74,9 +70,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public IBrush SidebarSyncAccentBrush => ActiveSidebarDirection switch
     {
-        TransferDirection.Download => SidebarAccentDownload,
-        TransferDirection.Delete => SidebarAccentDelete,
-        _ => SidebarAccentUpload
+        TransferDirection.Download => ThemeAccentService.ResolveThemeBrush("#6DD58C", "#146C2E"),
+        TransferDirection.Delete => ThemeAccentService.ResolveThemeBrush("#F28B82", "#B3261E"),
+        _ => ThemeAccentService.ResolveThemeBrush("#A8C7FA", "#0B57D0")
     };
 
     private bool? _lastKnownOnline;
@@ -158,6 +154,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _currentViewModel = SyncFoldersVm;
 
         _syncService.AccountChanged += OnAccountChanged;
+        ThemeAccentService.ThemeChanged += (_, _) =>
+            Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(SidebarSyncAccentBrush)));
         _syncService.SyncFoldersChanged += OnSyncFoldersChanged;
         _syncService.TransferUpdated += OnTransferUpdated;
         _syncService.ActivityLogged += OnActivityLogged;

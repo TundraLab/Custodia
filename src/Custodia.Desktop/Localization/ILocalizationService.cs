@@ -283,6 +283,11 @@ public interface ILocalizationService : INotifyPropertyChanged
     string StoragePerformanceSectionTitle { get; }
     string ApiEndpointsExpanderTitle { get; }
 
+    string UiThemeLabel { get; }
+    string UiThemeHint { get; }
+    string UiThemeDarkOption { get; }
+    string UiThemeLightOption { get; }
+    string UiThemeSystemOption { get; }
     string UiAccentLabel { get; }
     string UiAccentHint { get; }
     string UiAccentBlueOption { get; }

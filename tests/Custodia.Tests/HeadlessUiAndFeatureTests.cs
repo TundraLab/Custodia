@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Microsoft.Extensions.Logging.Abstractions;
 using TundraDrive.Api;
 using TundraDrive.Core.Configuration;
@@ -266,6 +267,59 @@ public sealed class HeadlessUiAndFeatureTests
         vm.SelectedAccentIndex = 5;
         await vm.SaveSettingsCommand.ExecuteAsync(null);
         Assert.Equal(ThemeAccentService.CyanAccentId, settingsService.Current.UiAccent);
+    }
+
+    [AvaloniaFact]
+    public async Task ThemeAccentService_SwitchesBetweenDarkAndLightThemesCleanly()
+    {
+        try
+        {
+            var loc = new LocalizationService();
+            var syncProxy = DispatchProxy.Create<IDriveSyncService, StubDriveSyncProxy>();
+            var settingsService = DispatchProxy.Create<IAppSettingsService, StubSettingsProxy>();
+            var authManager = DispatchProxy.Create<IAuthCredentialManager, StubAuthProxy>();
+            var apiServer = DispatchProxy.Create<IEmbeddedApiServer, StubApiServerProxy>();
+            var autostart = DispatchProxy.Create<IAutostartManager, StubAutostartProxy>();
+            var notifications = new RecordingNotificationService();
+            var driveProxy = DispatchProxy.Create<IGoogleDriveClient, StubDriveClientProxy>();
+            var memoryCleaner = new MemoryCleanerService(settingsService, NullLogger<MemoryCleanerService>.Instance);
+
+            var vm = new SettingsViewModel(settingsService, apiServer, autostart, loc, notifications, authManager, syncProxy, memoryCleaner);
+            Assert.Equal(3, vm.ThemeOptions.Count);
+
+            vm.SelectedThemeIndex = 1; // Light
+            vm.SelectedAccentIndex = 0; // Blue
+            await vm.SaveSettingsCommand.ExecuteAsync(null);
+            Assert.Equal(ThemeAccentService.LightThemeId, settingsService.Current.UiTheme);
+            Assert.True(ThemeAccentService.IsLightTheme);
+            Assert.Equal(ThemeVariant.Light, Application.Current!.RequestedThemeVariant);
+
+            Assert.True(Application.Current.Resources.TryGetValue("M3Surface", out var surfaceObj));
+            Assert.Equal(Color.Parse("#F8F9FC"), ((ISolidColorBrush)surfaceObj!).Color);
+            Assert.True(Application.Current.Resources.TryGetValue("M3OnSurface", out var onSurfaceObj));
+            Assert.Equal(Color.Parse("#1A1C20"), ((ISolidColorBrush)onSurfaceObj!).Color);
+            Assert.True(Application.Current.Resources.TryGetValue("M3Primary", out var lightBlueObj));
+            Assert.Equal(Color.Parse("#0B57D0"), ((ISolidColorBrush)lightBlueObj!).Color);
+
+            ThemeAccentService.ApplyTheme(ThemeAccentService.LightThemeId, ThemeAccentService.EmeraldAccentId);
+            Assert.True(Application.Current.Resources.TryGetValue("M3Primary", out var lightEmeraldObj));
+            Assert.Equal(Color.Parse("#146C2E"), ((ISolidColorBrush)lightEmeraldObj!).Color);
+
+            var lightBrush = (ISolidColorBrush)ThemeAccentService.ResolveThemeBrush("#6DD58C", "#146C2E");
+            Assert.Equal(Color.Parse("#146C2E"), lightBrush.Color);
+
+            ThemeAccentService.ApplyTheme(ThemeAccentService.DarkThemeId, ThemeAccentService.BlueAccentId);
+            Assert.False(ThemeAccentService.IsLightTheme);
+            Assert.Equal(ThemeVariant.Dark, Application.Current.RequestedThemeVariant);
+            Assert.True(Application.Current.Resources.TryGetValue("M3Surface", out var darkSurfaceObj));
+            Assert.Equal(Color.Parse("#111318"), ((ISolidColorBrush)darkSurfaceObj!).Color);
+            Assert.True(Application.Current.Resources.TryGetValue("M3Primary", out var darkBlueObj));
+            Assert.Equal(Color.Parse("#A8C7FA"), ((ISolidColorBrush)darkBlueObj!).Color);
+        }
+        finally
+        {
+            ThemeAccentService.ApplyTheme(ThemeAccentService.DarkThemeId, ThemeAccentService.BlueAccentId);
+        }
     }
 
     [Fact]

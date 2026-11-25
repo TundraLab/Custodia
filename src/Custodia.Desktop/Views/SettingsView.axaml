@@ -117,6 +117,22 @@
             <Border Classes="m3-grouped-row">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                  <TextBlock FontSize="13.5" FontWeight="Medium" Foreground="{DynamicResource M3OnSurface}" Text="{Binding Loc.UiThemeLabel}" TextWrapping="Wrap" />
+                  <TextBlock Classes="m3-meta" Text="{Binding Loc.UiThemeHint}" TextWrapping="Wrap" />
+                </StackPanel>
+                <ComboBox Grid.Column="1"
+                          Width="220"
+                          VerticalAlignment="Center"
+                          ItemsSource="{Binding ThemeOptions}"
+                          SelectedIndex="{Binding SelectedThemeIndex}" />
+              </Grid>
+            </Border>
+
+            <Border Classes="m3-divider" />
+
+            <Border Classes="m3-grouped-row">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                   <TextBlock FontSize="13.5" FontWeight="Medium" Foreground="{DynamicResource M3OnSurface}" Text="{Binding Loc.UiAccentLabel}" TextWrapping="Wrap" />
                   <TextBlock Classes="m3-meta" Text="{Binding Loc.UiAccentHint}" TextWrapping="Wrap" />
                 </StackPanel>
@@ -399,7 +415,7 @@
                         BorderThickness="0"
                         VerticalAlignment="Center">
                   <Image Width="20" Height="20"
-                         Source="{StaticResource TundraShieldVaultDrawing}"
+                         Source="{DynamicResource TundraShieldVaultDrawing}"
                          Stretch="Uniform" />
                 </Border>
 

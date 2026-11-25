@@ -551,6 +551,11 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["NotificationsSectionTitle"] = "Notificações",
         ["StoragePerformanceSectionTitle"] = "Downloads e Memória",
         ["ApiEndpointsExpanderTitle"] = "Endpoints da API disponíveis",
+        ["UiThemeLabel"] = "Tema",
+        ["UiThemeHint"] = "Escolha entre tema escuro, claro ou automático do sistema.",
+        ["UiThemeDarkOption"] = "Escuro",
+        ["UiThemeLightOption"] = "Claro",
+        ["UiThemeSystemOption"] = "Automático (Sistema)",
         ["UiAccentLabel"] = "Cor de destaque",
         ["UiAccentHint"] = "Escolha a cor principal de botões e destaques.",
         ["UiAccentBlueOption"] = "Azul",
@@ -1124,6 +1129,11 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["NotificationsSectionTitle"] = "Notifications",
         ["StoragePerformanceSectionTitle"] = "Downloads & Memory",
         ["ApiEndpointsExpanderTitle"] = "Available API endpoints",
+        ["UiThemeLabel"] = "Theme",
+        ["UiThemeHint"] = "Choose dark, light, or follow your system theme.",
+        ["UiThemeDarkOption"] = "Dark",
+        ["UiThemeLightOption"] = "Light",
+        ["UiThemeSystemOption"] = "Automatic (System)",
         ["UiAccentLabel"] = "Accent color",
         ["UiAccentHint"] = "Choose the main color for buttons and highlights.",
         ["UiAccentBlueOption"] = "Blue",
@@ -1472,6 +1482,11 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string StoragePerformanceSectionTitle => Text("StoragePerformanceSectionTitle");
     public string ApiEndpointsExpanderTitle => Text("ApiEndpointsExpanderTitle");
 
+    public string UiThemeLabel => Text("UiThemeLabel");
+    public string UiThemeHint => Text("UiThemeHint");
+    public string UiThemeDarkOption => Text("UiThemeDarkOption");
+    public string UiThemeLightOption => Text("UiThemeLightOption");
+    public string UiThemeSystemOption => Text("UiThemeSystemOption");
     public string UiAccentLabel => Text("UiAccentLabel");
     public string UiAccentHint => Text("UiAccentHint");
     public string UiAccentBlueOption => Text("UiAccentBlueOption");

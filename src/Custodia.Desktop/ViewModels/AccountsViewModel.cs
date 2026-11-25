@@ -167,6 +167,7 @@ public sealed partial class AccountsViewModel : ViewModelBase
         Loc = localization;
 
         Loc.LanguageChanged += (_, _) => ApplyAccount(_lastAccount);
+        ThemeAccentService.ThemeChanged += (_, _) => Dispatcher.UIThread.Post(() => ApplyAccount(_lastAccount));
         _syncService.AccountsListChanged += (_, _) => Dispatcher.UIThread.Post(() =>
         {
             RefreshCredentialDiagnostics();
@@ -297,13 +298,13 @@ public sealed partial class AccountsViewModel : ViewModelBase
                     ? Loc.Format("StorageWarningFmt", account.Quota.UsagePercentage)
                     : string.Empty;
             StorageProgressBrush = IsStorageFull
-                ? SolidColorBrush.Parse("#F28B82")
+                ? ThemeAccentService.ResolveThemeBrush("#F28B82", "#B3261E")
                 : HasStorageAlert
-                    ? SolidColorBrush.Parse("#F5C26B")
-                    : SolidColorBrush.Parse("#A8C7FA");
+                    ? ThemeAccentService.ResolveThemeBrush("#F5C26B", "#9A5B00")
+                    : ThemeAccentService.ResolveThemeBrush("#A8C7FA", "#0B57D0");
             StorageAlertTextBrush = IsStorageFull
-                ? SolidColorBrush.Parse("#FFB4AB")
-                : SolidColorBrush.Parse("#F5C26B");
+                ? ThemeAccentService.ResolveThemeBrush("#FFB4AB", "#5F1412")
+                : ThemeAccentService.ResolveThemeBrush("#F5C26B", "#4A2800");
         }
         else
         {
@@ -319,7 +320,7 @@ public sealed partial class AccountsViewModel : ViewModelBase
             IsStorageFull = false;
             HasStorageAlert = false;
             StorageAlertMessage = string.Empty;
-            StorageProgressBrush = SolidColorBrush.Parse("#A8C7FA");
+            StorageProgressBrush = ThemeAccentService.ResolveThemeBrush("#A8C7FA", "#0B57D0");
             DriveBarWidth = 0;
             OtherBarWidth = 0;
             TrashBarWidth = 0;

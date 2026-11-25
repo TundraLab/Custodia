@@ -6,20 +6,12 @@ using CommunityToolkit.Mvvm.Input;
 using TundraDrive.Core.Models;
 using TundraDrive.Core.Persistence;
 using TundraDrive.Desktop.Localization;
+using TundraDrive.Desktop.Services;
 
 namespace TundraDrive.Desktop.ViewModels;
 
-public sealed class ActivityLogItemViewModel
+public sealed class ActivityLogItemViewModel : ObservableObject
 {
-    private static readonly IBrush BrushSuccess = SolidColorBrush.Parse("#6DD58C");
-    private static readonly IBrush BrushWarning = SolidColorBrush.Parse("#F5C26B");
-    private static readonly IBrush BrushError = SolidColorBrush.Parse("#F28B82");
-    private static readonly IBrush BrushInfo = SolidColorBrush.Parse("#A8C7FA");
-    private static readonly IBrush BrushSuccessContainer = SolidColorBrush.Parse("#1B3927");
-    private static readonly IBrush BrushWarningContainer = SolidColorBrush.Parse("#3B2E14");
-    private static readonly IBrush BrushErrorContainer = SolidColorBrush.Parse("#4A1C20");
-    private static readonly IBrush BrushInfoContainer = SolidColorBrush.Parse("#374955");
-
     public long Id { get; init; }
     public ActivitySeverity Severity { get; init; }
     public string Action { get; init; } = string.Empty;
@@ -28,14 +20,32 @@ public sealed class ActivityLogItemViewModel
     public bool HasTargetPath { get; init; }
     public string TimestampDisplay { get; init; } = string.Empty;
     public string SeverityLabel { get; init; } = string.Empty;
-    public IBrush AccentBrush { get; init; } = SolidColorBrush.Parse("#44474F");
-    public IBrush SeverityBadgeBackground { get; init; } = BrushInfoContainer;
+    public IBrush AccentBrush => Severity switch
+    {
+        ActivitySeverity.Success => ThemeAccentService.ResolveThemeBrush("#6DD58C", "#146C2E"),
+        ActivitySeverity.Warning => ThemeAccentService.ResolveThemeBrush("#F5C26B", "#9A5B00"),
+        ActivitySeverity.Error => ThemeAccentService.ResolveThemeBrush("#F28B82", "#B3261E"),
+        _ => ThemeAccentService.ResolveThemeBrush("#A8C7FA", "#0B57D0")
+    };
+    public IBrush SeverityBadgeBackground => Severity switch
+    {
+        ActivitySeverity.Success => ThemeAccentService.ResolveThemeBrush("#1B3927", "#D7F5DF"),
+        ActivitySeverity.Warning => ThemeAccentService.ResolveThemeBrush("#3B2E14", "#FFE7BE"),
+        ActivitySeverity.Error => ThemeAccentService.ResolveThemeBrush("#4A1C20", "#FDE2DF"),
+        _ => ThemeAccentService.ResolveThemeBrush("#374955", "#D8E6F8")
+    };
     public string CopyMessageLabel { get; init; } = string.Empty;
     public string CopyTargetLabel { get; init; } = string.Empty;
     public string OpenFolderLabel { get; init; } = string.Empty;
     public IAsyncRelayCommand? CopyMessageCommand { get; init; }
     public IAsyncRelayCommand? CopyTargetCommand { get; init; }
     public IAsyncRelayCommand? OpenTargetFolderCommand { get; init; }
+
+    public void RefreshThemeBrushes()
+    {
+        OnPropertyChanged(nameof(AccentBrush));
+        OnPropertyChanged(nameof(SeverityBadgeBackground));
+    }
 
     public static ActivityLogItemViewModel FromModel(
         SyncActivityLog model,
@@ -60,20 +70,6 @@ public sealed class ActivityLogItemViewModel
                 ActivitySeverity.Warning => loc.Text("SeverityWarning"),
                 ActivitySeverity.Error => loc.Text("SeverityError"),
                 _ => loc.Text("SeverityInfo")
-            },
-            AccentBrush = model.Severity switch
-            {
-                ActivitySeverity.Success => BrushSuccess,
-                ActivitySeverity.Warning => BrushWarning,
-                ActivitySeverity.Error => BrushError,
-                _ => BrushInfo
-            },
-            SeverityBadgeBackground = model.Severity switch
-            {
-                ActivitySeverity.Success => BrushSuccessContainer,
-                ActivitySeverity.Warning => BrushWarningContainer,
-                ActivitySeverity.Error => BrushErrorContainer,
-                _ => BrushInfoContainer
             },
             CopyMessageLabel = loc.Text("CopyMessageMenu"),
             CopyTargetLabel = loc.Text("CopyTargetPathMenu"),
@@ -327,6 +323,17 @@ public sealed partial class ActivityLogsViewModel : ViewModelBase
         {
             RebuildFilterOptions();
             _ = RefreshLogsAsync();
+        };
+
+        ThemeAccentService.ThemeChanged += (_, _) =>
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                foreach (var item in Logs)
+                {
+                    item.RefreshThemeBrushes();
+                }
+            });
         };
     }
 

@@ -70,15 +70,15 @@ public sealed partial class SettingsAccountItemViewModel : ObservableObject
         if (jsonMeta is null)
         {
             JsonBadgeText = loc.Text("CredentialsMissingBadge");
-            JsonBadgeBgBrush = SolidColorBrush.Parse("#4A1C20");
-            JsonBadgeFgBrush = SolidColorBrush.Parse("#FFDAD6");
+            JsonBadgeBgBrush = ThemeAccentService.ResolveThemeBrush("#4A1C20", "#FDE2DF");
+            JsonBadgeFgBrush = ThemeAccentService.ResolveThemeBrush("#FFDAD6", "#5F1412");
             JsonDetailText = loc.Text("AccountJsonMissingDetail");
         }
         else if (jsonMeta.IsPerAccount)
         {
             JsonBadgeText = loc.Text("AccountJsonCustomBadge");
-            JsonBadgeBgBrush = SolidColorBrush.Parse("#374955");
-            JsonBadgeFgBrush = SolidColorBrush.Parse("#D3E4F3");
+            JsonBadgeBgBrush = ThemeAccentService.ResolveThemeBrush("#374955", "#D8E6F8");
+            JsonBadgeFgBrush = ThemeAccentService.ResolveThemeBrush("#D3E4F3", "#0D2948");
             JsonDetailText = string.IsNullOrWhiteSpace(jsonMeta.ProjectId)
                 ? jsonMeta.MaskedClientId
                 : $"{jsonMeta.ProjectId} • {jsonMeta.MaskedClientId}";
@@ -86,8 +86,8 @@ public sealed partial class SettingsAccountItemViewModel : ObservableObject
         else
         {
             JsonBadgeText = loc.Text("AccountJsonGlobalBadge");
-            JsonBadgeBgBrush = SolidColorBrush.Parse("#282A2F");
-            JsonBadgeFgBrush = SolidColorBrush.Parse("#C4C6D0");
+            JsonBadgeBgBrush = ThemeAccentService.ResolveThemeBrush("#282A2F", "#E4E8F0");
+            JsonBadgeFgBrush = ThemeAccentService.ResolveThemeBrush("#C4C6D0", "#44474F");
             JsonDetailText = string.IsNullOrWhiteSpace(jsonMeta.ProjectId)
                 ? jsonMeta.MaskedClientId
                 : $"{jsonMeta.ProjectId} • {jsonMeta.MaskedClientId}";
@@ -174,6 +174,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private int _selectedLanguageIndex;
+
+    [ObservableProperty]
+    private int _selectedThemeIndex;
 
     [ObservableProperty]
     private int _selectedAccentIndex;
@@ -342,16 +345,16 @@ public sealed partial class SettingsViewModel : ViewModelBase
     public bool HasCredentialsFeedback => !string.IsNullOrWhiteSpace(CredentialsFeedbackMessage);
 
     public IBrush CredentialsFeedbackBgBrush => IsCredentialsFeedbackError
-        ? SolidColorBrush.Parse("#4A1C20")
-        : SolidColorBrush.Parse("#1B3927");
+        ? ThemeAccentService.ResolveThemeBrush("#4A1C20", "#FDE2DF")
+        : ThemeAccentService.ResolveThemeBrush("#1B3927", "#D7F5DF");
 
     public IBrush CredentialsFeedbackBorderBrush => IsCredentialsFeedbackError
-        ? SolidColorBrush.Parse("#F28B82")
-        : SolidColorBrush.Parse("#6DD58C");
+        ? ThemeAccentService.ResolveThemeBrush("#F28B82", "#BA1A1A")
+        : ThemeAccentService.ResolveThemeBrush("#6DD58C", "#146C2E");
 
     public IBrush CredentialsFeedbackTextBrush => IsCredentialsFeedbackError
-        ? SolidColorBrush.Parse("#FFDAD6")
-        : SolidColorBrush.Parse("#B8F3C8");
+        ? ThemeAccentService.ResolveThemeBrush("#FFDAD6", "#5F1412")
+        : ThemeAccentService.ResolveThemeBrush("#B8F3C8", "#073B17");
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanRevokeCredentialsJson))]
@@ -397,6 +400,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         "English (US)"
     ];
 
+    public ObservableCollection<string> ThemeOptions { get; } = [];
     public ObservableCollection<string> AccentOptions { get; } = [];
     public ObservableCollection<string> ConflictPolicies { get; } = [];
     public ObservableCollection<string> UpdateFrequencies { get; } = [];
@@ -439,6 +443,13 @@ public sealed partial class SettingsViewModel : ViewModelBase
         _syncService.AccountsListChanged += (_, _) => Dispatcher.UIThread.Post(RefreshCredentialsAndAccounts);
         _syncService.AccountChanged += (_, _) => Dispatcher.UIThread.Post(RefreshCredentialsAndAccounts);
         _memoryCleaner.CleanupCompleted += (_, _) => Dispatcher.UIThread.Post(RefreshMemoryCleanerStatus);
+        ThemeAccentService.ThemeChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(CredentialsFeedbackBgBrush));
+            OnPropertyChanged(nameof(CredentialsFeedbackBorderBrush));
+            OnPropertyChanged(nameof(CredentialsFeedbackTextBrush));
+            Dispatcher.UIThread.Post(RefreshCredentialsAndAccounts);
+        };
 
         LoadFromCurrent();
     }
@@ -449,9 +460,18 @@ public sealed partial class SettingsViewModel : ViewModelBase
         Loc.SetLanguage(code);
     }
 
+    partial void OnSelectedThemeIndexChanged(int value)
+    {
+        ThemeAccentService.ApplyTheme(
+            ThemeAccentService.GetThemeIdByIndex(value),
+            ThemeAccentService.GetAccentIdByIndex(SelectedAccentIndex));
+    }
+
     partial void OnSelectedAccentIndexChanged(int value)
     {
-        ThemeAccentService.ApplyAccent(ThemeAccentService.GetAccentIdByIndex(value));
+        ThemeAccentService.ApplyTheme(
+            ThemeAccentService.GetThemeIdByIndex(SelectedThemeIndex),
+            ThemeAccentService.GetAccentIdByIndex(value));
     }
 
     partial void OnUiScalePercentChanged(int value)
@@ -500,8 +520,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
     {
         var current = _settingsService.Current;
         SelectedLanguageIndex = string.Equals(current.Language, "en-US", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        SelectedThemeIndex = ThemeAccentService.GetThemeIndex(current.UiTheme);
         SelectedAccentIndex = ThemeAccentService.GetAccentIndex(current.UiAccent);
-        ThemeAccentService.ApplyAccent(current.UiAccent);
+        ThemeAccentService.ApplyTheme(current.UiTheme, current.UiAccent);
         UiScalePercent = Math.Clamp(current.UiScalePercent, 100, 300);
         StartOnBoot = current.StartOnBoot || _autostartManager.IsEnabled();
         NotificationsEnabled = current.NotificationsEnabled;
@@ -960,6 +981,13 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     private void RebuildLocalizedLists()
     {
+        var savedThemeIndex = Math.Max(0, SelectedThemeIndex);
+        ThemeOptions.Clear();
+        ThemeOptions.Add(Loc.Text("UiThemeDarkOption"));
+        ThemeOptions.Add(Loc.Text("UiThemeLightOption"));
+        ThemeOptions.Add(Loc.Text("UiThemeSystemOption"));
+        SelectedThemeIndex = Math.Clamp(savedThemeIndex, 0, ThemeOptions.Count - 1);
+
         var savedAccentIndex = Math.Max(0, SelectedAccentIndex);
         AccentOptions.Clear();
         AccentOptions.Add(Loc.Text("UiAccentBlueOption"));
@@ -1042,6 +1070,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
             var updated = new AppSettings
             {
                 Language = languageCode,
+                UiTheme = ThemeAccentService.GetThemeIdByIndex(SelectedThemeIndex),
                 UiAccent = ThemeAccentService.GetAccentIdByIndex(SelectedAccentIndex),
                 ActiveAccountId = _settingsService.Current.ActiveAccountId,
                 UiScalePercent = Math.Clamp(UiScalePercent, 100, 300),
