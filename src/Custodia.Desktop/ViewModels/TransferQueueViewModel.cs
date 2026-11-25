@@ -413,6 +413,7 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
 
     public Func<string, Task>? CopyTextCallback { get; set; }
     public Func<string, Task>? OpenLocalFolderCallback { get; set; }
+    public event EventHandler? ScrollToTopRequested;
 
     partial void OnSelectedItemChanged(TransferItemViewModel? oldValue, TransferItemViewModel? newValue)
     {
@@ -466,15 +467,19 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
 
     public void UpsertTransfer(TransferQueueItem item)
     {
+        var becameCompleted = false;
         var existing = Items.FirstOrDefault(x => x.Id == item.Id);
         if (existing is not null)
         {
+            var wasCompleted = existing.Status == TransferStatus.Completed;
             existing.UpdateFrom(item);
+            becameCompleted = !wasCompleted && item.Status == TransferStatus.Completed;
         }
         else
         {
             existing = new TransferItemViewModel(item, this, Loc);
             Items.Insert(0, existing);
+            becameCompleted = item.Status == TransferStatus.Completed;
             while (Items.Count > MaxUiRetainedItems)
             {
                 var removable = Items.LastOrDefault(x => !x.CanCancel);
@@ -497,6 +502,17 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
                 }
                 Items.Remove(removable);
             }
+        }
+
+        if (becameCompleted)
+        {
+            var idx = Items.IndexOf(existing);
+            if (idx > 0)
+            {
+                Items.Move(idx, 0);
+            }
+
+            ScrollToTopRequested?.Invoke(this, EventArgs.Empty);
         }
 
         if (item.Status == TransferStatus.Failed)

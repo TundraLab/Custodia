@@ -108,6 +108,22 @@ public sealed class HeadlessUiAndFeatureTests
         Assert.True(scrollViewer.ScrollBarMaximum.Y > 0);
         settingsWindow.Close();
 
+        // Verify AboutView ScrollViewer includes the full inner StackPanel height (with bottom margin) in Extent
+        var aboutWindow = new Window
+        {
+            Width = 1040,
+            Height = 700,
+            Content = views.OfType<AboutView>().Single()
+        };
+        aboutWindow.Show();
+        var aboutScroll = (ScrollViewer)((AboutView)aboutWindow.Content).Content!;
+        var aboutPanel = (StackPanel)aboutScroll.Content!;
+        aboutScroll.Offset = new Vector(0, aboutScroll.ScrollBarMaximum.Y);
+        aboutWindow.UpdateLayout();
+        Assert.True(aboutScroll.Extent.Height >= aboutPanel.Bounds.Height + aboutPanel.Margin.Top + aboutPanel.Margin.Bottom - 1);
+        Assert.True(aboutScroll.ScrollBarMaximum.Y > 0);
+        aboutWindow.Close();
+
         ThemeAccentService.ApplyAccent(ThemeAccentService.EmeraldAccentId);
         Assert.True(Application.Current!.Resources.TryGetValue("M3Primary", out var emeraldObj));
         Assert.Equal(Color.Parse("#6DD58C"), ((ISolidColorBrush)emeraldObj!).Color);
@@ -156,6 +172,68 @@ public sealed class HeadlessUiAndFeatureTests
         await hub.ClearSearchCommand.ExecuteAsync(null);
         Assert.False(hub.HasSearchText);
         Assert.Equal(string.Empty, hub.SearchText);
+    }
+
+    [AvaloniaFact]
+    public void TransferQueueView_PromotesCompletedTaskAndScrollsToTop()
+    {
+        var loc = new LocalizationService();
+        var syncProxy = DispatchProxy.Create<IDriveSyncService, StubDriveSyncProxy>();
+        var queueVm = new TransferQueueViewModel(syncProxy, loc);
+
+        var scrollRequestedCount = 0;
+        queueVm.ScrollToTopRequested += (_, _) => scrollRequestedCount++;
+
+        var queueView = new TransferQueueView { DataContext = queueVm };
+        var window = new Window
+        {
+            Width = 900,
+            Height = 420,
+            Content = queueView
+        };
+        window.Show();
+
+        for (var i = 0; i < 6; i++)
+        {
+            queueVm.UpsertTransfer(new TransferQueueItem
+            {
+                Id = $"t-{i}",
+                FileName = $"file-{i}.txt",
+                RelativePath = $"docs/file-{i}.txt",
+                Direction = TransferDirection.Upload,
+                Status = TransferStatus.InProgress,
+                TotalBytes = 100,
+                TransferredBytes = 50
+            });
+        }
+
+        window.UpdateLayout();
+        var scrollViewer = queueView.FindControl<ScrollViewer>("QueueScrollViewer")!;
+        Assert.True(scrollViewer.ScrollBarMaximum.Y > 0);
+        scrollViewer.Offset = new Vector(0, scrollViewer.ScrollBarMaximum.Y);
+        window.UpdateLayout();
+        Assert.True(scrollViewer.Offset.Y > 0);
+
+        // Complete an older item below the fold
+        queueVm.UpsertTransfer(new TransferQueueItem
+        {
+            Id = "t-0",
+            FileName = "file-0.txt",
+            RelativePath = "docs/file-0.txt",
+            Direction = TransferDirection.Upload,
+            Status = TransferStatus.Completed,
+            TotalBytes = 100,
+            TransferredBytes = 100,
+            CompletedAtUtc = DateTimeOffset.UtcNow
+        });
+
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        window.UpdateLayout();
+
+        Assert.Equal("t-0", queueVm.Items[0].Id);
+        Assert.Equal(1, scrollRequestedCount);
+        Assert.Equal(0, scrollViewer.Offset.Y);
+        window.Close();
     }
 
     [Fact]

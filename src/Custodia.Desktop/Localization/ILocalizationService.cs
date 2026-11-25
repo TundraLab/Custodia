@@ -59,6 +59,7 @@ public interface ILocalizationService : INotifyPropertyChanged
     string SafeDeletionNotice { get; }
 
     string SyncFoldersTitle { get; }
+    string SyncFoldersSubtitle { get; }
     string FileHubTitle { get; }
     string SearchFilesWatermark { get; }
     string UploadFileButton { get; }
@@ -139,6 +140,7 @@ public interface ILocalizationService : INotifyPropertyChanged
     string TransferCopyDriveIdButton { get; }
 
     string ActivityLogsTitle { get; }
+    string ActivityLogsSubtitle { get; }
     string ClearLogsButton { get; }
     string FilterLogsWatermark { get; }
     string ApplyFilterButton { get; }

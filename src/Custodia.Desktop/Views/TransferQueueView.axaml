@@ -8,21 +8,21 @@
   <Grid RowDefinitions="Auto,*" Margin="24" RowSpacing="16">
     <!-- Compact header -->
     <Grid Grid.Row="0" MinHeight="48" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-      <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+      <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
         <TextBlock Classes="m3-page-title" Text="{Binding Loc.TransferQueueTitle}" />
         <TextBlock Classes="m3-subtitle" Text="{Binding SummaryText}" TextWrapping="Wrap" />
       </StackPanel>
 
-      <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
         <Button Classes="m3-danger-outlined"
-                Margin="0,0,8,0"
                 Content="{Binding Loc.CancelButton}"
-                IsEnabled="{Binding CanCancelSelected}"
+                IsVisible="{Binding CanCancelSelected}"
                 Command="{Binding CancelSelectedCommand}" />
         <Button Classes="m3-tonal"
                 Content="{Binding Loc.ClearCompletedButton}"
+                IsEnabled="{Binding !HasNoItems}"
                 Command="{Binding ClearCompletedCommand}" />
-      </WrapPanel>
+      </StackPanel>
     </Grid>
 
     <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="12">
@@ -56,13 +56,29 @@
         </Grid>
       </Border>
 
-      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+      <ScrollViewer x:Name="QueueScrollViewer"
+                    Grid.Row="1"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
         <StackPanel Spacing="12">
-          <Border Classes="m3-card" IsVisible="{Binding HasNoItems}">
-            <TextBlock Classes="m3-subtitle" Text="{Binding Loc.NoTransfersHint}" TextWrapping="Wrap" />
+          <Border Classes="m3-card"
+                  Padding="24,28"
+                  IsVisible="{Binding HasNoItems}">
+            <StackPanel Spacing="10" HorizontalAlignment="Center">
+              <PathIcon Width="28" Height="28"
+                        Foreground="{DynamicResource M3OnSurfaceMuted}"
+                        Opacity="0.65"
+                        HorizontalAlignment="Center"
+                        Data="{StaticResource TundraCloudSyncGeometry}" />
+              <TextBlock Classes="m3-subtitle"
+                         TextAlignment="Center"
+                         Text="{Binding Loc.NoTransfersHint}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
           </Border>
 
           <ListBox Classes="m3-cards"
+                   ScrollViewer.VerticalScrollBarVisibility="Disabled"
                    ItemsSource="{Binding Items}"
                    SelectedItem="{Binding SelectedItem}">
             <ListBox.ItemTemplate>
@@ -80,88 +96,104 @@
                     </ContextMenu>
                   </Border.ContextMenu>
                   <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="8" ColumnSpacing="12">
-                    <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="10">
-                      <!-- Animated icons for active transfers -->
-                      <PathIcon Classes="m3-upload-pulse"
-                                Width="15" Height="15"
-                                Foreground="{DynamicResource M3Primary}"
-                                IsVisible="{Binding IsUploadingActive}"
-                                Data="{StaticResource TundraUploadGeometry}">
-                        <PathIcon.RenderTransform>
-                          <TranslateTransform />
-                        </PathIcon.RenderTransform>
-                      </PathIcon>
-                      <PathIcon Classes="m3-download-pulse"
-                                Width="15" Height="15"
-                                Foreground="{DynamicResource M3Success}"
-                                IsVisible="{Binding IsDownloadingActive}"
-                                Data="{StaticResource TundraDownloadGeometry}">
-                        <PathIcon.RenderTransform>
-                          <TranslateTransform />
-                        </PathIcon.RenderTransform>
-                      </PathIcon>
-                      <PathIcon Classes="m3-delete-pulse"
-                                Width="15" Height="15"
-                                Foreground="{DynamicResource M3ErrorAccent}"
-                                IsVisible="{Binding IsDeletingActive}"
-                                Data="{StaticResource TundraTrashGeometry}">
-                        <PathIcon.RenderTransform>
-                          <TranslateTransform />
-                        </PathIcon.RenderTransform>
-                      </PathIcon>
-                      <PathIcon Classes="m3-error-pulse"
-                                Width="15" Height="15"
-                                Foreground="{DynamicResource M3ErrorAccent}"
-                                IsVisible="{Binding IsFailedActive}"
-                                Data="{StaticResource TundraAlertGeometry}">
-                        <PathIcon.RenderTransform>
-                          <TranslateTransform />
-                        </PathIcon.RenderTransform>
-                      </PathIcon>
+                    <Grid Grid.Row="0" Grid.Column="0" ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                      <Border Grid.Column="0"
+                              Width="38"
+                              Height="38"
+                              CornerRadius="12"
+                              Background="{DynamicResource M3SurfaceContainerHigh}"
+                              VerticalAlignment="Center">
+                        <Grid>
+                          <!-- Animated icons for active transfers -->
+                          <PathIcon Classes="m3-upload-pulse"
+                                    Width="16" Height="16"
+                                    Foreground="{DynamicResource M3Primary}"
+                                    IsVisible="{Binding IsUploadingActive}"
+                                    Data="{StaticResource TundraUploadGeometry}">
+                            <PathIcon.RenderTransform>
+                              <TranslateTransform />
+                            </PathIcon.RenderTransform>
+                          </PathIcon>
+                          <PathIcon Classes="m3-download-pulse"
+                                    Width="16" Height="16"
+                                    Foreground="{DynamicResource M3Success}"
+                                    IsVisible="{Binding IsDownloadingActive}"
+                                    Data="{StaticResource TundraDownloadGeometry}">
+                            <PathIcon.RenderTransform>
+                              <TranslateTransform />
+                            </PathIcon.RenderTransform>
+                          </PathIcon>
+                          <PathIcon Classes="m3-delete-pulse"
+                                    Width="16" Height="16"
+                                    Foreground="{DynamicResource M3ErrorAccent}"
+                                    IsVisible="{Binding IsDeletingActive}"
+                                    Data="{StaticResource TundraTrashGeometry}">
+                            <PathIcon.RenderTransform>
+                              <TranslateTransform />
+                            </PathIcon.RenderTransform>
+                          </PathIcon>
+                          <PathIcon Classes="m3-error-pulse"
+                                    Width="16" Height="16"
+                                    Foreground="{DynamicResource M3ErrorAccent}"
+                                    IsVisible="{Binding IsFailedActive}"
+                                    Data="{StaticResource TundraAlertGeometry}">
+                            <PathIcon.RenderTransform>
+                              <TranslateTransform />
+                            </PathIcon.RenderTransform>
+                          </PathIcon>
 
-                      <!-- Static icons for finished transfers -->
-                      <PathIcon Width="15" Height="15"
-                                Foreground="{DynamicResource M3Primary}"
-                                Opacity="0.82"
-                                IsVisible="{Binding IsUploadingStatic}"
-                                Data="{StaticResource TundraUploadGeometry}" />
-                      <PathIcon Width="15" Height="15"
-                                Foreground="{DynamicResource M3Success}"
-                                Opacity="0.82"
-                                IsVisible="{Binding IsDownloadingStatic}"
-                                Data="{StaticResource TundraDownloadGeometry}" />
-                      <PathIcon Width="15" Height="15"
-                                Foreground="{DynamicResource M3ErrorAccent}"
-                                Opacity="0.82"
-                                IsVisible="{Binding IsDeletingStatic}"
-                                Data="{StaticResource TundraTrashGeometry}" />
-                      <PathIcon Width="15" Height="15"
-                                Foreground="{DynamicResource M3ErrorAccent}"
-                                Opacity="0.92"
-                                IsVisible="{Binding IsFailedStatic}"
-                                Data="{StaticResource TundraAlertGeometry}" />
+                          <!-- Static icons for finished transfers -->
+                          <PathIcon Width="16" Height="16"
+                                    Foreground="{DynamicResource M3Primary}"
+                                    Opacity="0.85"
+                                    IsVisible="{Binding IsUploadingStatic}"
+                                    Data="{StaticResource TundraUploadGeometry}" />
+                          <PathIcon Width="16" Height="16"
+                                    Foreground="{DynamicResource M3Success}"
+                                    Opacity="0.85"
+                                    IsVisible="{Binding IsDownloadingStatic}"
+                                    Data="{StaticResource TundraDownloadGeometry}" />
+                          <PathIcon Width="16" Height="16"
+                                    Foreground="{DynamicResource M3ErrorAccent}"
+                                    Opacity="0.85"
+                                    IsVisible="{Binding IsDeletingStatic}"
+                                    Data="{StaticResource TundraTrashGeometry}" />
+                          <PathIcon Width="16" Height="16"
+                                    Foreground="{DynamicResource M3ErrorAccent}"
+                                    Opacity="0.92"
+                                    IsVisible="{Binding IsFailedStatic}"
+                                    Data="{StaticResource TundraAlertGeometry}" />
+                        </Grid>
+                      </Border>
 
-                      <StackPanel Spacing="2">
+                      <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                         <TextBlock FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurface}" Text="{Binding FileName}" TextWrapping="Wrap" />
                         <TextBlock Classes="m3-meta" Text="{Binding SubtitleText}" TextWrapping="Wrap" />
                       </StackPanel>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                      <TextBlock Classes="m3-meta" FontSize="11.5" Text="{Binding TimestampDisplay}" VerticalAlignment="Center" />
-                      <TextBlock Classes="m3-meta" FontSize="11.5" Text="•" VerticalAlignment="Center" />
-                      <Border Width="8" Height="8" CornerRadius="4" Background="{Binding AccentBorderBrush}" VerticalAlignment="Center" />
-                      <TextBlock Classes="m3-meta" Text="{Binding DirectionDisplay}" />
-                    </StackPanel>
+                    <Border Grid.Row="0" Grid.Column="1"
+                            Background="{DynamicResource M3SurfaceContainerHigh}"
+                            CornerRadius="12"
+                            Padding="10,4"
+                            VerticalAlignment="Center">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border Width="7" Height="7" CornerRadius="4" Background="{Binding AccentBorderBrush}" VerticalAlignment="Center" />
+                        <TextBlock FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource M3OnSurfaceVariant}" Text="{Binding DirectionDisplay}" VerticalAlignment="Center" />
+                        <TextBlock Classes="m3-meta" FontSize="11" Text="•" VerticalAlignment="Center" />
+                        <TextBlock Classes="m3-meta" FontSize="11" Text="{Binding TimestampDisplay}" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </Border>
 
                     <ProgressBar Grid.Row="1" Grid.ColumnSpan="2"
+                                 Height="5"
                                  Minimum="0" Maximum="100"
                                  Foreground="{Binding TransferProgressBrush}"
                                  Value="{Binding ProgressPercentage}" />
 
                     <Grid Grid.Row="2" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
                       <TextBlock Grid.Column="0" Classes="m3-meta" Text="{Binding StatusDisplay}" TextWrapping="Wrap" />
-                      <TextBlock Grid.Column="1" Classes="m3-meta" Text="{Binding ProgressDisplay}" />
+                      <TextBlock Grid.Column="1" Classes="m3-meta" FontWeight="Medium" Text="{Binding ProgressDisplay}" />
                     </Grid>
 
                     <!-- Inline error notice for failed transfers -->
@@ -213,17 +245,17 @@
                         </Grid>
 
                         <WrapPanel Orientation="Horizontal">
-                          <Button Classes="m3-outlined m3-compact"
+                          <Button Classes="m3-tonal m3-compact"
                                   Margin="0,0,8,4"
                                   Content="{Binding Loc.OpenLocalFolderMenu}"
                                   IsVisible="{Binding HasLocalPath}"
                                   Command="{Binding OpenFolderCommand}" />
-                          <Button Classes="m3-outlined m3-compact"
+                          <Button Classes="m3-text m3-compact"
                                   Margin="0,0,8,4"
                                   Content="{Binding Loc.TransferCopyPathButton}"
                                   IsVisible="{Binding HasLocalPath}"
                                   Command="{Binding CopyPathCommand}" />
-                          <Button Classes="m3-outlined m3-compact"
+                          <Button Classes="m3-text m3-compact"
                                   Margin="0,0,8,4"
                                   Content="{Binding Loc.TransferCopyDriveIdButton}"
                                   IsVisible="{Binding HasRemoteFileId}"

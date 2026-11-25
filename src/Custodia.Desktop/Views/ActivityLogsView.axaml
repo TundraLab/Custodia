@@ -8,29 +8,34 @@
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="24" RowSpacing="14">
     <!-- Compact header -->
     <Grid Grid.Row="0" MinHeight="48" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-      <TextBlock Grid.Column="0" Classes="m3-page-title" VerticalAlignment="Center" Text="{Binding Loc.ActivityLogsTitle}" />
+      <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+        <TextBlock Classes="m3-page-title" Text="{Binding Loc.ActivityLogsTitle}" />
+        <TextBlock Classes="m3-subtitle" Text="{Binding Loc.ActivityLogsSubtitle}" />
+      </StackPanel>
 
-      <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-        <Button Classes="m3-outlined"
-                Margin="0,0,8,4"
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <Button Classes="m3-tonal"
                 Content="{Binding Loc.OpenLocalFolderMenu}"
-                IsEnabled="{Binding CanOpenSelectedTarget}"
+                IsVisible="{Binding CanOpenSelectedTarget}"
                 Command="{Binding OpenSelectedTargetFolderCommand}" />
-        <Button Classes="m3-outlined"
-                Margin="0,0,8,4"
-                Content="{Binding Loc.RefreshButton}"
-                Command="{Binding RefreshLogsCommand}" />
+        <Button Classes="m3-tonal"
+                Width="36"
+                Height="36"
+                Padding="0"
+                ToolTip.Tip="{Binding Loc.RefreshButton}"
+                Command="{Binding RefreshLogsCommand}">
+          <PathIcon Width="15" Height="15" Data="{StaticResource TundraRefreshGeometry}" />
+        </Button>
         <Button Classes="m3-danger-outlined"
-                Margin="0,0,0,4"
                 IsEnabled="{Binding !HasNoLogs}"
                 Content="{Binding Loc.ClearLogsButton}"
                 Command="{Binding RequestClearLogsCommand}" />
-      </WrapPanel>
+      </StackPanel>
     </Grid>
 
     <!-- Filter bar and inline clear confirmation -->
     <StackPanel Grid.Row="1" Spacing="10">
-      <Grid ColumnDefinitions="190,*,Auto" ColumnSpacing="10">
+      <Grid ColumnDefinitions="190,*" ColumnSpacing="10">
         <ComboBox Grid.Column="0"
                   HorizontalAlignment="Stretch"
                   ItemsSource="{Binding SeverityFilterOptions}"
@@ -39,12 +44,26 @@
         <TextBox Grid.Column="1"
                  Watermark="{Binding Loc.FilterLogsWatermark}"
                  Text="{Binding SearchText}"
-                 KeyDown="OnSearchBoxKeyDown" />
-
-        <Button Grid.Column="2"
-                Classes="m3-tonal"
-                Content="{Binding Loc.ApplyFilterButton}"
-                Command="{Binding RefreshLogsCommand}" />
+                 KeyDown="OnSearchBoxKeyDown">
+          <TextBox.InnerLeftContent>
+            <PathIcon Width="14" Height="14"
+                      Margin="10,0,0,0"
+                      Foreground="{DynamicResource M3OnSurfaceMuted}"
+                      Data="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+          </TextBox.InnerLeftContent>
+          <TextBox.InnerRightContent>
+            <Button Classes="m3-text m3-icon"
+                    MinWidth="26"
+                    MinHeight="26"
+                    Padding="4"
+                    Margin="0,0,4,0"
+                    FontSize="11.5"
+                    Content="✕"
+                    IsVisible="{Binding HasSearchText}"
+                    ToolTip.Tip="{Binding Loc.ClearSearchTooltip}"
+                    Command="{Binding ClearSearchCommand}" />
+          </TextBox.InnerRightContent>
+        </TextBox>
       </Grid>
 
       <Border Classes="m3-banner-error"
@@ -89,49 +108,60 @@
                               Command="{Binding OpenTargetFolderCommand}" />
                   </ContextMenu>
                 </Border.ContextMenu>
-                <StackPanel Spacing="4">
-                  <WrapPanel Orientation="Horizontal">
-                    <TextBlock Classes="m3-meta"
-                               FontSize="11.5"
-                               Margin="0,0,10,0"
-                               VerticalAlignment="Center"
-                               Text="{Binding TimestampDisplay}" />
-                    <TextBlock FontSize="11.5"
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                  <Border Grid.Column="0"
+                          Background="{Binding SeverityBadgeBackground}"
+                          CornerRadius="10"
+                          Padding="9,3"
+                          VerticalAlignment="Top"
+                          Margin="0,2,0,0">
+                    <TextBlock FontSize="10.5"
                                FontWeight="SemiBold"
-                               Margin="0,0,10,0"
-                               VerticalAlignment="Center"
                                Foreground="{Binding AccentBrush}"
                                Text="{Binding SeverityLabel}" />
+                  </Border>
+
+                  <StackPanel Grid.Column="1" Spacing="3">
+                    <TextBlock FontSize="13"
+                               FontWeight="Medium"
+                               Foreground="{DynamicResource M3OnSurface}"
+                               TextWrapping="Wrap"
+                               Text="{Binding Message}" />
+
                     <TextBlock Classes="m3-meta"
                                FontSize="11.5"
-                               FontFamily="monospace"
-                               VerticalAlignment="Center"
-                               Text="{Binding Action}" />
-                  </WrapPanel>
+                               Foreground="{DynamicResource M3OnSurfaceMuted}"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding HasTargetPath}"
+                               Text="{Binding TargetPath}" />
+                  </StackPanel>
 
-                  <TextBlock FontSize="13"
-                             Foreground="{DynamicResource M3OnSurface}"
-                             TextWrapping="Wrap"
-                             Text="{Binding Message}" />
-
-                  <TextBlock Classes="m3-meta"
-                             FontFamily="monospace"
+                  <TextBlock Grid.Column="2"
+                             Classes="m3-meta"
                              FontSize="11.5"
-                             Foreground="{DynamicResource M3OnSurfaceVariant}"
-                             TextWrapping="Wrap"
-                             IsVisible="{Binding HasTargetPath}"
-                             Text="{Binding TargetPath}" />
-                </StackPanel>
+                             VerticalAlignment="Top"
+                             Margin="0,2,0,0"
+                             Text="{Binding TimestampDisplay}" />
+                </Grid>
               </Border>
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
 
-        <TextBlock VerticalAlignment="Center"
-                   HorizontalAlignment="Center"
-                   Classes="m3-subtitle"
-                   Text="{Binding Loc.NoLogsHint}"
-                   IsVisible="{Binding HasNoLogs}" />
+        <StackPanel VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Spacing="10"
+                    IsHitTestVisible="False"
+                    IsVisible="{Binding HasNoLogs}">
+          <PathIcon Width="28" Height="28"
+                    Foreground="{DynamicResource M3OnSurfaceMuted}"
+                    Opacity="0.65"
+                    HorizontalAlignment="Center"
+                    Data="{StaticResource TundraTelemetryGeometry}" />
+          <TextBlock Classes="m3-subtitle"
+                     TextAlignment="Center"
+                     Text="{Binding Loc.NoLogsHint}" />
+        </StackPanel>
       </Grid>
     </Border>
 

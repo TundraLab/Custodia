@@ -2,6 +2,16 @@
 
 Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [3.0.3] - 2026-11-25
+
+### Alterado
+- **Abas redesenhadas no estilo Material Design 3:** as telas **Pastas de Sincronização**, **Fila de Transferências**, **Logs de Atividade** e **Sobre** ganharam visual mais limpo, cartões com menos bordas, botões contextuais que aparecem apenas quando necessários e navegação mais direta.
+- **Textos e subtítulos mais claros:** descrições e legendas em todo o aplicativo foram simplificadas para uma linguagem natural e fácil de entender no dia a dia.
+- **Fila de Transferências inteligente:** sempre que uma tarefa é concluída, ela sobe para o topo da lista e a tela rola automaticamente para o início para destacar o item finalizado.
+
+### Corrigido
+- **Rolagem completa na aba Sobre em tela cheia:** ajuste no espaçamento inferior para garantir que os botões finais de suporte e envio fiquem sempre totalmente visíveis ao rolar até o fim.
+
 ## [3.0.2] - 2026-11-24
 
 ### Alterado

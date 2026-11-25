@@ -9,28 +9,41 @@
   <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="24" RowSpacing="14">
     <!-- Compact header -->
     <Grid Grid.Row="0" MinHeight="48" ColumnDefinitions="*,Auto" ColumnSpacing="16">
-      <TextBlock Grid.Column="0" Classes="m3-page-title" VerticalAlignment="Center" Text="{Binding Loc.SyncFoldersTitle}" />
+      <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+        <TextBlock Classes="m3-page-title" Text="{Binding Loc.SyncFoldersTitle}" />
+        <TextBlock Classes="m3-subtitle" Text="{Binding Loc.SyncFoldersSubtitle}" TextTrimming="CharacterEllipsis" />
+      </StackPanel>
 
-      <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-        <Button Classes="m3-outlined"
-                Margin="0,0,8,4"
-                Content="{Binding Loc.MappedFoldersButton}"
-                Command="{Binding ShowMappedFoldersCommand}"
-                IsVisible="{Binding IsRemoteBrowserActive}" />
-        <Button Classes="m3-outlined"
-                Margin="0,0,8,4"
-                Content="{Binding Loc.RemoteBrowserButton}"
-                Command="{Binding OpenRemoteBrowserCommand}"
-                IsVisible="{Binding !IsRemoteBrowserActive}" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <Border Classes="m3-segmented-track">
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <Button Classes="m3-segmented"
+                    Classes.m3-seg-active="{Binding !IsRemoteBrowserActive}"
+                    Content="{Binding Loc.MappedFoldersButton}"
+                    Command="{Binding ShowMappedFoldersCommand}" />
+            <Button Classes="m3-segmented"
+                    Classes.m3-seg-active="{Binding IsRemoteBrowserActive}"
+                    Content="{Binding Loc.RemoteBrowserButton}"
+                    Command="{Binding OpenRemoteBrowserCommand}" />
+          </StackPanel>
+        </Border>
+
         <Button Classes="m3-tonal"
-                Margin="0,0,8,4"
-                Content="{Binding Loc.MapLocalFolderButton}"
-                Command="{Binding AddLocalFolderToRootCommand}" />
+                Command="{Binding AddLocalFolderToRootCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Width="14" Height="14" Data="{StaticResource TundraFolderGeometry}" />
+            <TextBlock Text="{Binding Loc.MapLocalFolderButton}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+
         <Button Classes="m3-filled"
-                Margin="0,0,0,4"
-                Content="{Binding Loc.SyncAllButton}"
-                Command="{Binding SyncAllCommand}" />
-      </WrapPanel>
+                Command="{Binding SyncAllCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Width="14" Height="14" Data="{StaticResource TundraCloudSyncGeometry}" />
+            <TextBlock Text="{Binding Loc.SyncAllButton}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
     </Grid>
 
     <!-- Storage quota summary card -->
@@ -70,7 +83,9 @@
           </StackPanel>
 
           <Button Grid.Column="1"
-                  Classes="m3-outlined m3-compact"
+                  Classes="m3-text m3-compact"
+                  Foreground="{DynamicResource M3Primary}"
+                  FontWeight="SemiBold"
                   VerticalAlignment="Center"
                   IsVisible="{Binding IsAccountConnected}"
                   Content="{Binding Loc.BuyMoreShortButton}"
@@ -102,47 +117,44 @@
 
     <!-- Status message banner -->
     <Border Grid.Row="2"
-            Classes="m3-card"
+            Classes="m3-banner-info"
             Padding="14,10"
             IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-      <TextBlock Classes="m3-subtitle"
-                 FontSize="12.5"
+      <TextBlock FontSize="12.5"
+                 Foreground="{DynamicResource M3OnSecondaryContainer}"
                  TextWrapping="Wrap"
                  Text="{Binding StatusMessage}" />
     </Border>
 
     <!-- Mapped folders list -->
     <Grid Grid.Row="3" RowDefinitions="Auto,*" RowSpacing="12" IsVisible="{Binding !IsRemoteBrowserActive}">
-      <!-- Contextual action bar for selected folder -->
-      <Border Grid.Row="0" Classes="m3-card" Padding="12,8" IsVisible="{Binding !HasNoFolders}">
+      <!-- Contextual action bar shown when a folder is selected -->
+      <Border Grid.Row="0"
+              Classes="m3-card-elevated"
+              Padding="12,8"
+              IsVisible="{Binding HasSelectedFolder}">
         <WrapPanel Orientation="Horizontal">
           <Button Classes="m3-filled m3-compact"
                   Margin="0,0,6,0"
-                  IsEnabled="{Binding HasSelectedFolder}"
                   Content="{Binding Loc.SyncNowButton}"
                   Command="{Binding SyncSelectedFolderCommand}" />
-          <Button Classes="m3-outlined m3-compact"
+          <Button Classes="m3-tonal m3-compact"
                   Margin="0,0,6,0"
-                  IsEnabled="{Binding HasSelectedFolder}"
                   Content="{Binding SelectedPauseLabel}"
                   Command="{Binding TogglePauseSelectedFolderCommand}" />
-          <Button Classes="m3-outlined m3-compact"
+          <Button Classes="m3-tonal m3-compact"
                   Margin="0,0,6,0"
-                  IsEnabled="{Binding HasSelectedFolder}"
                   Content="{Binding SelectedModeToggleLabel}"
                   Command="{Binding ToggleModeSelectedFolderCommand}" />
-          <Button Classes="m3-outlined m3-compact"
+          <Button Classes="m3-text m3-compact"
                   Margin="0,0,6,0"
-                  IsEnabled="{Binding HasSelectedFolder}"
                   Content="{Binding Loc.OpenLocalFolderMenu}"
                   Command="{Binding OpenSelectedFolderCommand}" />
-          <Button Classes="m3-outlined m3-compact"
+          <Button Classes="m3-text m3-compact"
                   Margin="0,0,6,0"
-                  IsEnabled="{Binding HasSelectedFolder}"
                   Content="{Binding Loc.CustomizeFolderButton}"
                   Command="{Binding CustomizeSelectedFolderCommand}" />
           <Button Classes="m3-danger-outlined m3-compact"
-                  IsEnabled="{Binding HasSelectedFolder}"
                   Content="{Binding Loc.RemoveButton}"
                   Command="{Binding RequestRemoveSelectedFolderCommand}" />
         </WrapPanel>
@@ -173,41 +185,59 @@
         </Border>
 
         <Grid Grid.Row="1">
-          <Border Classes="m3-card" VerticalAlignment="Top" IsVisible="{Binding HasNoFolders}">
-            <TextBlock Classes="m3-subtitle" TextWrapping="Wrap" Text="{Binding Loc.EmptyFoldersHint}" />
+          <Border Classes="m3-card"
+                  Padding="24,28"
+                  VerticalAlignment="Top"
+                  IsVisible="{Binding HasNoFolders}">
+            <StackPanel Spacing="10" HorizontalAlignment="Center">
+              <PathIcon Width="28" Height="28"
+                        Foreground="{DynamicResource M3OnSurfaceMuted}"
+                        Opacity="0.65"
+                        HorizontalAlignment="Center"
+                        Data="{StaticResource TundraFolderGeometry}" />
+              <TextBlock Classes="m3-subtitle"
+                         TextAlignment="Center"
+                         TextWrapping="Wrap"
+                         Text="{Binding Loc.EmptyFoldersHint}" />
+            </StackPanel>
           </Border>
 
-        <ListBox Classes="m3-cards"
-                 IsVisible="{Binding !HasNoFolders}"
-                 ItemsSource="{Binding Folders}"
-                 SelectedItem="{Binding SelectedFolder}"
-                 DoubleTapped="OnFolderDoubleTapped">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="vm:SyncFolderItemViewModel">
-              <Border Padding="16,14" Background="Transparent">
-                <Border.ContextMenu>
-                  <ContextMenu>
-                    <MenuItem Header="{Binding Loc.SyncNowButton}" Command="{Binding SyncNowCommand}" />
-                    <MenuItem Header="{Binding PauseButtonLabel}" Command="{Binding TogglePauseCommand}" />
-                    <MenuItem Header="{Binding ModeToggleButtonLabel}" Command="{Binding ToggleModeCommand}" />
-                    <MenuItem Header="{Binding Loc.OpenLocalFolderMenu}" Command="{Binding OpenLocalFolderCommand}" />
-                    <MenuItem Header="{Binding Loc.CustomizeFolderButton}" Command="{Binding ToggleCustomizeCommand}" />
-                    <Separator />
-                    <MenuItem Header="{Binding Loc.RemoveButton}" Command="{Binding RemoveCommand}" />
-                  </ContextMenu>
-                </Border.ContextMenu>
-                <StackPanel Spacing="12">
-                  <!-- Visual sync rule block: local PC <-> Google Drive -->
-                  <Border Classes="m3-card-inset" Padding="14,12">
-                    <Grid ColumnDefinitions="*,Auto,*,Auto" ColumnSpacing="14">
+          <ListBox Classes="m3-cards"
+                   IsVisible="{Binding !HasNoFolders}"
+                   ItemsSource="{Binding Folders}"
+                   SelectedItem="{Binding SelectedFolder}"
+                   DoubleTapped="OnFolderDoubleTapped">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:SyncFolderItemViewModel">
+                <Border Padding="16,14" Background="Transparent">
+                  <Border.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="{Binding Loc.SyncNowButton}" Command="{Binding SyncNowCommand}" />
+                      <MenuItem Header="{Binding PauseButtonLabel}" Command="{Binding TogglePauseCommand}" />
+                      <MenuItem Header="{Binding ModeToggleButtonLabel}" Command="{Binding ToggleModeCommand}" />
+                      <MenuItem Header="{Binding Loc.OpenLocalFolderMenu}" Command="{Binding OpenLocalFolderCommand}" />
+                      <MenuItem Header="{Binding Loc.CustomizeFolderButton}" Command="{Binding ToggleCustomizeCommand}" />
+                      <Separator />
+                      <MenuItem Header="{Binding Loc.RemoveButton}" Command="{Binding RemoveCommand}" />
+                    </ContextMenu>
+                  </Border.ContextMenu>
+                  <StackPanel Spacing="12">
+                    <!-- Visual sync rule row: local computer <-> Google Drive -->
+                    <Grid ColumnDefinitions="Auto,*,Auto,*,Auto" ColumnSpacing="14">
+                      <Border Grid.Column="0"
+                              Width="40"
+                              Height="40"
+                              CornerRadius="12"
+                              Background="{DynamicResource M3SurfaceContainerHigh}"
+                              VerticalAlignment="Center">
+                        <PathIcon Width="20" Height="20"
+                                  Foreground="{Binding CustomColorBrush}"
+                                  Data="{Binding CustomIconGeometry}" />
+                      </Border>
+
                       <!-- Local origin -->
-                      <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                          <PathIcon Width="15" Height="15"
-                                    Foreground="{Binding CustomColorBrush}"
-                                    Data="{Binding CustomIconGeometry}" />
-                          <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource M3Primary}" Text="{Binding Loc.SyncOriginLocalLabel}" />
-                        </StackPanel>
+                      <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource M3Primary}" Text="{Binding Loc.SyncOriginLocalLabel}" />
                         <TextBlock FontSize="13.5"
                                    FontWeight="SemiBold"
                                    Foreground="{Binding CustomColorBrush}"
@@ -215,45 +245,44 @@
                                    Text="{Binding DisplayTitle}"
                                    TextWrapping="Wrap" />
                         <TextBlock FontSize="13"
-                                   FontWeight="SemiBold"
-                                   FontFamily="monospace"
+                                   FontWeight="Medium"
                                    Foreground="{DynamicResource M3OnSurface}"
                                    Text="{Binding LocalPath}"
                                    TextWrapping="Wrap" />
                       </StackPanel>
 
-                      <!-- Clean directional connector -->
-                      <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="3" MinWidth="112">
-                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                          <Border Width="18" Height="1" Background="{DynamicResource M3Primary}" IsVisible="{Binding IsTwoWayMode}" VerticalAlignment="Center" Opacity="0.6" />
-                          <Border Width="18" Height="1" Background="{DynamicResource M3Warning}" IsVisible="{Binding !IsTwoWayMode}" VerticalAlignment="Center" Opacity="0.6" />
-                          <PathIcon Width="15" Height="15"
+                      <!-- Direction pill -->
+                      <Border Grid.Column="2"
+                              Background="{DynamicResource M3SurfaceContainerHigh}"
+                              CornerRadius="14"
+                              Padding="10,6"
+                              VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <PathIcon Width="14" Height="14"
                                     Foreground="{DynamicResource M3Primary}"
                                     IsVisible="{Binding IsTwoWayMode}"
                                     Data="{StaticResource TundraNodesGeometry}" />
-                          <PathIcon Width="15" Height="15"
+                          <PathIcon Width="14" Height="14"
                                     Foreground="{DynamicResource M3Warning}"
                                     IsVisible="{Binding !IsTwoWayMode}"
                                     Data="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" />
-                          <Border Width="18" Height="1" Background="{DynamicResource M3Primary}" IsVisible="{Binding IsTwoWayMode}" VerticalAlignment="Center" Opacity="0.6" />
-                          <Border Width="18" Height="1" Background="{DynamicResource M3Warning}" IsVisible="{Binding !IsTwoWayMode}" VerticalAlignment="Center" Opacity="0.6" />
+                          <TextBlock FontSize="11.5"
+                                     FontWeight="SemiBold"
+                                     Foreground="{DynamicResource M3Primary}"
+                                     IsVisible="{Binding IsTwoWayMode}"
+                                     Text="{Binding DirectionBadgeText}"
+                                     VerticalAlignment="Center" />
+                          <TextBlock FontSize="11.5"
+                                     FontWeight="SemiBold"
+                                     Foreground="{DynamicResource M3Warning}"
+                                     IsVisible="{Binding !IsTwoWayMode}"
+                                     Text="{Binding DirectionBadgeText}"
+                                     VerticalAlignment="Center" />
                         </StackPanel>
-                        <TextBlock HorizontalAlignment="Center"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource M3Primary}"
-                                   IsVisible="{Binding IsTwoWayMode}"
-                                   Text="{Binding DirectionBadgeText}" />
-                        <TextBlock HorizontalAlignment="Center"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource M3Warning}"
-                                   IsVisible="{Binding !IsTwoWayMode}"
-                                   Text="{Binding DirectionBadgeText}" />
-                      </StackPanel>
+                      </Border>
 
                       <!-- Remote destination -->
-                      <StackPanel Grid.Column="2" Spacing="3" VerticalAlignment="Center">
+                      <StackPanel Grid.Column="3" Spacing="2" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                           <PathIcon Width="13" Height="13"
                                     Foreground="{DynamicResource M3Success}"
@@ -261,134 +290,133 @@
                           <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource M3Success}" Text="{Binding Loc.SyncDestinationCloudLabel}" />
                         </StackPanel>
                         <TextBlock FontSize="13"
-                                   FontWeight="SemiBold"
+                                   FontWeight="Medium"
                                    Foreground="{DynamicResource M3OnSurface}"
                                    Text="{Binding RemoteFolderName}"
                                    TextWrapping="Wrap" />
                       </StackPanel>
 
-                      <Border Grid.Column="3"
+                      <Border Grid.Column="4"
                               Width="9" Height="9"
                               CornerRadius="5"
                               VerticalAlignment="Center"
                               Background="{Binding AccentBorderBrush}" />
                     </Grid>
-                  </Border>
 
-                  <!-- Direction explanation and last sync metadata -->
-                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <TextBlock Grid.Column="0" Classes="m3-subtitle" FontSize="12" Text="{Binding DirectionExplanation}" TextWrapping="Wrap" />
-                    <TextBlock Grid.Column="1" Classes="m3-meta" FontSize="11.5" VerticalAlignment="Center" Text="{Binding LastSyncedDisplay}" />
-                  </Grid>
+                    <!-- Direction explanation and last sync metadata -->
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                      <TextBlock Grid.Column="0" Classes="m3-subtitle" FontSize="12" Text="{Binding DirectionExplanation}" TextWrapping="Wrap" />
+                      <TextBlock Grid.Column="1" Classes="m3-meta" FontSize="11.5" VerticalAlignment="Center" Text="{Binding LastSyncedDisplay}" />
+                    </Grid>
 
-                  <StackPanel Spacing="8">
-                    <Border Classes="m3-divider-full" />
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                      <PathIcon Classes="m3-spinning"
-                                Width="13" Height="13"
-                                Foreground="{DynamicResource M3Primary}"
-                                IsVisible="{Binding IsSyncing}"
-                                Data="{StaticResource TundraRefreshGeometry}">
-                        <PathIcon.RenderTransform>
-                          <RotateTransform />
-                        </PathIcon.RenderTransform>
-                      </PathIcon>
-                      <TextBlock Classes="m3-meta" Text="{Binding StateDisplay}" TextWrapping="Wrap" />
-                    </StackPanel>
-                    <ProgressBar Height="3"
-                                 IsIndeterminate="True"
-                                 IsVisible="{Binding IsSyncing}" />
-                  </StackPanel>
-
-                  <!-- Inline folder customization panel -->
-                  <Border Classes="m3-card-inset"
-                          Padding="14,12"
-                          IsVisible="{Binding IsCustomizing}">
-                    <StackPanel Spacing="10">
-                      <StackPanel Spacing="6">
-                        <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceVariant}" Text="{Binding Loc.CustomizeAliasLabel}" />
-                        <TextBox Watermark="{Binding Loc.CustomizeAliasWatermark}" Text="{Binding EditAlias}" />
+                    <StackPanel Spacing="8">
+                      <Border Classes="m3-divider-full" />
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Classes="m3-spinning"
+                                  Width="13" Height="13"
+                                  Foreground="{DynamicResource M3Primary}"
+                                  IsVisible="{Binding IsSyncing}"
+                                  Data="{StaticResource TundraRefreshGeometry}">
+                          <PathIcon.RenderTransform>
+                            <RotateTransform />
+                          </PathIcon.RenderTransform>
+                        </PathIcon>
+                        <TextBlock Classes="m3-meta" Text="{Binding StateDisplay}" TextWrapping="Wrap" />
                       </StackPanel>
+                      <ProgressBar Height="3"
+                                   IsIndeterminate="True"
+                                   IsVisible="{Binding IsSyncing}" />
+                    </StackPanel>
 
-                      <StackPanel Spacing="6">
-                        <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceVariant}" Text="{Binding Loc.CustomizeColorLabel}" />
-                        <ItemsControl ItemsSource="{Binding ColorChoices}">
-                          <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                              <WrapPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                          </ItemsControl.ItemsPanel>
-                          <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:FolderColorChoice">
-                              <Button Classes="m3-text"
-                                      MinHeight="0"
-                                      Padding="3"
-                                      Margin="0,0,6,4"
-                                      Command="{Binding SelectCommand}">
-                                <Border Width="22"
-                                        Height="22"
-                                        CornerRadius="11"
-                                        Background="{Binding Brush}"
+                    <!-- Inline folder customization panel -->
+                    <Border Classes="m3-card-inset"
+                            Padding="14,12"
+                            IsVisible="{Binding IsCustomizing}">
+                      <StackPanel Spacing="10">
+                        <StackPanel Spacing="6">
+                          <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceVariant}" Text="{Binding Loc.CustomizeAliasLabel}" />
+                          <TextBox Watermark="{Binding Loc.CustomizeAliasWatermark}" Text="{Binding EditAlias}" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="6">
+                          <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceVariant}" Text="{Binding Loc.CustomizeColorLabel}" />
+                          <ItemsControl ItemsSource="{Binding ColorChoices}">
+                            <ItemsControl.ItemsPanel>
+                              <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                              </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:FolderColorChoice">
+                                <Button Classes="m3-text"
+                                        MinHeight="0"
+                                        Padding="3"
+                                        Margin="0,0,6,4"
+                                        Command="{Binding SelectCommand}">
+                                  <Border Width="22"
+                                          Height="22"
+                                          CornerRadius="11"
+                                          Background="{Binding Brush}"
+                                          BorderBrush="{Binding SelectionBorderBrush}"
+                                          BorderThickness="2" />
+                                </Button>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+
+                        <StackPanel Spacing="6">
+                          <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceVariant}" Text="{Binding Loc.CustomizeIconLabel}" />
+                          <ItemsControl ItemsSource="{Binding IconChoices}">
+                            <ItemsControl.ItemsPanel>
+                              <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                              </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:FolderIconChoice">
+                                <Button Padding="10,5"
+                                        Margin="0,0,6,4"
+                                        Background="{DynamicResource M3SurfaceContainer}"
                                         BorderBrush="{Binding SelectionBorderBrush}"
-                                        BorderThickness="2" />
-                              </Button>
-                            </DataTemplate>
-                          </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                      </StackPanel>
+                                        BorderThickness="1"
+                                        CornerRadius="12"
+                                        Command="{Binding SelectCommand}">
+                                  <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Width="13" Height="13"
+                                              Foreground="{DynamicResource M3OnSurface}"
+                                              Data="{Binding Geometry}" />
+                                    <TextBlock FontSize="11.5"
+                                               Foreground="{DynamicResource M3OnSurface}"
+                                               VerticalAlignment="Center"
+                                               Text="{Binding Label}" />
+                                  </StackPanel>
+                                </Button>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
 
-                      <StackPanel Spacing="6">
-                        <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceVariant}" Text="{Binding Loc.CustomizeIconLabel}" />
-                        <ItemsControl ItemsSource="{Binding IconChoices}">
-                          <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                              <WrapPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                          </ItemsControl.ItemsPanel>
-                          <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:FolderIconChoice">
-                              <Button Padding="10,5"
-                                      Margin="0,0,6,4"
-                                      Background="{DynamicResource M3SurfaceContainer}"
-                                      BorderBrush="{Binding SelectionBorderBrush}"
-                                      BorderThickness="1"
-                                      CornerRadius="12"
-                                      Command="{Binding SelectCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                  <PathIcon Width="13" Height="13"
-                                            Foreground="{DynamicResource M3OnSurface}"
-                                            Data="{Binding Geometry}" />
-                                  <TextBlock FontSize="11.5"
-                                             Foreground="{DynamicResource M3OnSurface}"
-                                             VerticalAlignment="Center"
-                                             Text="{Binding Label}" />
-                                </StackPanel>
-                              </Button>
-                            </DataTemplate>
-                          </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <WrapPanel Orientation="Horizontal">
+                          <Button Classes="m3-filled m3-compact"
+                                  Margin="0,0,8,0"
+                                  Content="{Binding Loc.SaveCustomizationButton}"
+                                  Command="{Binding SaveCustomizationCommand}" />
+                          <Button Classes="m3-tonal m3-compact"
+                                  Margin="0,0,8,0"
+                                  Content="{Binding Loc.ResetCustomizationButton}"
+                                  Command="{Binding ResetCustomizationCommand}" />
+                          <Button Classes="m3-outlined m3-compact"
+                                  Content="{Binding Loc.CancelButton}"
+                                  Command="{Binding ToggleCustomizeCommand}" />
+                        </WrapPanel>
                       </StackPanel>
-
-                      <WrapPanel Orientation="Horizontal">
-                        <Button Classes="m3-filled m3-compact"
-                                Margin="0,0,8,0"
-                                Content="{Binding Loc.SaveCustomizationButton}"
-                                Command="{Binding SaveCustomizationCommand}" />
-                        <Button Classes="m3-tonal m3-compact"
-                                Margin="0,0,8,0"
-                                Content="{Binding Loc.ResetCustomizationButton}"
-                                Command="{Binding ResetCustomizationCommand}" />
-                        <Button Classes="m3-outlined m3-compact"
-                                Content="{Binding Loc.CancelButton}"
-                                Command="{Binding ToggleCustomizeCommand}" />
-                      </WrapPanel>
-                    </StackPanel>
-                  </Border>
-                </StackPanel>
-              </Border>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+                    </Border>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
         </Grid>
       </Grid>
     </Grid>
