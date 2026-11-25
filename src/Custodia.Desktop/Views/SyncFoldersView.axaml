@@ -296,11 +296,70 @@
                                    TextWrapping="Wrap" />
                       </StackPanel>
 
-                      <Border Grid.Column="4"
-                              Width="9" Height="9"
-                              CornerRadius="5"
-                              VerticalAlignment="Center"
-                              Background="{Binding AccentBorderBrush}" />
+                      <!-- Animated folder sync status beacon -->
+                      <Grid Grid.Column="4"
+                            Width="32" Height="32"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="{Binding StateDisplay}">
+                        <Border Classes="m3-beacon-halo"
+                                Width="28" Height="28"
+                                CornerRadius="14"
+                                BorderThickness="2"
+                                BorderBrush="{DynamicResource M3Success}"
+                                IsVisible="{Binding IsActiveMonitoring}" />
+                        <Border Width="28" Height="28"
+                                CornerRadius="14"
+                                Background="{DynamicResource M3SuccessContainer}"
+                                IsVisible="{Binding IsActiveMonitoring}">
+                          <PathIcon Classes="m3-beacon-core"
+                                    Width="14" Height="14"
+                                    Foreground="{DynamicResource M3Success}"
+                                    Data="{StaticResource TundraCloudSyncGeometry}" />
+                        </Border>
+
+                        <Border Classes="m3-beacon-halo"
+                                Width="28" Height="28"
+                                CornerRadius="14"
+                                BorderThickness="2"
+                                BorderBrush="{DynamicResource M3Primary}"
+                                IsVisible="{Binding IsSyncing}" />
+                        <Border Width="28" Height="28"
+                                CornerRadius="14"
+                                Background="{DynamicResource M3PrimaryContainer}"
+                                IsVisible="{Binding IsSyncing}">
+                          <PathIcon Classes="m3-spinning"
+                                    Width="14" Height="14"
+                                    Foreground="{DynamicResource M3Primary}"
+                                    Data="{StaticResource TundraRefreshGeometry}">
+                            <PathIcon.RenderTransform>
+                              <RotateTransform />
+                            </PathIcon.RenderTransform>
+                          </PathIcon>
+                        </Border>
+
+                        <Border Width="28" Height="28"
+                                CornerRadius="14"
+                                Background="{DynamicResource M3SurfaceContainerHighest}"
+                                IsVisible="{Binding IsPaused}">
+                          <PathIcon Width="12" Height="12"
+                                    Foreground="{DynamicResource M3OnSurfaceMuted}"
+                                    Data="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                        </Border>
+
+                        <Border Width="28" Height="28"
+                                CornerRadius="14"
+                                Background="{DynamicResource M3ErrorContainer}"
+                                IsVisible="{Binding IsErrorState}">
+                          <PathIcon Classes="m3-error-pulse"
+                                    Width="14" Height="14"
+                                    Foreground="{DynamicResource M3ErrorAccent}"
+                                    Data="{StaticResource TundraAlertGeometry}">
+                            <PathIcon.RenderTransform>
+                              <TranslateTransform />
+                            </PathIcon.RenderTransform>
+                          </PathIcon>
+                        </Border>
+                      </Grid>
                     </Grid>
 
                     <!-- Direction explanation and last sync metadata -->

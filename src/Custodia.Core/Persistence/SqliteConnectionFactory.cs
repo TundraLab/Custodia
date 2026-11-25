@@ -37,7 +37,7 @@ public sealed class SqliteConnectionFactory
         await connection.OpenAsync(cancellationToken);
 
         await using var pragmaCmd = connection.CreateCommand();
-        pragmaCmd.CommandText = "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;";
+        pragmaCmd.CommandText = "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;";
         await pragmaCmd.ExecuteNonQueryAsync(cancellationToken);
 
         PosixPermissionHelper.EnsureFileMode0600(_databasePath);

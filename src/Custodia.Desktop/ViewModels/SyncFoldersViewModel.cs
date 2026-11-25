@@ -130,6 +130,8 @@ public sealed partial class SyncFolderItemViewModel : ViewModelBase
         }
         RefreshLocalizedProperties();
         OnPropertyChanged(nameof(IsSyncing));
+        OnPropertyChanged(nameof(IsErrorState));
+        OnPropertyChanged(nameof(IsActiveMonitoring));
         OnPropertyChanged(nameof(IsTwoWayMode));
         OnPropertyChanged(nameof(AccentBorderBrush));
     }
@@ -211,7 +213,9 @@ public sealed partial class SyncFolderItemViewModel : ViewModelBase
         }
     }
 
-    public bool IsSyncing => State == FolderSyncState.Syncing;
+    public bool IsSyncing => !IsPaused && State == FolderSyncState.Syncing;
+    public bool IsErrorState => !IsPaused && State == FolderSyncState.Error;
+    public bool IsActiveMonitoring => !IsPaused && State == FolderSyncState.Idle;
     public bool IsTwoWayMode => Mode == SyncMode.TwoWay;
 
     public string DirectionBadgeText => IsTwoWayMode

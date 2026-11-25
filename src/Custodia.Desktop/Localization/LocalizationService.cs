@@ -133,6 +133,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["FileHubOpenDrive"] = "Ver no Drive",
         ["FileHubUploadingFmt"] = "Enviando {0} para o Google Drive...",
         ["FileHubUploadedFmt"] = "Arquivo {0} enviado com sucesso.",
+        ["FilesUploadedBatchFmt"] = "{0} arquivo(s) enviado(s).",
         ["FileHubErrorFmt"] = "Erro ao carregar arquivos: {0}",
 
         ["SyncFoldersTitle"] = "Pastas de Sincronização",
@@ -388,7 +389,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["NodeTypeGoogleDoc"] = "Documento Google",
         ["NodeTypeFile"] = "Arquivo",
 
-        ["TransferDirectionUpload"] = "Envio (Upload)",
+        ["TransferDirectionUpload"] = "Envio",
         ["TransferDirectionDownload"] = "Download",
         ["TransferDirectionDelete"] = "Exclusão",
         ["TransferQueued"] = "Na fila",
@@ -711,6 +712,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["FileHubOpenDrive"] = "Open in Drive",
         ["FileHubUploadingFmt"] = "Uploading {0} to Google Drive...",
         ["FileHubUploadedFmt"] = "File {0} uploaded successfully.",
+        ["FilesUploadedBatchFmt"] = "{0} file(s) uploaded.",
         ["FileHubErrorFmt"] = "Error loading files: {0}",
 
         ["SyncFoldersTitle"] = "Sync Folders",

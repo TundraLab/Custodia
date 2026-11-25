@@ -63,7 +63,7 @@ public sealed partial class FileHubItemViewModel : ObservableObject, IDisposable
     public string? CustomColorHex { get; init; }
     public string? CustomIconKey { get; init; }
     public string ActionLabel { get; init; } = string.Empty;
-    public bool CanDownload => !IsFolder && !string.IsNullOrWhiteSpace(RemoteFileId);
+    public bool CanDownload => !IsInTrash && !string.IsNullOrWhiteSpace(RemoteFileId);
     public bool CanPreview => !IsFolder;
     public bool CanMoveToTrash => !IsInTrash && !string.IsNullOrWhiteSpace(RemoteFileId);
     public bool CanCopyDriveLink => !IsInTrash && !string.IsNullOrWhiteSpace(RemoteFileId);
@@ -718,47 +718,118 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        if (targets.Count == 1)
-        {
-            var single = targets[0];
-            await DownloadFileAsync(single.RemoteFileId, single.Name, single.SizeBytes, single.IsGoogleWorkspaceDoc, single.MimeType);
-            return;
-        }
-
         if (!_driveClient.IsConnected)
         {
             StatusSummary = Loc.Text("ConnectBeforeSync");
             return;
         }
 
-        TransferErrorBannerText = string.Empty;
-        var downloadedCount = 0;
-        for (var i = 0; i < targets.Count; i++)
+        var filesToDownload = await ExpandRemoteDownloadTargetsAsync(targets);
+        if (filesToDownload.Count == 0)
         {
-            var item = targets[i];
-            StatusSummary = $"({i + 1}/{targets.Count}) {Loc.Format("DownloadingFileFmt", item.Name)}";
+            return;
+        }
+
+        if (filesToDownload.Count == 1)
+        {
+            var single = filesToDownload[0];
+            await DownloadFileAsync(single.RemoteFileId, single.Name, single.SizeBytes, single.IsGoogleWorkspaceDoc, single.MimeType);
+            return;
+        }
+
+        TransferErrorBannerText = string.Empty;
+        var total = filesToDownload.Count;
+        var completed = 0;
+        var downloadedCount = 0;
+        using var gate = new SemaphoreSlim(3, 3);
+
+        var tasks = filesToDownload.Select(async item =>
+        {
+            await gate.WaitAsync();
             try
             {
+                var current = Interlocked.Increment(ref completed);
+                Dispatcher.UIThread.Post(() =>
+                    StatusSummary = $"({current}/{total}) {Loc.Format("DownloadingFileFmt", item.Name)}");
+
                 await _syncService.DownloadRemoteFileAsync(
                     item.RemoteFileId,
                     item.Name,
                     item.SizeBytes,
                     item.IsGoogleWorkspaceDoc,
                     item.MimeType);
-                downloadedCount++;
+                Interlocked.Increment(ref downloadedCount);
             }
             catch (Exception ex)
             {
                 var err = Loc.Format("DownloadErrorBannerFmt", item.Name, ex.Message);
-                TransferErrorBannerText = err;
-                StatusSummary = err;
+                Dispatcher.UIThread.Post(() =>
+                {
+                    TransferErrorBannerText = err;
+                    StatusSummary = err;
+                });
             }
-        }
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        await Task.WhenAll(tasks);
 
         if (downloadedCount > 0)
         {
             StatusSummary = Loc.Format("FilesDownloadedBatchFmt", downloadedCount);
         }
+    }
+
+    private async Task<List<FileHubItemViewModel>> ExpandRemoteDownloadTargetsAsync(IEnumerable<FileHubItemViewModel> targets)
+    {
+        var results = new List<FileHubItemViewModel>();
+        var seenFileIds = new HashSet<string>(StringComparer.Ordinal);
+        var visitedFolderIds = new HashSet<string>(StringComparer.Ordinal);
+
+        async Task AppendFolderChildrenAsync(string folderId)
+        {
+            if (!visitedFolderIds.Add(folderId))
+            {
+                return;
+            }
+
+            var children = await _driveClient.ListChildrenAsync(folderId);
+            foreach (var child in children)
+            {
+                if (child.IsFolder)
+                {
+                    await AppendFolderChildrenAsync(child.Id);
+                }
+                else if (seenFileIds.Add(child.Id))
+                {
+                    results.Add(new FileHubItemViewModel
+                    {
+                        Name = child.Name,
+                        RemoteFileId = child.Id,
+                        SizeBytes = child.SizeBytes,
+                        IsGoogleWorkspaceDoc = child.IsGoogleWorkspaceDoc,
+                        MimeType = child.MimeType
+                    });
+                }
+            }
+        }
+
+        foreach (var item in targets)
+        {
+            if (item.IsFolder)
+            {
+                await AppendFolderChildrenAsync(item.RemoteFileId);
+            }
+            else if (seenFileIds.Add(item.RemoteFileId))
+            {
+                results.Add(item);
+            }
+        }
+
+        return results;
     }
 
     [RelayCommand]
@@ -2294,36 +2365,58 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         }
 
         TransferErrorBannerText = string.Empty;
-        var targetFolder = SelectedSourceFilterIndex == 0 ? CurrentFolderId : "root";
+        var rootTargetFolder = SelectedSourceFilterIndex == 0 ? CurrentFolderId : "root";
+        var jobs = await CollectUploadJobsAsync(localPaths, rootTargetFolder);
+        if (jobs.Count == 0)
+        {
+            return;
+        }
+
+        var total = jobs.Count;
+        var completed = 0;
         var uploadedCount = 0;
+        using var gate = new SemaphoreSlim(3, 3);
 
         IsLoading = true;
         try
         {
-            foreach (var path in localPaths)
+            var tasks = jobs.Select(async job =>
             {
-                if (!File.Exists(path))
-                {
-                    continue;
-                }
-
-                var fileName = Path.GetFileName(path);
-                StatusSummary = Loc.Format("FileHubUploadingFmt", fileName);
+                await gate.WaitAsync();
+                var fileName = Path.GetFileName(job.LocalPath);
                 try
                 {
-                    await _syncService.UploadSingleFileAsync(path, targetFolder);
-                    uploadedCount++;
+                    var current = Interlocked.Increment(ref completed);
+                    Dispatcher.UIThread.Post(() =>
+                        StatusSummary = total > 1
+                            ? $"({current}/{total}) {Loc.Format("FileHubUploadingFmt", fileName)}"
+                            : Loc.Format("FileHubUploadingFmt", fileName));
+
+                    await _syncService.UploadSingleFileAsync(job.LocalPath, job.RemoteFolderId);
+                    Interlocked.Increment(ref uploadedCount);
                 }
                 catch (Exception ex)
                 {
                     var err = Loc.Format("UploadErrorBannerFmt", fileName, ex.Message);
-                    TransferErrorBannerText = err;
-                    StatusSummary = err;
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        TransferErrorBannerText = err;
+                        StatusSummary = err;
+                    });
                 }
-            }
+                finally
+                {
+                    gate.Release();
+                }
+            });
+
+            await Task.WhenAll(tasks);
 
             if (uploadedCount > 0)
             {
+                StatusSummary = uploadedCount == 1
+                    ? Loc.Format("FileHubUploadedFmt", Path.GetFileName(jobs[0].LocalPath))
+                    : Loc.Format("FilesUploadedBatchFmt", uploadedCount);
                 await RefreshAsync();
             }
         }
@@ -2331,6 +2424,47 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         {
             IsLoading = false;
         }
+    }
+
+    private async Task<List<(string LocalPath, string RemoteFolderId)>> CollectUploadJobsAsync(
+        IEnumerable<string> localPaths,
+        string rootTargetFolderId)
+    {
+        var jobs = new List<(string LocalPath, string RemoteFolderId)>();
+
+        async Task CollectDirectoryAsync(string directoryPath, string parentRemoteFolderId)
+        {
+            var folderName = Path.GetFileName(Path.TrimEndingDirectorySeparator(directoryPath));
+            if (string.IsNullOrWhiteSpace(folderName))
+            {
+                return;
+            }
+
+            var remoteDir = await _driveClient.FindOrCreateFolderAsync(folderName, parentRemoteFolderId);
+            foreach (var file in Directory.EnumerateFiles(directoryPath))
+            {
+                jobs.Add((file, remoteDir.Id));
+            }
+
+            foreach (var subDir in Directory.EnumerateDirectories(directoryPath))
+            {
+                await CollectDirectoryAsync(subDir, remoteDir.Id);
+            }
+        }
+
+        foreach (var path in localPaths)
+        {
+            if (File.Exists(path))
+            {
+                jobs.Add((path, rootTargetFolderId));
+            }
+            else if (Directory.Exists(path))
+            {
+                await CollectDirectoryAsync(path, rootTargetFolderId);
+            }
+        }
+
+        return jobs;
     }
 
     [RelayCommand]

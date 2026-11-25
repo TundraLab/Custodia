@@ -166,6 +166,12 @@ public sealed partial class TransferItemViewModel : ViewModelBase
         RefreshActiveIndicatorProperties();
         OnPropertyChanged(nameof(TransferProgressBrush));
         OnPropertyChanged(nameof(AccentBorderBrush));
+        OnPropertyChanged(nameof(StatusChipBackground));
+        OnPropertyChanged(nameof(StatusChipForeground));
+        OnPropertyChanged(nameof(IsCompleted));
+        OnPropertyChanged(nameof(IsUploadDirection));
+        OnPropertyChanged(nameof(IsDownloadDirection));
+        OnPropertyChanged(nameof(IsDeleteDirection));
     }
 
     public string SubtitleText
@@ -342,10 +348,49 @@ public sealed partial class TransferItemViewModel : ViewModelBase
         _ => ThemeAccentService.ResolveThemeBrush("#44474F", "#C4C6D0")
     };
 
+    public bool IsCompleted => Status == TransferStatus.Completed;
+    public bool IsUploadDirection => Direction == TransferDirection.Upload;
+    public bool IsDownloadDirection => Direction == TransferDirection.Download;
+    public bool IsDeleteDirection => Direction == TransferDirection.Delete;
+
+    public IBrush StatusChipBackground => Status switch
+    {
+        TransferStatus.Completed => ThemeAccentService.ResolveThemeBrush("#1B3927", "#D7F5DF"),
+        TransferStatus.Failed => ThemeAccentService.ResolveThemeBrush("#4A1C20", "#FDE2DF"),
+        TransferStatus.Cancelled => ThemeAccentService.ResolveThemeBrush("#33363D", "#E1E3EC"),
+        TransferStatus.InProgress => Direction switch
+        {
+            TransferDirection.Download => ThemeAccentService.ResolveThemeBrush("#1B3927", "#D7F5DF"),
+            TransferDirection.Delete => ThemeAccentService.ResolveThemeBrush("#4A1C20", "#FDE2DF"),
+            _ => ThemeAccentService.ResolveThemeBrush("#374955", "#D8E6F8")
+        },
+        _ => ThemeAccentService.ResolveThemeBrush("#282A2F", "#E6EAF2")
+    };
+
+    public IBrush StatusChipForeground => Status switch
+    {
+        TransferStatus.Completed => ThemeAccentService.ResolveThemeBrush("#6DD58C", "#146C2E"),
+        TransferStatus.Failed => ThemeAccentService.ResolveThemeBrush("#FFB4AB", "#B3261E"),
+        TransferStatus.Cancelled => ThemeAccentService.ResolveThemeBrush("#9296A4", "#5F6368"),
+        TransferStatus.InProgress => Direction switch
+        {
+            TransferDirection.Download => ThemeAccentService.ResolveThemeBrush("#6DD58C", "#146C2E"),
+            TransferDirection.Delete => ThemeAccentService.ResolveThemeBrush("#FFB4AB", "#B3261E"),
+            _ => ThemeAccentService.ResolveThemeBrush("#A8C7FA", "#0B57D0")
+        },
+        _ => ThemeAccentService.ResolveThemeBrush("#C4C6D0", "#44474F")
+    };
+
     internal void RefreshThemeBrushes()
     {
         OnPropertyChanged(nameof(TransferProgressBrush));
         OnPropertyChanged(nameof(AccentBorderBrush));
+        OnPropertyChanged(nameof(StatusChipBackground));
+        OnPropertyChanged(nameof(StatusChipForeground));
+        OnPropertyChanged(nameof(IsCompleted));
+        OnPropertyChanged(nameof(IsUploadDirection));
+        OnPropertyChanged(nameof(IsDownloadDirection));
+        OnPropertyChanged(nameof(IsDeleteDirection));
     }
 
     [RelayCommand]

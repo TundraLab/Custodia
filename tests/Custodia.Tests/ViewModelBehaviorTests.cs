@@ -55,7 +55,7 @@ public sealed class ViewModelBehaviorTests
         queueVm.UpsertTransfer(upload);
         Assert.Equal(TransferDirection.Upload, queueVm.ActiveDirection);
         Assert.True(queueVm.Items[0].IsUploadingActive);
-        Assert.Equal("Envio (Upload)", queueVm.Items[0].DirectionDisplay);
+        Assert.Equal("Envio", queueVm.Items[0].DirectionDisplay);
         Assert.Equal("/tmp", queueVm.Items[0].SubtitleText);
 
         queueVm.SelectedItem = queueVm.Items[0];

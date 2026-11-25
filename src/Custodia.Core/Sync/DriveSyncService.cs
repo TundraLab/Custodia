@@ -28,6 +28,10 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
     private readonly ConcurrentDictionary<string, byte> _pendingInitialSyncFolders = new();
     private readonly object _suppressionLock = new();
     private readonly HashSet<string> _suppressedWatcherFolders = new();
+    private readonly object _downloadPathLock = new();
+    private readonly HashSet<string> _reservedDownloadPaths = new(StringComparer.Ordinal);
+    private const int MaxConcurrentFolderSyncs = 3;
+    private const int MaxConcurrentFileTransfers = 3;
 
     private PeriodicTimer? _periodicTimer;
     private CancellationTokenSource? _lifecycleCts;
@@ -787,10 +791,25 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             return;
         }
 
-        var folders = await GetSyncFoldersAsync(cancellationToken);
-        foreach (var folder in folders.Where(f => !f.IsPaused))
+        var activeFolders = (await GetSyncFoldersAsync(cancellationToken))
+            .Where(f => !f.IsPaused)
+            .ToList();
+        if (activeFolders.Count > 0)
         {
-            await TriggerFolderSyncAsync(folder.Id, cancellationToken);
+            using var gate = new SemaphoreSlim(MaxConcurrentFolderSyncs, MaxConcurrentFolderSyncs);
+            var syncTasks = activeFolders.Select(async folder =>
+            {
+                await gate.WaitAsync(cancellationToken);
+                try
+                {
+                    await TriggerFolderSyncAsync(folder.Id, cancellationToken);
+                }
+                finally
+                {
+                    gate.Release();
+                }
+            });
+            await Task.WhenAll(syncTasks);
         }
 
         await RefreshAccountInfoAsync(cancellationToken);
@@ -1116,7 +1135,19 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             }
         }
 
-        var targetPath = GetUniqueDestinationPath(downloadDir, safeName);
+        string targetPath;
+        lock (_downloadPathLock)
+        {
+            targetPath = GetUniqueDestinationPath(downloadDir, safeName);
+            while (!_reservedDownloadPaths.Add(targetPath))
+            {
+                var dir = Path.GetDirectoryName(targetPath) ?? downloadDir;
+                var stem = Path.GetFileNameWithoutExtension(targetPath);
+                var ext = Path.GetExtension(targetPath);
+                targetPath = Path.Combine(dir, $"{stem}_1{ext}");
+            }
+        }
+
         var queueItem = CreateTransferItem(
             syncFolderId: "manual-download",
             fileName: Path.GetFileName(targetPath),
@@ -1197,6 +1228,10 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         }
         finally
         {
+            lock (_downloadPathLock)
+            {
+                _reservedDownloadPaths.Remove(targetPath);
+            }
             _transferCancellations.TryRemove(queueItem.Id, out _);
         }
     }
@@ -1342,6 +1377,24 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
         var remoteFoldersByRelPath = remoteTree.FoldersByRelativePath;
         var remoteFilesByRelPath = remoteTree.FilesByRelativePath;
+        using var transferGate = new SemaphoreSlim(MaxConcurrentFileTransfers, MaxConcurrentFileTransfers);
+        using var remoteFolderGate = new SemaphoreSlim(1, 1);
+
+        async Task RunTransferAsync(Func<Task> action)
+        {
+            await transferGate.WaitAsync(cancellationToken);
+            try
+            {
+                await action();
+                Interlocked.Increment(ref changesCount);
+            }
+            finally
+            {
+                transferGate.Release();
+            }
+        }
+
+        var localTransferTasks = new List<Task>();
 
         foreach (var (relPath, localFile) in localFiles)
         {
@@ -1363,8 +1416,12 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
                 if (folder.Mode == SyncMode.OneWayBackup)
                 {
-                    await UploadAndTrackAsync(folder, relPath, localFile, remoteFile.ParentIds.FirstOrDefault() ?? folder.RemoteFolderId, remoteFile.Id, hashes, cancellationToken);
-                    changesCount++;
+                    var capturedRelPath = relPath;
+                    var capturedLocalFile = localFile;
+                    var capturedRemoteFile = remoteFile;
+                    var capturedHashes = hashes;
+                    localTransferTasks.Add(RunTransferAsync(() =>
+                        UploadAndTrackAsync(folder, capturedRelPath, capturedLocalFile, capturedRemoteFile.ParentIds.FirstOrDefault() ?? folder.RemoteFolderId, capturedRemoteFile.Id, capturedHashes, cancellationToken)));
                     continue;
                 }
 
@@ -1378,18 +1435,30 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
                 if (localChangedSinceTrack && !remoteChangedSinceTrack)
                 {
-                    await UploadAndTrackAsync(folder, relPath, localFile, remoteFile.ParentIds.FirstOrDefault() ?? folder.RemoteFolderId, remoteFile.Id, hashes, cancellationToken);
-                    changesCount++;
+                    var capturedRelPath = relPath;
+                    var capturedLocalFile = localFile;
+                    var capturedRemoteFile = remoteFile;
+                    var capturedHashes = hashes;
+                    localTransferTasks.Add(RunTransferAsync(() =>
+                        UploadAndTrackAsync(folder, capturedRelPath, capturedLocalFile, capturedRemoteFile.ParentIds.FirstOrDefault() ?? folder.RemoteFolderId, capturedRemoteFile.Id, capturedHashes, cancellationToken)));
                 }
                 else if (!localChangedSinceTrack && remoteChangedSinceTrack)
                 {
-                    await DownloadAndTrackAsync(folder, relPath, localFile.FullName, remoteFile, cancellationToken);
-                    changesCount++;
+                    var capturedRelPath = relPath;
+                    var capturedLocalFile = localFile;
+                    var capturedRemoteFile = remoteFile;
+                    localTransferTasks.Add(RunTransferAsync(() =>
+                        DownloadAndTrackAsync(folder, capturedRelPath, capturedLocalFile.FullName, capturedRemoteFile, cancellationToken)));
                 }
                 else
                 {
-                    await ResolveConflictAsync(folder, relPath, localFile, hashes, localModUtc, remoteFile, cancellationToken);
-                    changesCount++;
+                    var capturedRelPath = relPath;
+                    var capturedLocalFile = localFile;
+                    var capturedRemoteFile = remoteFile;
+                    var capturedHashes = hashes;
+                    var capturedModUtc = localModUtc;
+                    localTransferTasks.Add(RunTransferAsync(() =>
+                        ResolveConflictAsync(folder, capturedRelPath, capturedLocalFile, capturedHashes, capturedModUtc, capturedRemoteFile, cancellationToken)));
                 }
             }
             else if (tracked is not null)
@@ -1453,9 +1522,14 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                     var localModifiedSinceBackup = !string.Equals(tracked.Md5Hash, hashes.Md5Hex, StringComparison.OrdinalIgnoreCase);
                     if (localModifiedSinceBackup)
                     {
-                        var parentId = await EnsureRemoteParentFolderAsync(folder.RemoteFolderId, relPath, remoteFoldersByRelPath, cancellationToken);
-                        await UploadAndTrackAsync(folder, relPath, localFile, parentId, null, hashes, cancellationToken);
-                        changesCount++;
+                        var capturedRelPath = relPath;
+                        var capturedLocalFile = localFile;
+                        var capturedHashes = hashes;
+                        localTransferTasks.Add(RunTransferAsync(async () =>
+                        {
+                            var parentId = await EnsureRemoteParentFolderAsync(folder.RemoteFolderId, capturedRelPath, remoteFoldersByRelPath, remoteFolderGate, cancellationToken);
+                            await UploadAndTrackAsync(folder, capturedRelPath, capturedLocalFile, parentId, null, capturedHashes, cancellationToken);
+                        }));
                     }
                     else if (!string.IsNullOrEmpty(tracked.RemoteFileId))
                     {
@@ -1467,10 +1541,20 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             }
             else
             {
-                var parentId = await EnsureRemoteParentFolderAsync(folder.RemoteFolderId, relPath, remoteFoldersByRelPath, cancellationToken);
-                await UploadAndTrackAsync(folder, relPath, localFile, parentId, null, hashes, cancellationToken);
-                changesCount++;
+                var capturedRelPath = relPath;
+                var capturedLocalFile = localFile;
+                var capturedHashes = hashes;
+                localTransferTasks.Add(RunTransferAsync(async () =>
+                {
+                    var parentId = await EnsureRemoteParentFolderAsync(folder.RemoteFolderId, capturedRelPath, remoteFoldersByRelPath, remoteFolderGate, cancellationToken);
+                    await UploadAndTrackAsync(folder, capturedRelPath, capturedLocalFile, parentId, null, capturedHashes, cancellationToken);
+                }));
             }
+        }
+
+        if (localTransferTasks.Count > 0)
+        {
+            await Task.WhenAll(localTransferTasks);
         }
 
         var trashedAny = false;
@@ -1538,6 +1622,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
         if (folder.Mode == SyncMode.TwoWay)
         {
+            var remoteDownloadTasks = new List<Task>();
             foreach (var (relPath, remoteFile) in remoteFilesByRelPath)
             {
                 if (localFiles.ContainsKey(relPath) || trackedEntries.ContainsKey(relPath))
@@ -1550,9 +1635,16 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                     continue;
                 }
 
-                var targetLocalPath = ResolveSafeLocalPath(folder.LocalPath, relPath);
-                await DownloadAndTrackAsync(folder, relPath, targetLocalPath, remoteFile, cancellationToken);
-                changesCount++;
+                var capturedRelPath = relPath;
+                var capturedRemoteFile = remoteFile;
+                var targetLocalPath = ResolveSafeLocalPath(folder.LocalPath, capturedRelPath);
+                remoteDownloadTasks.Add(RunTransferAsync(() =>
+                    DownloadAndTrackAsync(folder, capturedRelPath, targetLocalPath, capturedRemoteFile, cancellationToken)));
+            }
+
+            if (remoteDownloadTasks.Count > 0)
+            {
+                await Task.WhenAll(remoteDownloadTasks);
             }
         }
 
@@ -1563,8 +1655,8 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             if (!remoteFoldersByRelPath.ContainsKey(relDir))
             {
-                await EnsureRemoteParentFolderAsync(folder.RemoteFolderId, $"{relDir}/.dir-placeholder", remoteFoldersByRelPath, cancellationToken);
-                changesCount++;
+                await EnsureRemoteParentFolderAsync(folder.RemoteFolderId, $"{relDir}/.dir-placeholder", remoteFoldersByRelPath, remoteFolderGate, cancellationToken);
+                Interlocked.Increment(ref changesCount);
             }
         }
 
@@ -1811,6 +1903,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         string rootRemoteFolderId,
         string relativeFilePath,
         Dictionary<string, RemoteDriveNode> remoteFoldersByRelPath,
+        SemaphoreSlim folderGate,
         CancellationToken cancellationToken)
     {
         var dirPart = Path.GetDirectoryName(relativeFilePath)?.Replace('\\', '/');
@@ -1819,30 +1912,38 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             return rootRemoteFolderId;
         }
 
-        if (remoteFoldersByRelPath.TryGetValue(dirPart, out var existing))
+        await folderGate.WaitAsync(cancellationToken);
+        try
         {
-            return existing.Id;
-        }
-
-        var segments = dirPart.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        var currentParentId = rootRemoteFolderId;
-        var builtPath = string.Empty;
-
-        foreach (var segment in segments)
-        {
-            builtPath = string.IsNullOrEmpty(builtPath) ? segment : $"{builtPath}/{segment}";
-            if (remoteFoldersByRelPath.TryGetValue(builtPath, out var found))
+            if (remoteFoldersByRelPath.TryGetValue(dirPart, out var existing))
             {
-                currentParentId = found.Id;
-                continue;
+                return existing.Id;
             }
 
-            var created = await _driveClient.CreateFolderAsync(segment, currentParentId, cancellationToken);
-            remoteFoldersByRelPath[builtPath] = created;
-            currentParentId = created.Id;
-        }
+            var segments = dirPart.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var currentParentId = rootRemoteFolderId;
+            var builtPath = string.Empty;
 
-        return currentParentId;
+            foreach (var segment in segments)
+            {
+                builtPath = string.IsNullOrEmpty(builtPath) ? segment : $"{builtPath}/{segment}";
+                if (remoteFoldersByRelPath.TryGetValue(builtPath, out var found))
+                {
+                    currentParentId = found.Id;
+                    continue;
+                }
+
+                var created = await _driveClient.CreateFolderAsync(segment, currentParentId, cancellationToken);
+                remoteFoldersByRelPath[builtPath] = created;
+                currentParentId = created.Id;
+            }
+
+            return currentParentId;
+        }
+        finally
+        {
+            folderGate.Release();
+        }
     }
 
     private async Task<RemoteTreeSnapshot> ScanRemoteTreeAsync(

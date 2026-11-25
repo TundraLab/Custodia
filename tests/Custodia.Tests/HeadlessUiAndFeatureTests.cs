@@ -438,6 +438,176 @@ public sealed class HeadlessUiAndFeatureTests
         Assert.True(((RecordingClearLogsRepoProxy)repoProxy).Cleared);
     }
 
+    [AvaloniaFact]
+    public async Task BatchTransfersAndAnimatedIndicators_WorkCleanly()
+    {
+        var loc = new LocalizationService();
+        loc.SetLanguage("pt-BR");
+
+        // 1. Verify animated status flags on SyncFolderItemViewModel and render SyncFoldersView
+        var syncProxy = DispatchProxy.Create<IDriveSyncService, StubDriveSyncProxy>();
+        var driveProxy = DispatchProxy.Create<IGoogleDriveClient, StubDriveClientProxy>();
+        var remoteBrowserVm = new RemoteBrowserViewModel(driveProxy, syncProxy, loc);
+        var foldersVm = new SyncFoldersViewModel(syncProxy, driveProxy, remoteBrowserVm, loc);
+        var model = new LocalSyncFolder
+        {
+            Id = "sf-1",
+            LocalPath = "/tmp/custodia-docs",
+            RemoteFolderId = "r-docs",
+            RemoteFolderName = "Docs",
+            Mode = SyncMode.TwoWay,
+            State = FolderSyncState.Idle,
+            IsPaused = false
+        };
+        var itemVm = new SyncFolderItemViewModel(model, foldersVm, loc);
+        Assert.True(itemVm.IsActiveMonitoring);
+        Assert.False(itemVm.IsSyncing);
+        Assert.False(itemVm.IsErrorState);
+
+        model.State = FolderSyncState.Syncing;
+        itemVm.UpdateFrom(model);
+        Assert.True(itemVm.IsSyncing);
+        Assert.False(itemVm.IsActiveMonitoring);
+
+        model.State = FolderSyncState.Error;
+        itemVm.UpdateFrom(model);
+        Assert.True(itemVm.IsErrorState);
+
+        foldersVm.Folders.Add(itemVm);
+        foldersVm.HasNoFolders = false;
+        var syncView = new SyncFoldersView { DataContext = foldersVm };
+        syncView.Measure(new Size(960, 700));
+        syncView.Arrange(new Rect(0, 0, 960, 700));
+
+        // 2. Verify TransferQueueView renders updated direction chip without legacy pill artifacts
+        var queueVm = new TransferQueueViewModel(syncProxy, loc);
+        var queueItem = new TransferQueueItem
+        {
+            Id = "tx-1",
+            FileName = "relatorio.pdf",
+            RelativePath = "Docs/relatorio.pdf",
+            Direction = TransferDirection.Upload,
+            Status = TransferStatus.Completed,
+            TotalBytes = 2048,
+            TransferredBytes = 2048,
+            CompletedAtUtc = DateTimeOffset.UtcNow
+        };
+        queueVm.UpsertTransfer(queueItem);
+        Assert.Single(queueVm.Items);
+        Assert.True(queueVm.Items[0].IsCompleted);
+        Assert.True(queueVm.Items[0].IsUploadDirection);
+        Assert.Equal("Envio", queueVm.Items[0].DirectionDisplay);
+        Assert.NotNull(queueVm.Items[0].StatusChipBackground);
+        Assert.NotNull(queueVm.Items[0].StatusChipForeground);
+
+        var queueView = new TransferQueueView { DataContext = queueVm };
+        queueView.Measure(new Size(960, 700));
+        queueView.Arrange(new Rect(0, 0, 960, 700));
+
+        // 3. Verify batch multi-upload (files + subfolder) and folder/multi-file download
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"custodia-batch-{Guid.NewGuid():N}");
+        var subDir = Path.Combine(tempRoot, "Lote");
+        Directory.CreateDirectory(subDir);
+        var rootFile = Path.Combine(tempRoot, "a.txt");
+        var nestedFile = Path.Combine(subDir, "b.txt");
+        await File.WriteAllTextAsync(rootFile, "one");
+        await File.WriteAllTextAsync(nestedFile, "two");
+
+        try
+        {
+            var batchSyncProxy = DispatchProxy.Create<IDriveSyncService, RecordingBatchSyncProxy>();
+            var batchDriveProxy = DispatchProxy.Create<IGoogleDriveClient, RecordingBatchDriveClientProxy>();
+            var batchRepoProxy = DispatchProxy.Create<ISyncStateRepository, StubStateRepoProxy>();
+            var hub = new FileHubViewModel(batchRepoProxy, batchDriveProxy, batchSyncProxy, new FilePreviewService(batchDriveProxy), loc);
+
+            await hub.UploadDroppedFilesAsync([rootFile, subDir]);
+
+            var recordedSync = (RecordingBatchSyncProxy)batchSyncProxy;
+            var recordedDrive = (RecordingBatchDriveClientProxy)batchDriveProxy;
+            Assert.Contains("Lote", recordedDrive.CreatedFolders);
+            Assert.Equal(2, recordedSync.UploadedFiles.Count);
+
+            var remoteFolderItem = new FileHubItemViewModel { Name = "Fotos", IsFolder = true, RemoteFileId = "remote-folder-1" };
+            var remoteDirectFile = new FileHubItemViewModel { Name = "direto.png", IsFolder = false, RemoteFileId = "remote-direct-1", SizeBytes = 512 };
+            Assert.True(remoteFolderItem.CanDownload);
+            hub.UpdateSelectedItems([remoteFolderItem, remoteDirectFile]);
+
+            await hub.DownloadSelectedCommand.ExecuteAsync(null);
+            Assert.Contains("child-file-1", recordedSync.DownloadedIds);
+            Assert.Contains("remote-direct-1", recordedSync.DownloadedIds);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    private class RecordingBatchSyncProxy : StubDriveSyncProxy
+    {
+        public List<(string Path, string ParentId)> UploadedFiles { get; } = [];
+        private readonly object _gate = new();
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            if (targetMethod?.Name == nameof(IDriveSyncService.UploadSingleFileAsync))
+            {
+                var path = (string)args![0]!;
+                var parentId = (string)args[1]!;
+                lock (_gate)
+                {
+                    UploadedFiles.Add((path, parentId));
+                }
+                return Task.FromResult(new RemoteDriveNode { Id = Guid.NewGuid().ToString("N"), Name = Path.GetFileName(path) });
+            }
+
+            if (targetMethod?.Name == nameof(IDriveSyncService.DownloadRemoteFileAsync))
+            {
+                lock (_gate)
+                {
+                    DownloadedIds.Add((string)args![0]!);
+                }
+                return Task.FromResult($"/tmp/{args![1]}");
+            }
+
+            return base.Invoke(targetMethod, args);
+        }
+    }
+
+    private class RecordingBatchDriveClientProxy : StubDriveClientProxy
+    {
+        public List<string> CreatedFolders { get; } = [];
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            if (targetMethod?.Name == nameof(IGoogleDriveClient.FindOrCreateFolderAsync))
+            {
+                var name = (string)args![0]!;
+                CreatedFolders.Add(name);
+                return Task.FromResult(new RemoteDriveNode { Id = $"dir-{name}", Name = name, IsFolder = true });
+            }
+
+            if (targetMethod?.Name == nameof(IGoogleDriveClient.ListChildrenAsync))
+            {
+                var parentId = (string)args![0]!;
+                if (parentId == "remote-folder-1")
+                {
+                    IReadOnlyList<RemoteDriveNode> children =
+                    [
+                        new RemoteDriveNode { Id = "child-file-1", Name = "praia.jpg", IsFolder = false, SizeBytes = 1024 }
+                    ];
+                    return Task.FromResult(children);
+                }
+
+                return Task.FromResult<IReadOnlyList<RemoteDriveNode>>(Array.Empty<RemoteDriveNode>());
+            }
+
+            return base.Invoke(targetMethod, args);
+        }
+    }
+
     private class RecordingRemoveSyncProxy : StubDriveSyncProxy
     {
         public List<string> RemovedFolderIds { get; } = [];
