@@ -550,7 +550,7 @@ public static class ThemeAccentService
         {
             Brush = surfaceContainer,
             Pen = new Pen(primary, 1.5) { LineCap = PenLineCap.Round, LineJoin = PenLineJoin.Round },
-            Geometry = Geometry.Parse("M 12.0,7.9 A 2.1,2.1 0 1 1 10.7,11.6 L 10.0,15.8 L 14.0,15.8 L 13.3,11.6 A 2.1,2.1 0 0 1 12.0,7.9 Z")
+            Geometry = Geometry.Parse("M 10.8,11.4 A 2.0,2.0 0 1 1 13.2,11.4 L 14.0,15.8 L 10.0,15.8 Z")
         });
         app.Resources["TundraShieldVaultDrawing"] = new DrawingImage(shieldGroup);
     }
