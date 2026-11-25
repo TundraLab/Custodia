@@ -2,6 +2,12 @@
 
 Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
+## [3.0.4] - 2026-11-25
+
+### Adicionado
+- **Tema Claro e modo Automático (Sistema):** agora você pode escolher entre **Escuro**, **Claro** ou **Automático (Sistema)** em **Configurações > Aparência e Idioma**, com aplicação imediata em todo o aplicativo.
+- **Contraste e ícones adaptados ao modo claro:** cores de destaque, status, cartões, barra lateral e logotipos da TundraLab se ajustam automaticamente para oferecer leitura confortável tanto no tema escuro quanto no claro.
+
 ## [3.0.3] - 2026-11-25
 
 ### Alterado

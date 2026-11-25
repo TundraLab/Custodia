@@ -1,11 +1,11 @@
-# Custódia v3.0.3
+# Custódia v3.0.4
 
 ![Custódia by TundraLab - Meus arquivos. Sempre seguros.](docs/images/custodia-promo.jpg)
 
 [![GitHub](https://img.shields.io/badge/GitHub-TundraLab%2FCustodia-181717?logo=github)](https://github.com/TundraLab/Custodia)
 [![Autor Único](https://img.shields.io/badge/Autor%20e%20Dev%20Único-%40GustaHerin-181717?logo=github)](https://github.com/GustaHerin)
-[![Release](https://img.shields.io/badge/Release-v3.0.3-2563EB?logo=github)](https://github.com/TundraLab/Custodia/releases)
-[![Testes xUnit](https://img.shields.io/badge/Testes%20xUnit-64%20aprovados-16A34A)](tests/Custodia.Tests)
+[![Release](https://img.shields.io/badge/Release-v3.0.4-2563EB?logo=github)](https://github.com/TundraLab/Custodia/releases)
+[![Testes xUnit](https://img.shields.io/badge/Testes%20xUnit-65%20aprovados-16A34A)](tests/Custodia.Tests)
 [![Fedora](https://img.shields.io/badge/Fedora-Workstation%20%2F%20KDE-51A2DA?logo=fedora&logoColor=white)](#sistemas-e-formatos)
 [![Pop!_OS](https://img.shields.io/badge/Pop!__OS-GNOME%20%2F%20COSMIC-48B9C7?logo=popos&logoColor=white)](#sistemas-e-formatos)
 [![KDE Plasma](https://img.shields.io/badge/KDE%20Plasma-5%20%2F%206-1D99F3?logo=kdeplasma&logoColor=white)](#sistemas-e-formatos)
@@ -120,14 +120,14 @@ chmod +x install-custodia.sh
 
 - **AppImage (`x86_64`, roda direto sem instalar):**
   ```bash
-  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-3.0.3-x86_64.AppImage
-  chmod +x Custodia-3.0.3-x86_64.AppImage
-  ./Custodia-3.0.3-x86_64.AppImage
+  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-3.0.4-x86_64.AppImage
+  chmod +x Custodia-3.0.4-x86_64.AppImage
+  ./Custodia-3.0.4-x86_64.AppImage
   ```
 - **Fedora / RHEL / openSUSE (`.rpm`):**
   ```bash
-  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-3.0.3-1.x86_64.rpm
-  sudo dnf install -y ./Custodia-3.0.3-1.x86_64.rpm
+  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-3.0.4-1.x86_64.rpm
+  sudo dnf install -y ./Custodia-3.0.4-1.x86_64.rpm
   ```
 
 <details>
@@ -139,7 +139,7 @@ chmod +x install-custodia.sh
   - `./install-custodia.sh --appimage`: baixa, valida `SHA-256` e instala o `.AppImage` integrado ao usuário.
   - `./install-custodia.sh --download-only`: baixa `.rpm`, `.AppImage` e `SHA256SUMS.txt` na pasta atual.
   - `./install-custodia.sh --uninstall`: remove a instalação local ou `.rpm` mantendo suas configurações.
-- **AppImage sem FUSE:** `./Custodia-3.0.3-x86_64.AppImage --appimage-extract-and-run`
+- **AppImage sem FUSE:** `./Custodia-3.0.4-x86_64.AppImage --appimage-extract-and-run`
 - **Pacotes opcionais para pré-visualização completa (PDF, Office, áudio e vídeo):**
   - Fedora: `sudo dnf install poppler-utils ghostscript ffmpeg libreoffice ImageMagick`
   - Pop!_OS / Ubuntu: `sudo apt install poppler-utils ghostscript ffmpeg libreoffice imagemagick`

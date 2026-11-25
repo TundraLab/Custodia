@@ -10,7 +10,7 @@ fi
 ASSETS_DIR="$(dirname "${PROJECT_PATH}")/Assets"
 
 VERSION="${CUSTODIA_VERSION:-${TUNDRA_VERSION:-$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "${PROJECT_PATH}" | head -n 1)}}"
-VERSION="${VERSION:-3.0.3}"
+VERSION="${VERSION:-3.0.4}"
 ARCH="x86_64"
 
 BUILD_ROOT="${REPO_ROOT}/packaging/linux/build"
