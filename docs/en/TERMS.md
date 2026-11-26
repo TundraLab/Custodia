@@ -1,12 +1,12 @@
 # Terms of Use — Custódia
 
-> 🌐 **Language / Idioma:** [🇧🇷 Português](TERMS.md) | **🇺🇸 English (current)**
+> 🌐 **Language / Idioma:** [🇧🇷 Português](../../TERMS.md) | **🇺🇸 English (current)**
 
 **Last updated:** November 24, 2026  
 **Owner / Developer:** TundraLab (`contato.tundralab@gmail.com`)  
 **Official repository:** https://github.com/TundraLab/Custodia
 
-By downloading, installing, compiling, or using **Custódia**, you state that you have read and agree to these Terms of Use, the [Privacy Policy](PRIVACY.en.md), and the [Proprietary License Agreement](LICENSE).
+By downloading, installing, compiling, or using **Custódia**, you state that you have read and agree to these Terms of Use, the [Privacy Policy](PRIVACY.md), and the [Proprietary License Agreement](../../LICENSE).
 
 ---
 
@@ -14,7 +14,7 @@ By downloading, installing, compiling, or using **Custódia**, you state that yo
 
 **Custódia** is a desktop client software for local Google Drive synchronization and management on Linux systems, exclusively owned by **TundraLab** (`Copyright (c) 2026 TundraLab. All Rights Reserved.`).
 
-- Specific terms regarding source code access, prohibition of unauthorized commercial redistribution, trademark usage, and intellectual property are governed by the [LICENSE](LICENSE) file.
+- Specific terms regarding source code access, prohibition of unauthorized commercial redistribution, trademark usage, and intellectual property are governed by the [LICENSE](../../LICENSE) file.
 - Nothing in these Terms grants any rights to trademarks, logos, or intellectual property of TundraLab or Google LLC.
 
 ---
@@ -40,7 +40,7 @@ Custódia performs local and remote upload, update, deletion, and mirroring oper
 
 ## 4. Optional Account Communications
 
-If you enable account lifecycle alerts in the application, TundraLab will send only transactional connection or revocation confirmation emails from `contato.tundralab@gmail.com`, using solely your email address and profile name as detailed in the [Privacy Policy](PRIVACY.en.md). This feature is optional and can be disabled at any time in settings.
+If you enable account lifecycle alerts in the application, TundraLab will send only transactional connection or revocation confirmation emails from `contato.tundralab@gmail.com`, using solely your email address and profile name as detailed in the [Privacy Policy](PRIVACY.md). This feature is optional and can be disabled at any time in settings.
 
 ---
 

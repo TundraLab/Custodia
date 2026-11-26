@@ -1,22 +1,22 @@
 # Custódia v3.0.5
 
-> 🌐 **Language / Idioma:** [🇧🇷 Português](README.md) | **🇺🇸 English (current)**
+> 🌐 **Language / Idioma:** [🇧🇷 Português](../../README.md) | **🇺🇸 English (current)**
 
-![Custódia by TundraLab - My files. Always safe.](docs/images/custodia-promo.jpg)
+![Custódia by TundraLab - My files. Always safe.](../images/custodia-promo.jpg)
 
 [![GitHub](https://img.shields.io/badge/GitHub-TundraLab%2FCustodia-181717?logo=github)](https://github.com/TundraLab/Custodia)
 [![Sole Author](https://img.shields.io/badge/Author%20%26%20Lead%20Dev-%40GustaHerin-181717?logo=github)](https://github.com/GustaHerin)
 [![Release](https://img.shields.io/badge/Release-v3.0.5-2563EB?logo=github)](https://github.com/TundraLab/Custodia/releases)
-[![xUnit Tests](https://img.shields.io/badge/xUnit%20Tests-66%20passed-16A34A)](tests/Custodia.Tests)
+[![xUnit Tests](https://img.shields.io/badge/xUnit%20Tests-66%20passed-16A34A)](../../tests/Custodia.Tests)
 [![Fedora](https://img.shields.io/badge/Fedora-Workstation%20%2F%20KDE-51A2DA?logo=fedora&logoColor=white)](#systems-and-formats)
 [![Pop!_OS](https://img.shields.io/badge/Pop!__OS-GNOME%20%2F%20COSMIC-48B9C7?logo=popos&logoColor=white)](#systems-and-formats)
 [![KDE Plasma](https://img.shields.io/badge/KDE%20Plasma-5%20%2F%206-1D99F3?logo=kdeplasma&logoColor=white)](#systems-and-formats)
 [![AppImage](https://img.shields.io/badge/AppImage-x86__64-2C7FB8?logo=linux&logoColor=white)](#installation)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Avalonia UI](https://img.shields.io/badge/Avalonia%20UI-11.3.8-8B44AC)](https://avaloniaui.net/)
-[![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-red)](LICENSE)
-[![Privacy](https://img.shields.io/badge/Privacy-Policy-0F766E)](PRIVACY.en.md)
-[![Terms of Use](https://img.shields.io/badge/Terms%20of-Use-1D4ED8)](TERMS.en.md)
+[![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-red)](../../LICENSE)
+[![Privacy](https://img.shields.io/badge/Privacy-Policy-0F766E)](PRIVACY.md)
+[![Terms of Use](https://img.shields.io/badge/Terms%20of-Use-1D4ED8)](TERMS.md)
 
 > **In development since:** 2026  
 > **Status:** stable, with official releases ([GitHub Releases](https://github.com/TundraLab/Custodia/releases))  
@@ -30,44 +30,44 @@
 - **Build & distribution:** clean `.NET 10.0` compilation for Linux `x86_64` with native `.rpm` and `.AppImage` packaging verified by SHA-256
 - **Test suite:** **66 xUnit unit tests passing (`0` failures)** covering sync engine, transfer queue, SQLite persistence, OAuth2 account isolation, updater, support diagnostics sanitization, terms/privacy acceptance, and lifecycle emails
 - **Primary platform:** Linux `x86_64` (Fedora Workstation/KDE, Pop!_OS GNOME/COSMIC, and KDE Plasma 5/6)
-- **Technical documentation:** live OpenAPI `3.0.3` (`GET /api/v1/openapi.json`), [docs/en/API.md](docs/en/API.md), [Custodia-API.en.pdf](Custodia-API.en.pdf), and full history in [CHANGELOG.md](CHANGELOG.md)
+- **Technical documentation:** live OpenAPI `3.0.3` (`GET /api/v1/openapi.json`), [API.md](API.md), [Custodia-API.en.pdf](Custodia-API.en.pdf), and full history in [CHANGELOG.md](../../CHANGELOG.md)
 
 ## Documentation
 
-> Available in **[🇺🇸 English](README.en.md)** and **[🇧🇷 Português](README.md)**.
+> Available in **[🇺🇸 English](README.md)** and **[🇧🇷 Português](../../README.md)**.
 
 | Guide | Contents |
 | :--- | :--- |
-| **[OAuth2 Setup](docs/en/OAUTH_SETUP.md)** | Illustrated step-by-step guide to create `credentials.json` in Google Cloud Console and connect your account |
-| **[Linux Compatibility](docs/en/COMPATIBILITY.md)** | Matrix of tested vs. supported features across GNOME, KDE Plasma 5/6, COSMIC, Wayland, and X11 |
-| **[Security & Privacy](docs/en/SECURITY.md)** | BYO-OAuth2 model, `0700`/`0600` permissions, token refresh, and local API surface |
-| **[Frequently Asked Questions (FAQ)](docs/en/FAQ.md)** | Offline mode, conflict policy, Trash recovery, multiple accounts, and complete removal |
-| **[Troubleshooting](docs/en/TROUBLESHOOTING.md)** | Diagnostics for `.rpm`, `.AppImage`/FUSE, GNOME tray icon, D-Bus, `403` error, and previews |
-| **[Local REST API](docs/en/API.md)** | Endpoints on `127.0.0.1:5080`, OpenAPI `3.0.3`, Python examples, and AI agent integration |
+| **[OAuth2 Setup](OAUTH_SETUP.md)** | Illustrated step-by-step guide to create `credentials.json` in Google Cloud Console and connect your account |
+| **[Linux Compatibility](COMPATIBILITY.md)** | Matrix of tested vs. supported features across GNOME, KDE Plasma 5/6, COSMIC, Wayland, and X11 |
+| **[Security & Privacy](SECURITY.md)** | BYO-OAuth2 model, `0700`/`0600` permissions, token refresh, and local API surface |
+| **[Frequently Asked Questions (FAQ)](FAQ.md)** | Offline mode, conflict policy, Trash recovery, multiple accounts, and complete removal |
+| **[Troubleshooting](TROUBLESHOOTING.md)** | Diagnostics for `.rpm`, `.AppImage`/FUSE, GNOME tray icon, D-Bus, `403` error, and previews |
+| **[Local REST API](API.md)** | Endpoints on `127.0.0.1:5080`, OpenAPI `3.0.3`, Python examples, and AI agent integration |
 
 ## Visual Preview
 
-![Custódia screens preview](docs/images/preview-showcase.png)
+![Custódia screens preview](../images/preview-showcase.png)
 
-- **[Watch promo video](docs/videos/custodia-divulgacao.mp4)** (`MP4`, 21 MB)
+- **[Watch promo video](../videos/custodia-divulgacao.mp4)** (`MP4`, 21 MB)
 
 <details>
 <summary>View all 6 individual screens</summary>
 
 | Screen | Preview |
 | :--- | :--- |
-| **My Files** | ![My Files](docs/images/preview-01-meu-driver.png) |
-| **Sync Folders** | ![Sync Folders](docs/images/preview-02-pastas.png) |
-| **Transfer Queue** | ![Transfer Queue](docs/images/preview-03-transferencias.png) |
-| **Activity Logs** | ![Activity Logs](docs/images/preview-04-logs.png) |
-| **Settings** | ![Settings](docs/images/preview-05-configuracoes.png) |
-| **About** | ![About](docs/images/preview-06-sobre.png) |
+| **My Files** | ![My Files](../images/preview-01-meu-driver.png) |
+| **Sync Folders** | ![Sync Folders](../images/preview-02-pastas.png) |
+| **Transfer Queue** | ![Transfer Queue](../images/preview-03-transferencias.png) |
+| **Activity Logs** | ![Activity Logs](../images/preview-04-logs.png) |
+| **Settings** | ![Settings](../images/preview-05-configuracoes.png) |
+| **About** | ![About](../images/preview-06-sobre.png) |
 
 </details>
 
 ## Systems and Formats
 
-- Tested on **Fedora** and **Pop!_OS** (including modest hardware), with support for **GNOME**, **COSMIC**, and **KDE Plasma 5/6** — see the full matrix in **[docs/en/COMPATIBILITY.md](docs/en/COMPATIBILITY.md)**.
+- Tested on **Fedora** and **Pop!_OS** (including modest hardware), with support for **GNOME**, **COSMIC**, and **KDE Plasma 5/6** — see the full matrix in **[COMPATIBILITY.md](COMPATIBILITY.md)**.
 - **Distributed formats:** native **`.rpm`** package (Fedora / RHEL / openSUSE) and standalone **`.AppImage` (`x86_64`)** with the `.NET 10` runtime bundled (Pop!_OS, Ubuntu, Debian, and other Linux distros, without installing `.NET` dependencies), both verified by **SHA-256** (`SHA256SUMS.txt`).
 
 ## What the App Does
@@ -179,12 +179,12 @@ To connect your account directly to Google without intermediary servers, create 
 4. Under **Clients → + Create client**, choose **Desktop app** and download the `client_secret_*.json` file.
 5. Import the JSON in Custódia (automatically detected in `~/Downloads` or via drag-and-drop in **Settings**) and authorize in your browser.
 
-> **Full guide with screenshots for every step:** **[docs/en/OAUTH_SETUP.md](docs/en/OAUTH_SETUP.md)**  
-> Facing `403: access_denied` or tray/AppImage issues? Check **[docs/en/TROUBLESHOOTING.md](docs/en/TROUBLESHOOTING.md)** and **[docs/en/FAQ.md](docs/en/FAQ.md)**.
+> **Full guide with screenshots for every step:** **[OAUTH_SETUP.md](OAUTH_SETUP.md)**  
+> Facing `403: access_denied` or tray/AppImage issues? Check **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** and **[FAQ.md](FAQ.md)**.
 
 ## Security and Privacy
 
-See the full architecture in **[docs/en/SECURITY.md](docs/en/SECURITY.md)**.
+See the full architecture in **[SECURITY.md](SECURITY.md)**.
 
 - **Local isolation and restricted permissions (`0700` / `0600`):**
   - `~/.config/custodia/settings.json`: general preferences and visual folder customizations.
@@ -203,7 +203,7 @@ See the full architecture in **[docs/en/SECURITY.md](docs/en/SECURITY.md)**.
 
 ## Privacy, Google OAuth Compliance, and Terms of Use
 
-Official documents available in the repository: **[Privacy Policy](PRIVACY.en.md)** | **[Terms of Use](TERMS.en.md)** | **[Proprietary License](LICENSE)**.
+Official documents available in the repository: **[Privacy Policy](PRIVACY.md)** | **[Terms of Use](TERMS.md)** | **[Proprietary License](../../LICENSE)**.
 
 - **Scope classification and BYO-OAuth model:** Custódia requests the `https://www.googleapis.com/auth/drive` scope (classified as a **sensitive scope** by [official Google documentation](https://developers.google.com/identity/protocols/oauth2/scopes)). In the current setup, each user creates and uses their own OAuth credentials in Google Cloud Console strictly for **personal/individual use** — this **does not** waive the formal [Google OAuth Verification](https://support.google.com/cloud/answer/9110914) process if a shared Client ID is ever publicly distributed by TundraLab.
 - **Limited Use:** the use of data obtained from Google APIs follows the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy). Your Drive files, folders, metadata, hashes, and OAuth tokens stay exclusively on your machine and are never sent to TundraLab servers.
@@ -212,7 +212,7 @@ Official documents available in the repository: **[Privacy Policy](PRIVACY.en.md
 
 ## Local REST API (`127.0.0.1:5080`) and AI Agents
 
-Complete guide with examples, Function Calling schemas, and Python client: **[Custodia-API.en.pdf](Custodia-API.en.pdf)** and **[docs/en/API.md](docs/en/API.md)**.
+Complete guide with examples, Function Calling schemas, and Python client: **[Custodia-API.en.pdf](Custodia-API.en.pdf)** and **[API.md](API.md)**.
 
 - `GET /api/v1/status`: active account, quota usage, transfers, and synced folders.
 - `GET /api/v1/openapi.json`: OpenAPI 3.0.3 specification for AI agent auto-discovery.
@@ -240,4 +240,4 @@ Copyright © 2026 TundraLab and Gustavo Henrique Novaes Gomes (@GustaHerin).
 - **Use of Official Binaries (`.AppImage` / `.rpm`):** End users receive a free, non-exclusive, non-transferable, revocable license to download, install, and run the official packages published under [Releases](https://github.com/TundraLab/Custodia/releases), strictly for personal or internal corporate use; redistribution (free or commercial), resale, offering as a service (SaaS), modification, or reverse engineering beyond limits expressly permitted by law is prohibited.
 - **External Contributions, Trademarks, and Third Parties:** Any suggestions, bug reports, or Pull Requests grant the authors an irrevocable, royalty-free license to incorporate them into the Software; this license does not authorize use of the names **"TundraLab"**, **"Custódia"**, or visual identity, and third-party libraries remain governed by their respective original licenses.
 
-Read the full binding text in [LICENSE](./LICENSE).
+Read the full binding text in [LICENSE](../../LICENSE).

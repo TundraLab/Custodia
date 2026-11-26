@@ -1,6 +1,6 @@
 # Privacy Policy — Custódia
 
-> 🌐 **Language / Idioma:** [🇧🇷 Português](PRIVACY.md) | **🇺🇸 English (current)**
+> 🌐 **Language / Idioma:** [🇧🇷 Português](../../PRIVACY.md) | **🇺🇸 English (current)**
 
 **Last updated:** November 24, 2026  
 **Controller:** TundraLab (`contato.tundralab@gmail.com`)  

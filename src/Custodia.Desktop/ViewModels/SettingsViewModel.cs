@@ -1238,7 +1238,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         var localDocsPath = Loc.IsEnglish
             ? ResolveLocalDocsPath("docs", "en", "API.md") ?? ResolveLocalDocsPath("docs", "API.md")
             : ResolveLocalDocsPath("docs", "API.md");
-        var remotePdf = Loc.IsEnglish ? "Custodia-API.en.pdf" : "Custodia-API.pdf";
+        var remotePdf = Loc.IsEnglish ? "docs/en/Custodia-API.en.pdf" : "Custodia-API.pdf";
         var target = localDocsPath is not null
             ? new Uri(localDocsPath)
             : new Uri($"{RepositoryUrl}/blob/main/{remotePdf}");

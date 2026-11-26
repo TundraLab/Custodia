@@ -1,6 +1,6 @@
 # Custódia v3.0.5
 
-> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](README.en.md)
+> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](docs/en/README.md)
 
 ![Custódia by TundraLab - Meus arquivos. Sempre seguros.](docs/images/custodia-promo.jpg)
 
@@ -34,7 +34,7 @@
 
 ## Documentação
 
-> Disponível em **[🇧🇷 Português](README.md)** e **[🇺🇸 English](README.en.md)**.
+> Disponível em **[🇧🇷 Português](README.md)** e **[🇺🇸 English](docs/en/README.md)**.
 
 | Guia | Conteúdo |
 | :--- | :--- |

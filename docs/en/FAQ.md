@@ -43,7 +43,7 @@ Custódia uses safe deletion by default:
 - **Two-Way (`PC <-> Drive`):** keeps PC and Google Drive mirrored in both directions. Changes and deletions on one side reflect on the other.
 - **One-Way Backup (`PC -> Drive`):** uploads new files and edits from PC to Drive, but **never** downloads new files from Drive or deletes files from PC if they are removed in Drive.
 
-See the full comparison table in the [README](../../README.en.md#sync-modes).
+See the full comparison table in the [README](README.md#sync-modes).
 
 ---
 

@@ -1,6 +1,6 @@
 # Política de Privacidade — Custódia
 
-> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](PRIVACY.en.md)
+> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](docs/en/PRIVACY.md)
 
 **Última atualização:** 24 de novembro de 2026  
 **Responsável:** TundraLab (`contato.tundralab@gmail.com`)  

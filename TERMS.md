@@ -1,6 +1,6 @@
 # Termos de Uso — Custódia
 
-> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](TERMS.en.md)
+> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](docs/en/TERMS.md)
 
 **Última atualização:** 24 de novembro de 2026  
 **Titular / Desenvolvedora:** TundraLab (`contato.tundralab@gmail.com`)  

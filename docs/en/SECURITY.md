@@ -55,8 +55,8 @@ All sensitive directories and files created by Custódia receive permissions res
 
 ## 6. Legal Documents and Complete Removal
 
-- [Privacy Policy](../../PRIVACY.en.md)
-- [Terms of Use](../../TERMS.en.md)
+- [Privacy Policy](PRIVACY.md)
+- [Terms of Use](TERMS.md)
 - [License](../../LICENSE)
 
 To uninstall the application and erase all local configuration, tokens, and SQLite database data:
