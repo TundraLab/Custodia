@@ -4,19 +4,13 @@
 
 ![Custódia by TundraLab - Your files. Always safe.](../images/custodia-promo-en.jpg)
 
-[![GitHub](https://img.shields.io/badge/GitHub-TundraLab%2FCustodia-181717?logo=github)](https://github.com/TundraLab/Custodia)
-[![Sole Author](https://img.shields.io/badge/Author%20%26%20Lead%20Dev-%40GustaHerin-181717?logo=github)](https://github.com/GustaHerin)
-[![Release](https://img.shields.io/badge/Release-v3.0.5-2563EB?logo=github)](https://github.com/TundraLab/Custodia/releases)
-[![xUnit Tests](https://img.shields.io/badge/xUnit%20Tests-66%20passed-16A34A)](../../tests/Custodia.Tests)
-[![Fedora](https://img.shields.io/badge/Fedora-Workstation%20%2F%20KDE-51A2DA?logo=fedora&logoColor=white)](#systems-and-formats)
-[![Pop!_OS](https://img.shields.io/badge/Pop!__OS-GNOME%20%2F%20COSMIC-48B9C7?logo=popos&logoColor=white)](#systems-and-formats)
-[![KDE Plasma](https://img.shields.io/badge/KDE%20Plasma-5%20%2F%206-1D99F3?logo=kdeplasma&logoColor=white)](#systems-and-formats)
-[![AppImage](https://img.shields.io/badge/AppImage-x86__64-2C7FB8?logo=linux&logoColor=white)](#installation)
-[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![Avalonia UI](https://img.shields.io/badge/Avalonia%20UI-11.3.8-8B44AC)](https://avaloniaui.net/)
-[![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-red)](../../LICENSE)
-[![Privacy](https://img.shields.io/badge/Privacy-Policy-0F766E)](PRIVACY.md)
-[![Terms of Use](https://img.shields.io/badge/Terms%20of-Use-1D4ED8)](TERMS.md)
+[![Release](https://img.shields.io/badge/Release-v3.0.5-2563EB?style=flat-square&logo=github&labelColor=1D2024)](https://github.com/TundraLab/Custodia/releases)
+[![xUnit Tests](https://img.shields.io/badge/xUnit%20Tests-66%20passed-16A34A?style=flat-square&labelColor=1D2024)](../../tests/Custodia.Tests)
+[![Linux](https://img.shields.io/badge/Linux-x86__64%20(.rpm%20%7C%20.AppImage)-334155?style=flat-square&logo=linux&logoColor=white&labelColor=1D2024)](#systems-and-formats)
+[![.NET 10](https://img.shields.io/badge/.NET%2010-Avalonia%2011.3.8-3B82F6?style=flat-square&logo=dotnet&logoColor=white&labelColor=1D2024)](https://dotnet.microsoft.com/)
+[![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-475569?style=flat-square&labelColor=1D2024)](../../LICENSE)
+[![Privacy](https://img.shields.io/badge/Privacy-EN-0F766E?style=flat-square&labelColor=1D2024)](PRIVACY.md)
+[![Terms of Use](https://img.shields.io/badge/Terms-EN-1D4ED8?style=flat-square&labelColor=1D2024)](TERMS.md)
 
 > **In development since:** 2026  
 > **Status:** stable, with official releases ([GitHub Releases](https://github.com/TundraLab/Custodia/releases))  
