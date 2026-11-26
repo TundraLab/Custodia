@@ -45,6 +45,8 @@
 
 ![Prévia das telas do Custódia](docs/images/preview-showcase.png)
 
+- **[Assistir vídeo de divulgação](docs/videos/custodia-divulgacao.mp4)** (`MP4`, 21 MB)
+
 <details>
 <summary>Ver todas as 6 telas individuais</summary>
 
