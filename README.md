@@ -2,7 +2,7 @@
 
 > 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](docs/en/README.md)
 
-![Custódia by TundraLab - Meus arquivos. Sempre seguros.](docs/images/custodia-promo.jpg)
+![Custódia by TundraLab - Meus arquivos. Sempre seguros.](docs/images/custodia-promo-pt.jpg)
 
 [![Release](https://img.shields.io/badge/Release-v3.0.5-2563EB?style=flat-square&logo=github&labelColor=1D2024)](https://github.com/TundraLab/Custodia/releases)
 [![Testes xUnit](https://img.shields.io/badge/Testes%20xUnit-66%20aprovados-16A34A?style=flat-square&labelColor=1D2024)](tests/Custodia.Tests)
