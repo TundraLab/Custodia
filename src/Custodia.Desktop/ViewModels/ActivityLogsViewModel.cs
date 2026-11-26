@@ -132,8 +132,12 @@ public sealed class ActivityLogItemViewModel : ObservableObject
             "FolderCreated" => $"Folder created: {target ?? ExtractAfterColon(msg)}.",
             "GmailAlertSent" => $"Official TundraLab email sent to {target ?? ExtractTrailingValue(msg, "enviado para ")}.",
             "GmailAlertSkipped" => $"Automatic TundraLab email skipped for {target ?? "account"} (mailer webhook not configured or offline).",
-            "LocalTrashed" => $"Moved local file to Trash after remote deletion: {target ?? ExtractTrailingValue(msg, "exclusão remota: ")}.",
-            "RemoteTrashed" => $"Moved to Google Drive Trash: {target ?? ExtractInsideParens(msg)}.",
+            "LocalTrashed" => msg.Contains("Pasta movida", StringComparison.OrdinalIgnoreCase)
+                ? $"Moved local folder to Trash after remote deletion: {target ?? ExtractTrailingValue(msg, "exclusão remota: ")}."
+                : $"Moved local file to Trash after remote deletion: {target ?? ExtractTrailingValue(msg, "exclusão remota: ")}.",
+            "RemoteTrashed" => msg.Contains("pasta enviada", StringComparison.OrdinalIgnoreCase)
+                ? $"Moved folder to Google Drive Trash: {target ?? ExtractInsideParens(msg)}."
+                : $"Moved to Google Drive Trash: {target ?? ExtractInsideParens(msg)}.",
             "RemoteRestored" => $"Restored from Google Drive Trash: {target ?? ExtractAfterColon(msg)}.",
             "RemoteDeletedPermanent" => $"Permanently deleted from Google Drive: {target ?? ExtractAfterColon(msg)}.",
             "TrashEmptied" => "Google Drive Trash emptied.",

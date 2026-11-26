@@ -27,11 +27,9 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _transferCancellations = new();
     private readonly ConcurrentDictionary<string, byte> _pendingInitialSyncFolders = new();
     private readonly object _suppressionLock = new();
-    private readonly HashSet<string> _suppressedWatcherFolders = new();
+    private readonly Dictionary<string, int> _suppressedWatcherCounts = new(StringComparer.Ordinal);
     private readonly object _downloadPathLock = new();
     private readonly HashSet<string> _reservedDownloadPaths = new(StringComparer.Ordinal);
-    private const int MaxConcurrentFolderSyncs = 3;
-    private const int MaxConcurrentFileTransfers = 3;
 
     private PeriodicTimer? _periodicTimer;
     private CancellationTokenSource? _lifecycleCts;
@@ -370,6 +368,19 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         await _authManager.RevokeAndClearAsync(targetId, disconnectedEmail, purgeFolderConfig: deleteFolderConfiguration, cancellationToken);
         if (deleteFolderConfiguration)
         {
+            var accountFolders = await _repository.GetSyncFoldersByAccountAsync(targetId, cancellationToken);
+            foreach (var af in accountFolders)
+            {
+                if (_folderSyncCancellations.TryGetValue(af.Id, out var folderCts))
+                {
+                    folderCts.Cancel();
+                }
+
+                var folderLock = _folderLocks.GetOrAdd(af.Id, _ => new SemaphoreSlim(1, 1));
+                await folderLock.WaitAsync(cancellationToken);
+                folderLock.Release();
+            }
+
             await _repository.DeleteSyncFoldersByAccountAsync(targetId, disconnectedEmail, cancellationToken);
         }
         await _repository.DeleteAccountAsync(targetId, cancellationToken);
@@ -761,14 +772,29 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
 
     public async Task RemoveSyncFolderAsync(string folderId, CancellationToken cancellationToken = default)
     {
-        var folder = await _repository.GetSyncFolderByIdAsync(folderId, cancellationToken);
-        if (folder is null)
+        if (_folderSyncCancellations.TryGetValue(folderId, out var folderCts))
         {
-            return;
+            folderCts.Cancel();
         }
 
-        _pendingInitialSyncFolders.TryRemove(folderId, out _);
-        await _repository.DeleteSyncFolderAsync(folderId, cancellationToken);
+        LocalSyncFolder? folder;
+        var folderLock = _folderLocks.GetOrAdd(folderId, _ => new SemaphoreSlim(1, 1));
+        await folderLock.WaitAsync(cancellationToken);
+        try
+        {
+            folder = await _repository.GetSyncFolderByIdAsync(folderId, cancellationToken);
+            if (folder is null)
+            {
+                return;
+            }
+
+            _pendingInitialSyncFolders.TryRemove(folderId, out _);
+            await _repository.DeleteSyncFolderAsync(folderId, cancellationToken);
+        }
+        finally
+        {
+            folderLock.Release();
+        }
         await PersistCurrentAccountFoldersProfileAsync(cancellationToken);
         var folders = await GetSyncFoldersAsync(cancellationToken);
         _watcherService.UpdateWatchers(folders);
@@ -796,17 +822,22 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             .ToList();
         if (activeFolders.Count > 0)
         {
-            using var gate = new SemaphoreSlim(MaxConcurrentFolderSyncs, MaxConcurrentFolderSyncs);
+            var concurrencyLimit = _settingsService.Current.GetEffectiveTransferConcurrencyLimit();
+            using var gate = concurrencyLimit is int limit ? new SemaphoreSlim(limit, limit) : null;
             var syncTasks = activeFolders.Select(async folder =>
             {
-                await gate.WaitAsync(cancellationToken);
+                if (gate is not null)
+                {
+                    await gate.WaitAsync(cancellationToken);
+                }
+
                 try
                 {
                     await TriggerFolderSyncAsync(folder.Id, cancellationToken);
                 }
                 finally
                 {
-                    gate.Release();
+                    gate?.Release();
                 }
             });
             await Task.WhenAll(syncTasks);
@@ -1138,14 +1169,8 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         string targetPath;
         lock (_downloadPathLock)
         {
-            targetPath = GetUniqueDestinationPath(downloadDir, safeName);
-            while (!_reservedDownloadPaths.Add(targetPath))
-            {
-                var dir = Path.GetDirectoryName(targetPath) ?? downloadDir;
-                var stem = Path.GetFileNameWithoutExtension(targetPath);
-                var ext = Path.GetExtension(targetPath);
-                targetPath = Path.Combine(dir, $"{stem}_1{ext}");
-            }
+            targetPath = GetUniqueDestinationPath(downloadDir, safeName, _reservedDownloadPaths);
+            _reservedDownloadPaths.Add(targetPath);
         }
 
         var queueItem = CreateTransferItem(
@@ -1273,11 +1298,14 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         return combined;
     }
 
-    private static string GetUniqueDestinationPath(string directory, string fileName)
+    private static string GetUniqueDestinationPath(
+        string directory,
+        string fileName,
+        HashSet<string>? reservedPaths = null)
     {
         var safeFileName = SanitizeRemoteSegment(fileName);
         var candidate = ResolveSafeLocalPath(directory, safeFileName);
-        if (!File.Exists(candidate))
+        if (!File.Exists(candidate) && (reservedPaths is null || !reservedPaths.Contains(candidate)))
         {
             return candidate;
         }
@@ -1285,7 +1313,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         var baseName = Path.GetFileNameWithoutExtension(safeFileName);
         var ext = Path.GetExtension(safeFileName);
         var counter = 1;
-        while (File.Exists(candidate))
+        while (File.Exists(candidate) || (reservedPaths is not null && reservedPaths.Contains(candidate)))
         {
             candidate = ResolveSafeLocalPath(directory, $"{baseName} ({counter}){ext}");
             counter++;
@@ -1356,12 +1384,25 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
     private async Task<int> SyncFolderInternalAsync(LocalSyncFolder folder, CancellationToken cancellationToken)
     {
         var changesCount = 0;
-        var trackedEntries = (await _repository.GetTrackedFilesByFolderAsync(folder.Id, cancellationToken))
-            .ToDictionary(e => e.RelativePath, StringComparer.Ordinal);
+        var trackedAll = await _repository.GetTrackedFilesByFolderAsync(folder.Id, cancellationToken);
+        var trackedFiles = new Dictionary<string, TrackedFileEntry>(StringComparer.Ordinal);
+        var trackedFolders = new Dictionary<string, TrackedFileEntry>(StringComparer.Ordinal);
+
+        foreach (var entry in trackedAll)
+        {
+            if (entry.IsFolder)
+            {
+                trackedFolders[entry.RelativePath] = entry;
+            }
+            else
+            {
+                trackedFiles[entry.RelativePath] = entry;
+            }
+        }
 
         if (!Directory.Exists(folder.LocalPath))
         {
-            if (trackedEntries.Count > 0)
+            if (trackedFiles.Count > 0 || trackedFolders.Count > 0)
             {
                 throw new DirectoryNotFoundException(
                     $"Pasta local '{folder.LocalPath}' não foi encontrada ou está desmontada. Sincronização abortada para proteger seus arquivos no Google Drive.");
@@ -1373,24 +1414,226 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         var ignorePatterns = _settingsService.Current.IgnorePatterns;
 
         var localFiles = ScanLocalFiles(folder.LocalPath, ignorePatterns);
+        var localDirs = ScanLocalDirectories(folder.LocalPath, ignorePatterns);
+        var localDirSet = new HashSet<string>(localDirs, StringComparer.Ordinal);
         var remoteTree = await ScanRemoteTreeAsync(folder.RemoteFolderId, cancellationToken);
 
         var remoteFoldersByRelPath = remoteTree.FoldersByRelativePath;
         var remoteFilesByRelPath = remoteTree.FilesByRelativePath;
-        using var transferGate = new SemaphoreSlim(MaxConcurrentFileTransfers, MaxConcurrentFileTransfers);
-        using var remoteFolderGate = new SemaphoreSlim(1, 1);
+        var trashedAny = false;
 
-        async Task RunTransferAsync(Func<Task> action)
+        // Collect all previously synced folder paths (explicit folder rows + ancestor paths of tracked files).
+        var previouslySyncedDirs = new HashSet<string>(trackedFolders.Keys, StringComparer.Ordinal);
+        foreach (var fileRelPath in trackedFiles.Keys)
         {
-            await transferGate.WaitAsync(cancellationToken);
+            foreach (var ancestorDir in EnumerateAncestorDirectories(fileRelPath))
+            {
+                previouslySyncedDirs.Add(ancestorDir);
+            }
+        }
+
+        // 1. Whole-folder deletion: folder deleted remotely on Drive -> trash entire local folder once.
+        var remoteDeletedDirs = FilterTopMostFolders(previouslySyncedDirs.Where(relDir =>
+            !remoteFoldersByRelPath.ContainsKey(relDir) &&
+            Directory.Exists(ResolveSafeLocalPath(folder.LocalPath, relDir))));
+
+        if (remoteDeletedDirs.Count > 0)
+        {
+            if (folder.Mode == SyncMode.TwoWay)
+            {
+                foreach (var relDir in remoteDeletedDirs)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var localDirPath = ResolveSafeLocalPath(folder.LocalPath, relDir);
+                    var dirPrefix = relDir + "/";
+                    var totalBytes = localFiles
+                        .Where(kv => kv.Key.StartsWith(dirPrefix, StringComparison.Ordinal))
+                        .Sum(kv => kv.Value.Length);
+                    trackedFolders.TryGetValue(relDir, out var trackedDir);
+
+                    var deleteQueueItem = CreateTransferItem(
+                        folder.Id,
+                        Path.GetFileName(relDir),
+                        relDir,
+                        localDirPath,
+                        trackedDir?.RemoteFileId,
+                        TransferDirection.Delete,
+                        totalBytes);
+                    deleteQueueItem.Status = TransferStatus.InProgress;
+                    PublishTransfer(deleteQueueItem);
+
+                    try
+                    {
+                        SuppressWatcherForFolder(folder.Id);
+                        try
+                        {
+                            MoveLocalDirectoryToSystemTrash(localDirPath);
+                        }
+                        finally
+                        {
+                            ReleaseWatcherSuppressionDelayed(folder.Id);
+                        }
+
+                        deleteQueueItem.TransferredBytes = totalBytes;
+                        deleteQueueItem.Status = TransferStatus.Completed;
+                        deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
+                        PublishTransfer(deleteQueueItem);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        deleteQueueItem.Status = TransferStatus.Cancelled;
+                        deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
+                        PublishTransfer(deleteQueueItem);
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        deleteQueueItem.Status = TransferStatus.Failed;
+                        deleteQueueItem.ErrorMessage = ex.Message;
+                        deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
+                        PublishTransfer(deleteQueueItem);
+                        throw;
+                    }
+
+                    await RemoveTrackedSubtreeAsync(relDir, trackedFolders, trackedFiles, cancellationToken);
+                    RemoveSubtreeFromMap(localFiles, relDir);
+                    localDirs.RemoveAll(d => string.Equals(d, relDir, StringComparison.Ordinal) || d.StartsWith(dirPrefix, StringComparison.Ordinal));
+                    localDirSet.RemoveWhere(d => string.Equals(d, relDir, StringComparison.Ordinal) || d.StartsWith(dirPrefix, StringComparison.Ordinal));
+                    changesCount++;
+
+                    await LogAsync(ActivitySeverity.Info, "LocalTrashed",
+                        $"Pasta movida para lixeira local após exclusão remota: {relDir}.",
+                        folder.Id, relDir, cancellationToken);
+                }
+            }
+            else
+            {
+                // In OneWayBackup, keep local directories intact and clear stale remote folder tracking rows.
+                foreach (var relDir in remoteDeletedDirs)
+                {
+                    var dirPrefix = relDir + "/";
+                    var staleFolderKeys = trackedFolders.Keys
+                        .Where(k => string.Equals(k, relDir, StringComparison.Ordinal) || k.StartsWith(dirPrefix, StringComparison.Ordinal))
+                        .ToList();
+                    foreach (var key in staleFolderKeys)
+                    {
+                        if (trackedFolders.Remove(key, out var staleDir))
+                        {
+                            await _repository.DeleteTrackedFileAsync(staleDir.Id, cancellationToken);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Whole-folder deletion: folder deleted locally on PC -> trash entire remote folder once.
+        var localDeletedDirs = FilterTopMostFolders(previouslySyncedDirs.Where(relDir =>
+            remoteFoldersByRelPath.ContainsKey(relDir) &&
+            !localDirSet.Contains(relDir) &&
+            !Directory.Exists(ResolveSafeLocalPath(folder.LocalPath, relDir))));
+
+        foreach (var relDir in localDeletedDirs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!remoteFoldersByRelPath.TryGetValue(relDir, out var remoteDir))
+            {
+                continue;
+            }
+
+            var dirPrefix = relDir + "/";
+            var localDirPath = ResolveSafeLocalPath(folder.LocalPath, relDir);
+            var totalBytes = remoteFilesByRelPath
+                .Where(kv => kv.Key.StartsWith(dirPrefix, StringComparison.Ordinal))
+                .Sum(kv => kv.Value.SizeBytes);
+
+            var deleteQueueItem = CreateTransferItem(
+                folder.Id,
+                remoteDir.Name,
+                relDir,
+                localDirPath,
+                remoteDir.Id,
+                TransferDirection.Delete,
+                totalBytes);
+            deleteQueueItem.Status = TransferStatus.InProgress;
+            PublishTransfer(deleteQueueItem);
+
+            try
+            {
+                await _driveClient.TrashFileAsync(remoteDir.Id, cancellationToken);
+
+                deleteQueueItem.TransferredBytes = totalBytes;
+                deleteQueueItem.Status = TransferStatus.Completed;
+                deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
+                PublishTransfer(deleteQueueItem);
+            }
+            catch (OperationCanceledException)
+            {
+                deleteQueueItem.Status = TransferStatus.Cancelled;
+                deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
+                PublishTransfer(deleteQueueItem);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                deleteQueueItem.Status = TransferStatus.Failed;
+                deleteQueueItem.ErrorMessage = ex.Message;
+                deleteQueueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
+                PublishTransfer(deleteQueueItem);
+                throw;
+            }
+
+            trashedAny = true;
+            changesCount++;
+            await RemoveTrackedSubtreeAsync(relDir, trackedFolders, trackedFiles, cancellationToken);
+            RemoveSubtreeFromMap(remoteFoldersByRelPath, relDir);
+            RemoveSubtreeFromMap(remoteFilesByRelPath, relDir);
+
+            await LogAsync(ActivitySeverity.Warning, "RemoteTrashed",
+                $"Exclusão local segura: pasta enviada para Lixeira do Google Drive ({relDir}).",
+                folder.Id, relDir, cancellationToken);
+        }
+
+        var concurrencyLimit = _settingsService.Current.GetEffectiveTransferConcurrencyLimit();
+        using var transferGate = concurrencyLimit is int limit ? new SemaphoreSlim(limit, limit) : null;
+        using var remoteFolderGate = new SemaphoreSlim(1, 1);
+        var transferErrors = new ConcurrentQueue<Exception>();
+
+        async Task RunTransferAsync(TransferQueueItem? preQueuedItem, Func<Task> action)
+        {
+            if (transferGate is not null)
+            {
+                try
+                {
+                    await transferGate.WaitAsync(cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (preQueuedItem is not null)
+                    {
+                        preQueuedItem.Status = TransferStatus.Cancelled;
+                        preQueuedItem.CompletedAtUtc = DateTimeOffset.UtcNow;
+                        PublishTransfer(preQueuedItem);
+                    }
+                    throw;
+                }
+            }
+
             try
             {
                 await action();
                 Interlocked.Increment(ref changesCount);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                transferErrors.Enqueue(ex);
+            }
             finally
             {
-                transferGate.Release();
+                transferGate?.Release();
             }
         }
 
@@ -1400,7 +1643,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            trackedEntries.TryGetValue(relPath, out var tracked);
+            trackedFiles.TryGetValue(relPath, out var tracked);
             remoteFilesByRelPath.TryGetValue(relPath, out var remoteFile);
 
             var hashes = await FileHashUtility.ComputeHashesAsync(localFile.FullName, cancellationToken);
@@ -1410,7 +1653,13 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             {
                 if (string.Equals(hashes.Md5Hex, remoteFile.Md5Checksum, StringComparison.OrdinalIgnoreCase))
                 {
-                    await UpsertTrackedAsync(folder.Id, relPath, remoteFile, hashes, localFile.Length, localModUtc, cancellationToken);
+                    if (tracked is null ||
+                        !string.Equals(tracked.RemoteFileId, remoteFile.Id, StringComparison.Ordinal) ||
+                        !string.Equals(tracked.Md5Hash, hashes.Md5Hex, StringComparison.OrdinalIgnoreCase) ||
+                        tracked.SizeBytes != localFile.Length)
+                    {
+                        await UpsertTrackedAsync(folder.Id, relPath, remoteFile, hashes, localFile.Length, localModUtc, cancellationToken);
+                    }
                     continue;
                 }
 
@@ -1420,8 +1669,16 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                     var capturedLocalFile = localFile;
                     var capturedRemoteFile = remoteFile;
                     var capturedHashes = hashes;
-                    localTransferTasks.Add(RunTransferAsync(() =>
-                        UploadAndTrackAsync(folder, capturedRelPath, capturedLocalFile, capturedRemoteFile.ParentIds.FirstOrDefault() ?? folder.RemoteFolderId, capturedRemoteFile.Id, capturedHashes, cancellationToken)));
+                    var queued = CreateTransferItem(
+                        folder.Id,
+                        capturedLocalFile.Name,
+                        capturedRelPath,
+                        capturedLocalFile.FullName,
+                        capturedRemoteFile.Id,
+                        TransferDirection.Upload,
+                        capturedLocalFile.Length);
+                    localTransferTasks.Add(RunTransferAsync(queued, () =>
+                        UploadAndTrackAsync(folder, capturedRelPath, capturedLocalFile, capturedRemoteFile.ParentIds.FirstOrDefault() ?? folder.RemoteFolderId, capturedRemoteFile.Id, capturedHashes, cancellationToken, queued)));
                     continue;
                 }
 
@@ -1439,16 +1696,32 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                     var capturedLocalFile = localFile;
                     var capturedRemoteFile = remoteFile;
                     var capturedHashes = hashes;
-                    localTransferTasks.Add(RunTransferAsync(() =>
-                        UploadAndTrackAsync(folder, capturedRelPath, capturedLocalFile, capturedRemoteFile.ParentIds.FirstOrDefault() ?? folder.RemoteFolderId, capturedRemoteFile.Id, capturedHashes, cancellationToken)));
+                    var queued = CreateTransferItem(
+                        folder.Id,
+                        capturedLocalFile.Name,
+                        capturedRelPath,
+                        capturedLocalFile.FullName,
+                        capturedRemoteFile.Id,
+                        TransferDirection.Upload,
+                        capturedLocalFile.Length);
+                    localTransferTasks.Add(RunTransferAsync(queued, () =>
+                        UploadAndTrackAsync(folder, capturedRelPath, capturedLocalFile, capturedRemoteFile.ParentIds.FirstOrDefault() ?? folder.RemoteFolderId, capturedRemoteFile.Id, capturedHashes, cancellationToken, queued)));
                 }
                 else if (!localChangedSinceTrack && remoteChangedSinceTrack)
                 {
                     var capturedRelPath = relPath;
                     var capturedLocalFile = localFile;
                     var capturedRemoteFile = remoteFile;
-                    localTransferTasks.Add(RunTransferAsync(() =>
-                        DownloadAndTrackAsync(folder, capturedRelPath, capturedLocalFile.FullName, capturedRemoteFile, cancellationToken)));
+                    var queued = CreateTransferItem(
+                        folder.Id,
+                        capturedRemoteFile.Name,
+                        capturedRelPath,
+                        capturedLocalFile.FullName,
+                        capturedRemoteFile.Id,
+                        TransferDirection.Download,
+                        capturedRemoteFile.SizeBytes);
+                    localTransferTasks.Add(RunTransferAsync(queued, () =>
+                        DownloadAndTrackAsync(folder, capturedRelPath, capturedLocalFile.FullName, capturedRemoteFile, cancellationToken, queued)));
                 }
                 else
                 {
@@ -1457,7 +1730,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                     var capturedRemoteFile = remoteFile;
                     var capturedHashes = hashes;
                     var capturedModUtc = localModUtc;
-                    localTransferTasks.Add(RunTransferAsync(() =>
+                    localTransferTasks.Add(RunTransferAsync(null, () =>
                         ResolveConflictAsync(folder, capturedRelPath, capturedLocalFile, capturedHashes, capturedModUtc, capturedRemoteFile, cancellationToken)));
                 }
             }
@@ -1517,18 +1790,26 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                 }
                 else
                 {
-                    // Em Backup Unidirecional, mantém o arquivo local sem reenviá-lo após exclusão no Drive,
-                    // a menos que o arquivo no PC volte a ser editado localmente.
+                    // In OneWayBackup, keep the local file without re-uploading after Drive deletion
+                    // unless the local file is edited again.
                     var localModifiedSinceBackup = !string.Equals(tracked.Md5Hash, hashes.Md5Hex, StringComparison.OrdinalIgnoreCase);
                     if (localModifiedSinceBackup)
                     {
                         var capturedRelPath = relPath;
                         var capturedLocalFile = localFile;
                         var capturedHashes = hashes;
-                        localTransferTasks.Add(RunTransferAsync(async () =>
+                        var queued = CreateTransferItem(
+                            folder.Id,
+                            capturedLocalFile.Name,
+                            capturedRelPath,
+                            capturedLocalFile.FullName,
+                            null,
+                            TransferDirection.Upload,
+                            capturedLocalFile.Length);
+                        localTransferTasks.Add(RunTransferAsync(queued, async () =>
                         {
                             var parentId = await EnsureRemoteParentFolderAsync(folder.RemoteFolderId, capturedRelPath, remoteFoldersByRelPath, remoteFolderGate, cancellationToken);
-                            await UploadAndTrackAsync(folder, capturedRelPath, capturedLocalFile, parentId, null, capturedHashes, cancellationToken);
+                            await UploadAndTrackAsync(folder, capturedRelPath, capturedLocalFile, parentId, null, capturedHashes, cancellationToken, queued);
                         }));
                     }
                     else if (!string.IsNullOrEmpty(tracked.RemoteFileId))
@@ -1544,10 +1825,18 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                 var capturedRelPath = relPath;
                 var capturedLocalFile = localFile;
                 var capturedHashes = hashes;
-                localTransferTasks.Add(RunTransferAsync(async () =>
+                var queued = CreateTransferItem(
+                    folder.Id,
+                    capturedLocalFile.Name,
+                    capturedRelPath,
+                    capturedLocalFile.FullName,
+                    null,
+                    TransferDirection.Upload,
+                    capturedLocalFile.Length);
+                localTransferTasks.Add(RunTransferAsync(queued, async () =>
                 {
                     var parentId = await EnsureRemoteParentFolderAsync(folder.RemoteFolderId, capturedRelPath, remoteFoldersByRelPath, remoteFolderGate, cancellationToken);
-                    await UploadAndTrackAsync(folder, capturedRelPath, capturedLocalFile, parentId, null, capturedHashes, cancellationToken);
+                    await UploadAndTrackAsync(folder, capturedRelPath, capturedLocalFile, parentId, null, capturedHashes, cancellationToken, queued);
                 }));
             }
         }
@@ -1557,8 +1846,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             await Task.WhenAll(localTransferTasks);
         }
 
-        var trashedAny = false;
-        foreach (var (relPath, tracked) in trackedEntries)
+        foreach (var (relPath, tracked) in trackedFiles)
         {
             if (localFiles.ContainsKey(relPath))
             {
@@ -1625,7 +1913,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             var remoteDownloadTasks = new List<Task>();
             foreach (var (relPath, remoteFile) in remoteFilesByRelPath)
             {
-                if (localFiles.ContainsKey(relPath) || trackedEntries.ContainsKey(relPath))
+                if (localFiles.ContainsKey(relPath) || trackedFiles.ContainsKey(relPath))
                 {
                     continue;
                 }
@@ -1638,18 +1926,53 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                 var capturedRelPath = relPath;
                 var capturedRemoteFile = remoteFile;
                 var targetLocalPath = ResolveSafeLocalPath(folder.LocalPath, capturedRelPath);
-                remoteDownloadTasks.Add(RunTransferAsync(() =>
-                    DownloadAndTrackAsync(folder, capturedRelPath, targetLocalPath, capturedRemoteFile, cancellationToken)));
+                var queued = CreateTransferItem(
+                    folder.Id,
+                    capturedRemoteFile.Name,
+                    capturedRelPath,
+                    targetLocalPath,
+                    capturedRemoteFile.Id,
+                    TransferDirection.Download,
+                    capturedRemoteFile.SizeBytes);
+                remoteDownloadTasks.Add(RunTransferAsync(queued, () =>
+                    DownloadAndTrackAsync(folder, capturedRelPath, targetLocalPath, capturedRemoteFile, cancellationToken, queued)));
             }
 
             if (remoteDownloadTasks.Count > 0)
             {
                 await Task.WhenAll(remoteDownloadTasks);
             }
+
+            // Ensure empty remote folders also exist locally in TwoWay mode.
+            foreach (var relDir in remoteFoldersByRelPath.Keys.OrderBy(k => k.Length))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (SyncIgnoreMatcher.IsIgnored(relDir + "/", ignorePatterns) || trackedFolders.ContainsKey(relDir))
+                {
+                    continue;
+                }
+
+                var targetDir = ResolveSafeLocalPath(folder.LocalPath, relDir);
+                if (!Directory.Exists(targetDir))
+                {
+                    SuppressWatcherForFolder(folder.Id);
+                    try
+                    {
+                        Directory.CreateDirectory(targetDir);
+                    }
+                    finally
+                    {
+                        ReleaseWatcherSuppressionDelayed(folder.Id);
+                    }
+
+                    localDirs.Add(relDir);
+                    localDirSet.Add(relDir);
+                    changesCount++;
+                }
+            }
         }
 
         // Ensure empty local subdirectories also exist in Drive.
-        var localDirs = ScanLocalDirectories(folder.LocalPath, ignorePatterns);
         foreach (var relDir in localDirs)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -1658,6 +1981,33 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                 await EnsureRemoteParentFolderAsync(folder.RemoteFolderId, $"{relDir}/.dir-placeholder", remoteFoldersByRelPath, remoteFolderGate, cancellationToken);
                 Interlocked.Increment(ref changesCount);
             }
+        }
+
+        // Persist tracked folder rows for synced directories so whole-folder deletion works both ways.
+        foreach (var (relDir, remoteDir) in remoteFoldersByRelPath)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var localDirPath = ResolveSafeLocalPath(folder.LocalPath, relDir);
+            if (!Directory.Exists(localDirPath))
+            {
+                continue;
+            }
+
+            if (!trackedFolders.TryGetValue(relDir, out var existingDir) ||
+                !string.Equals(existingDir.RemoteFileId, remoteDir.Id, StringComparison.Ordinal))
+            {
+                await UpsertTrackedFolderAsync(folder.Id, relDir, remoteDir, localDirPath, existingDir, cancellationToken);
+            }
+        }
+
+        if (!transferErrors.IsEmpty)
+        {
+            if (transferErrors.Count == 1 && transferErrors.TryDequeue(out var singleErr))
+            {
+                throw singleErr;
+            }
+
+            throw new AggregateException($"{transferErrors.Count} transferência(s) falharam durante a sincronização.", transferErrors.ToArray());
         }
 
         return changesCount;
@@ -1716,9 +2066,10 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         string remoteParentId,
         string? existingRemoteFileId,
         FileHashResult hashes,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TransferQueueItem? existingQueueItem = null)
     {
-        var queueItem = CreateTransferItem(
+        var queueItem = existingQueueItem ?? CreateTransferItem(
             folder.Id,
             localFile.Name,
             relPath,
@@ -1788,9 +2139,10 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         string relPath,
         string targetLocalPath,
         RemoteDriveNode remoteFile,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TransferQueueItem? existingQueueItem = null)
     {
-        var queueItem = CreateTransferItem(
+        var queueItem = existingQueueItem ?? CreateTransferItem(
             folder.Id,
             remoteFile.Name,
             relPath,
@@ -1897,6 +2249,115 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         entry.LastSyncedAtUtc = DateTimeOffset.UtcNow;
 
         await _repository.UpsertTrackedFileAsync(entry, cancellationToken);
+    }
+
+    private async Task UpsertTrackedFolderAsync(
+        string syncFolderId,
+        string relDir,
+        RemoteDriveNode remoteDir,
+        string localDirPath,
+        TrackedFileEntry? existing,
+        CancellationToken cancellationToken)
+    {
+        var dirInfo = new DirectoryInfo(localDirPath);
+        var entry = existing ?? await _repository.GetTrackedFileAsync(syncFolderId, relDir, cancellationToken) ?? new TrackedFileEntry
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            SyncFolderId = syncFolderId,
+            RelativePath = relDir
+        };
+
+        entry.RemoteFileId = remoteDir.Id;
+        entry.RemoteParentId = remoteDir.ParentIds.FirstOrDefault() ?? string.Empty;
+        entry.IsFolder = true;
+        entry.Md5Hash = null;
+        entry.Sha256Hash = null;
+        entry.SizeBytes = 0;
+        entry.LocalModifiedAtUtc = dirInfo.Exists
+            ? new DateTimeOffset(dirInfo.LastWriteTimeUtc, TimeSpan.Zero)
+            : DateTimeOffset.UtcNow;
+        entry.RemoteModifiedAtUtc = remoteDir.ModifiedTimeUtc;
+        entry.LastSyncedAtUtc = DateTimeOffset.UtcNow;
+
+        await _repository.UpsertTrackedFileAsync(entry, cancellationToken);
+    }
+
+    private async Task RemoveTrackedSubtreeAsync(
+        string relDir,
+        Dictionary<string, TrackedFileEntry> trackedFolders,
+        Dictionary<string, TrackedFileEntry> trackedFiles,
+        CancellationToken cancellationToken)
+    {
+        var prefix = relDir + "/";
+
+        var folderKeys = trackedFolders.Keys
+            .Where(k => string.Equals(k, relDir, StringComparison.Ordinal) || k.StartsWith(prefix, StringComparison.Ordinal))
+            .ToList();
+        foreach (var key in folderKeys)
+        {
+            if (trackedFolders.Remove(key, out var entry))
+            {
+                await _repository.DeleteTrackedFileAsync(entry.Id, cancellationToken);
+            }
+        }
+
+        var fileKeys = trackedFiles.Keys
+            .Where(k => k.StartsWith(prefix, StringComparison.Ordinal))
+            .ToList();
+        foreach (var key in fileKeys)
+        {
+            if (trackedFiles.Remove(key, out var entry))
+            {
+                await _repository.DeleteTrackedFileAsync(entry.Id, cancellationToken);
+            }
+        }
+    }
+
+    private static void RemoveSubtreeFromMap<T>(Dictionary<string, T> map, string relDir)
+    {
+        var prefix = relDir + "/";
+        var keys = map.Keys
+            .Where(k => string.Equals(k, relDir, StringComparison.Ordinal) || k.StartsWith(prefix, StringComparison.Ordinal))
+            .ToList();
+        foreach (var key in keys)
+        {
+            map.Remove(key);
+        }
+    }
+
+    private static IEnumerable<string> EnumerateAncestorDirectories(string relativeFilePath)
+    {
+        var normalized = relativeFilePath.Replace('\\', '/').Trim('/');
+        var idx = normalized.IndexOf('/');
+        while (idx > 0)
+        {
+            yield return normalized[..idx];
+            idx = normalized.IndexOf('/', idx + 1);
+        }
+    }
+
+    private static List<string> FilterTopMostFolders(IEnumerable<string> folderPaths)
+    {
+        var ordered = folderPaths
+            .Select(p => p.Replace('\\', '/').Trim('/'))
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(p => p.Length)
+            .ThenBy(p => p, StringComparer.Ordinal)
+            .ToList();
+
+        var topMost = new List<string>();
+        foreach (var candidate in ordered)
+        {
+            var hasSelectedAncestor = topMost.Any(parent =>
+                candidate.StartsWith(parent + "/", StringComparison.Ordinal));
+            if (!hasSelectedAncestor)
+            {
+                topMost.Add(candidate);
+            }
+        }
+
+        return topMost;
     }
 
     private async Task<string> EnsureRemoteParentFolderAsync(
@@ -2086,37 +2547,81 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         return Path.Combine(dir, $"{name}.conflito-{stamp}{ext}");
     }
 
-    private static void MoveLocalFileToSystemTrash(string localFilePath)
+    internal string? TrashDirectoryOverride { get; set; }
+
+    private void MoveLocalFileToSystemTrash(string localFilePath) =>
+        MoveLocalPathToSystemTrash(localFilePath, isDirectory: false);
+
+    private void MoveLocalDirectoryToSystemTrash(string localDirPath) =>
+        MoveLocalPathToSystemTrash(localDirPath, isDirectory: true);
+
+    private void MoveLocalPathToSystemTrash(string localPath, bool isDirectory)
     {
-        if (!File.Exists(localFilePath))
+        var normalizedPath = isDirectory
+            ? Path.TrimEndingDirectorySeparator(localPath)
+            : localPath;
+
+        if (isDirectory ? !Directory.Exists(normalizedPath) : !File.Exists(normalizedPath))
         {
             return;
         }
 
+        string? infoFile = null;
         try
         {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var trashFiles = Path.Combine(home, ".local", "share", "Trash", "files");
-            var trashInfo = Path.Combine(home, ".local", "share", "Trash", "info");
+            var trashBase = !string.IsNullOrWhiteSpace(TrashDirectoryOverride)
+                ? TrashDirectoryOverride
+                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share", "Trash");
+            var trashFiles = Path.Combine(trashBase, "files");
+            var trashInfo = Path.Combine(trashBase, "info");
             Directory.CreateDirectory(trashFiles);
             Directory.CreateDirectory(trashInfo);
 
-            var fileName = Path.GetFileName(localFilePath);
-            var destName = $"{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}_{fileName}";
-            var destFile = Path.Combine(trashFiles, destName);
-            var infoFile = Path.Combine(trashInfo, $"{destName}.trashinfo");
+            var itemName = Path.GetFileName(normalizedPath);
+            var destName = $"{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}_{itemName}";
+            var destPath = Path.Combine(trashFiles, destName);
+            infoFile = Path.Combine(trashInfo, $"{destName}.trashinfo");
 
             var trashMetadata = $"""
                 [Trash Info]
-                Path={EncodeFreeDesktopTrashPath(localFilePath)}
+                Path={EncodeFreeDesktopTrashPath(normalizedPath)}
                 DeletionDate={DateTime.Now:yyyy-MM-ddTHH:mm:ss}
                 """;
             File.WriteAllText(infoFile, trashMetadata);
-            File.Move(localFilePath, destFile, overwrite: true);
+
+            if (isDirectory)
+            {
+                Directory.Move(normalizedPath, destPath);
+            }
+            else
+            {
+                File.Move(normalizedPath, destPath, overwrite: true);
+            }
         }
         catch
         {
-            File.Delete(localFilePath);
+            if (!string.IsNullOrEmpty(infoFile) && File.Exists(infoFile))
+            {
+                try
+                {
+                    File.Delete(infoFile);
+                }
+                catch
+                {
+                }
+            }
+
+            if (isDirectory)
+            {
+                if (Directory.Exists(normalizedPath))
+                {
+                    Directory.Delete(normalizedPath, recursive: true);
+                }
+            }
+            else if (File.Exists(normalizedPath))
+            {
+                File.Delete(normalizedPath);
+            }
         }
     }
 
@@ -2288,7 +2793,8 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
     {
         lock (_suppressionLock)
         {
-            _suppressedWatcherFolders.Add(folderId);
+            _suppressedWatcherCounts.TryGetValue(folderId, out var count);
+            _suppressedWatcherCounts[folderId] = count + 1;
         }
     }
 
@@ -2299,7 +2805,19 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             await Task.Delay(1800);
             lock (_suppressionLock)
             {
-                _suppressedWatcherFolders.Remove(folderId);
+                if (!_suppressedWatcherCounts.TryGetValue(folderId, out var count))
+                {
+                    return;
+                }
+
+                if (count <= 1)
+                {
+                    _suppressedWatcherCounts.Remove(folderId);
+                }
+                else
+                {
+                    _suppressedWatcherCounts[folderId] = count - 1;
+                }
             }
         });
     }
@@ -2308,7 +2826,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
     {
         lock (_suppressionLock)
         {
-            if (_suppressedWatcherFolders.Contains(folderId))
+            if (_suppressedWatcherCounts.TryGetValue(folderId, out var count) && count > 0)
             {
                 return;
             }

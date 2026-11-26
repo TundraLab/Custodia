@@ -675,6 +675,31 @@
     <Setter Property="IsHitTestVisible" Value="True" />
   </Style>
 
+  <Style Selector="Button.m3-grid-star">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.14" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.m3-grid-star.m3-star-active">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="IsHitTestVisible" Value="True" />
+  </Style>
+
+  <Style Selector="ListBox.m3-grid > ListBoxItem:pointerover Button.m3-grid-star">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="IsHitTestVisible" Value="True" />
+  </Style>
+
+  <Style Selector="ListBox.m3-grid > ListBoxItem:selected Button.m3-grid-star">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="IsHitTestVisible" Value="True" />
+  </Style>
+
   <!-- Card list (sync rules, transfers) -->
   <Style Selector="ListBox.m3-cards">
     <Setter Property="Background" Value="Transparent" />

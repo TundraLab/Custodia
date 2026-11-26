@@ -153,7 +153,51 @@ public partial class FileHubView : UserControl
             return;
         }
 
-        if (!point.Properties.IsLeftButtonPressed || otherGrid is null)
+        if (!point.Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        var clickedCheckBox = sourceVisual.FindAncestorOfType<CheckBox>() is not null;
+        if (clickedCheckBox && container?.DataContext is FileHubItemViewModel checkedItem && listBox.SelectedItems is not null)
+        {
+            _isSyncingGridSelection = true;
+            try
+            {
+                if (listBox.SelectedItems.Contains(checkedItem))
+                {
+                    listBox.SelectedItems.Remove(checkedItem);
+                }
+                else
+                {
+                    listBox.SelectedItems.Add(checkedItem);
+                }
+            }
+            finally
+            {
+                _isSyncingGridSelection = false;
+            }
+
+            if (otherGrid is not null)
+            {
+                SyncGridSelectionToViewModel();
+            }
+            else if (DataContext is FileHubViewModel vm)
+            {
+                vm.UpdateSelectedItems(listBox.SelectedItems.OfType<FileHubItemViewModel>());
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        // Let inline action buttons (e.g., the favorite toggle) execute without disturbing multi-selection.
+        if (sourceVisual.FindAncestorOfType<Button>() is not null)
+        {
+            return;
+        }
+
+        if (otherGrid is null)
         {
             return;
         }
@@ -164,9 +208,8 @@ public partial class FileHubView : UserControl
             return;
         }
 
-        var clickedCheckBox = sourceVisual.FindAncestorOfType<CheckBox>() is not null;
         var hasMultiModifier = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Shift);
-        if (!clickedCheckBox && !hasMultiModifier && otherGrid.SelectedItems?.Count > 0)
+        if (!hasMultiModifier && otherGrid.SelectedItems?.Count > 0)
         {
             _isSyncingGridSelection = true;
             try

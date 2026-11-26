@@ -632,8 +632,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         });
     }
 
-    private readonly Dictionary<string, TransferStatus> _lastUiStatusById = new();
-    private long _lastProgressTickMs;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (TransferStatus Status, long LastTickMs)> _lastUiStatusById = new();
     private TransferDirection? _heldSidebarDirection;
     private long _sidebarHoldUntilMs;
     private long _sidebarHoldVersion;
@@ -643,26 +642,23 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void OnTransferUpdated(object? sender, TransferQueueItem item)
     {
         var nowMs = Environment.TickCount64;
-        var hasPrev = _lastUiStatusById.TryGetValue(item.Id, out var prevStatus);
+        var hasPrev = _lastUiStatusById.TryGetValue(item.Id, out var prev);
         var isRepeatedProgressTick = item.Status == TransferStatus.InProgress
             && hasPrev
-            && prevStatus == TransferStatus.InProgress
-            && nowMs - _lastProgressTickMs < 100;
+            && prev.Status == TransferStatus.InProgress
+            && nowMs - prev.LastTickMs < 100;
 
         if (isRepeatedProgressTick)
         {
             return;
         }
 
-        _lastUiStatusById[item.Id] = item.Status;
-        if (_lastUiStatusById.Count > 300)
+        if (_lastUiStatusById.Count > 500)
         {
             _lastUiStatusById.Clear();
         }
-        if (item.Status == TransferStatus.InProgress)
-        {
-            _lastProgressTickMs = nowMs;
-        }
+
+        _lastUiStatusById[item.Id] = (item.Status, item.Status == TransferStatus.InProgress ? nowMs : prev.LastTickMs);
 
         var isActiveTransfer = item.Status is TransferStatus.Queued or TransferStatus.InProgress;
 

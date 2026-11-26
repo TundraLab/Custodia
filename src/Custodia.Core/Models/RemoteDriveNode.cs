@@ -12,4 +12,5 @@ public sealed class RemoteDriveNode
     public DateTimeOffset ModifiedTimeUtc { get; set; }
     public IReadOnlyList<string> ParentIds { get; set; } = Array.Empty<string>();
     public bool Trashed { get; set; }
+    public bool Starred { get; set; }
 }

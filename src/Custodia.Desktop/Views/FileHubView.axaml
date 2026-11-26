@@ -106,6 +106,16 @@
             </Button>
 
             <Button Classes="m3-segmented"
+                    Classes.m3-seg-active="{Binding IsFavoritesView}"
+                    ToolTip.Tip="{Binding Loc.OpenFavoritesTooltip}"
+                    Command="{Binding SelectFavoritesFilterCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Width="13" Height="13" Foreground="{DynamicResource M3Warning}" Data="{StaticResource TundraStarGeometry}" />
+                <TextBlock FontSize="12" Text="{Binding Loc.FileHubFilterFavorites}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
+            <Button Classes="m3-segmented"
                     Classes.m3-seg-trash-active="{Binding IsTrashView}"
                     ToolTip.Tip="{Binding Loc.OpenTrashTooltip}"
                     Command="{Binding SelectTrashFilterCommand}">
@@ -439,6 +449,15 @@
                     Content="{Binding Loc.CustomizeFolderButton}"
                     IsVisible="{Binding CanCustomizeSelectedFolder}"
                     Command="{Binding OpenCustomizeFolderCommand}" />
+            <Button Classes="m3-tonal m3-compact"
+                    Margin="0,0,6,0"
+                    IsVisible="{Binding CanToggleFavoriteSelected}"
+                    Command="{Binding ToggleFavoriteSelectedCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <PathIcon Width="12" Height="12" Foreground="{DynamicResource M3Warning}" Data="{StaticResource TundraStarGeometry}" />
+                <TextBlock Text="{Binding FavoriteSelectedLabel}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
             <Button Classes="m3-text m3-compact"
                     Margin="0,0,6,0"
                     Content="{Binding Loc.OpenInDriveButton}"
@@ -570,6 +589,13 @@
             <MenuItem Header="{Binding Loc.MoveToFolderButton}"
                       IsVisible="{Binding CanMoveSelected}"
                       Command="{Binding OpenMoveCommand}" />
+            <MenuItem Header="{Binding FavoriteSelectedLabel}"
+                      IsVisible="{Binding CanToggleFavoriteSelected}"
+                      Command="{Binding ToggleFavoriteSelectedCommand}">
+              <MenuItem.Icon>
+                <PathIcon Width="13" Height="13" Foreground="{DynamicResource M3Warning}" Data="{StaticResource TundraStarGeometry}" />
+              </MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="{Binding SelectedItem.OpenInDriveLabel, FallbackValue=''}"
                       IsVisible="{Binding SelectedItem.CanCopyDriveLink, FallbackValue=False}"
                       Command="{Binding SelectedItem.OpenInDriveCommand}" />
@@ -629,11 +655,11 @@
           <Grid RowDefinitions="Auto,*">
             <StackPanel Grid.Row="0">
               <Border Padding="16,10">
-                <Grid ColumnDefinitions="28,*,110,90,135" ColumnSpacing="8">
+                <Grid ColumnDefinitions="28,*,32,110,90,135" ColumnSpacing="8">
                   <TextBlock Grid.Column="1" Classes="m3-meta" Text="{Binding Loc.ColName}" />
-                  <TextBlock Grid.Column="2" Classes="m3-meta" Text="{Binding Loc.ColOrigin}" />
-                  <TextBlock Grid.Column="3" Classes="m3-meta" Text="{Binding Loc.ColSize}" />
-                  <TextBlock Grid.Column="4" Classes="m3-meta" Text="{Binding Loc.ColModified}" />
+                  <TextBlock Grid.Column="3" Classes="m3-meta" Text="{Binding Loc.ColOrigin}" />
+                  <TextBlock Grid.Column="4" Classes="m3-meta" Text="{Binding Loc.ColSize}" />
+                  <TextBlock Grid.Column="5" Classes="m3-meta" Text="{Binding Loc.ColModified}" />
                 </Grid>
               </Border>
               <Border Classes="m3-divider-full" />
@@ -650,7 +676,7 @@
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:FileHubItemViewModel">
                   <Border Padding="16,10" Background="Transparent">
-                    <Grid ColumnDefinitions="28,*,110,90,135" ColumnSpacing="8">
+                    <Grid ColumnDefinitions="28,*,32,110,90,135" ColumnSpacing="8">
                       <CheckBox Grid.Column="0"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
@@ -667,15 +693,30 @@
                         <TextBlock Classes="m3-meta" FontSize="11" Text="{Binding PathDisplay}" TextTrimming="CharacterEllipsis" />
                       </StackPanel>
 
-                      <TextBlock Grid.Column="2"
+                      <Button Grid.Column="2"
+                              Classes="m3-text m3-icon"
+                              MinWidth="26"
+                              MinHeight="26"
+                              Padding="3"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              IsVisible="{Binding CanToggleFavorite}"
+                              ToolTip.Tip="{Binding FavoriteTooltip}"
+                              Command="{Binding ToggleFavoriteCommand}">
+                        <PathIcon Width="13" Height="13"
+                                  Foreground="{Binding FavoriteIconBrush}"
+                                  Data="{Binding FavoriteIconData}" />
+                      </Button>
+
+                      <TextBlock Grid.Column="3"
                                  FontSize="12"
                                  FontWeight="Medium"
                                  VerticalAlignment="Center"
                                  Foreground="{Binding OriginBrush}"
                                  Text="{Binding OriginDisplay}"
                                  TextTrimming="CharacterEllipsis" />
-                      <TextBlock Grid.Column="3" Classes="m3-meta" VerticalAlignment="Center" Text="{Binding SizeDisplay}" />
-                      <TextBlock Grid.Column="4" Classes="m3-meta" VerticalAlignment="Center" Text="{Binding ModifiedDisplay}" />
+                      <TextBlock Grid.Column="4" Classes="m3-meta" VerticalAlignment="Center" Text="{Binding SizeDisplay}" />
+                      <TextBlock Grid.Column="5" Classes="m3-meta" VerticalAlignment="Center" Text="{Binding ModifiedDisplay}" />
                     </Grid>
                   </Border>
                 </DataTemplate>
@@ -705,7 +746,7 @@
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:FileHubItemViewModel">
                     <Border Width="228" MinHeight="56" Padding="12,10" Background="Transparent" ToolTip.Tip="{Binding Name}">
-                      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
                         <PathIcon Grid.Column="0"
                                   Width="22" Height="22"
                                   VerticalAlignment="Center"
@@ -722,7 +763,22 @@
                                    TextTrimming="CharacterEllipsis"
                                    Text="{Binding Name}" />
 
-                        <CheckBox Grid.Column="2"
+                        <Button Grid.Column="2"
+                                Classes="m3-text m3-icon m3-grid-star"
+                                Classes.m3-star-active="{Binding IsStarred}"
+                                MinWidth="24"
+                                MinHeight="24"
+                                Padding="3"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding CanToggleFavorite}"
+                                ToolTip.Tip="{Binding FavoriteTooltip}"
+                                Command="{Binding ToggleFavoriteCommand}">
+                          <PathIcon Width="13" Height="13"
+                                    Foreground="{Binding FavoriteIconBrush}"
+                                    Data="{Binding FavoriteIconData}" />
+                        </Button>
+
+                        <CheckBox Grid.Column="3"
                                   Classes="m3-grid-check"
                                   Classes.m3-check-visible="{Binding #FileHubRoot.((vm:FileHubViewModel)DataContext).HasSelectedItem, FallbackValue=False}"
                                   VerticalAlignment="Center"
@@ -794,6 +850,22 @@
                                     MinWidth="0" MinHeight="0" Padding="0"
                                     IsChecked="{Binding IsSelected, Mode=OneWay}"
                                     Click="OnItemCheckBoxClick" />
+
+                          <Button Classes="m3-text m3-icon m3-grid-star"
+                                  Classes.m3-star-active="{Binding IsStarred}"
+                                  MinWidth="26"
+                                  MinHeight="26"
+                                  Padding="4"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Top"
+                                  Margin="2"
+                                  IsVisible="{Binding CanToggleFavorite}"
+                                  ToolTip.Tip="{Binding FavoriteTooltip}"
+                                  Command="{Binding ToggleFavoriteCommand}">
+                            <PathIcon Width="13" Height="13"
+                                      Foreground="{Binding FavoriteIconBrush}"
+                                      Data="{Binding FavoriteIconData}" />
+                          </Button>
                         </Grid>
 
                         <StackPanel Grid.Row="1" Spacing="2">

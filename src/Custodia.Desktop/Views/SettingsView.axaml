@@ -601,6 +601,36 @@
             <Border Classes="m3-divider" />
 
             <Border Classes="m3-grouped-row">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+                  <CheckBox IsChecked="{Binding LimitConcurrentTransfers}"
+                            Content="{Binding Loc.LimitConcurrentTransfersCheckbox}" />
+                  <TextBlock Classes="m3-meta"
+                             Margin="28,0,0,0"
+                             Text="{Binding Loc.LimitConcurrentTransfersHint}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center"
+                            IsEnabled="{Binding LimitConcurrentTransfers}">
+                  <TextBlock Classes="m3-meta"
+                             VerticalAlignment="Center"
+                             Text="{Binding Loc.MaxConcurrentTransfersLabel}" />
+                  <NumericUpDown Width="110"
+                                 Minimum="1"
+                                 Maximum="6"
+                                 Increment="1"
+                                 Value="{Binding MaxConcurrentTransfers}" />
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <Border Classes="m3-divider" />
+
+            <Border Classes="m3-grouped-row">
               <StackPanel Spacing="8">
                 <TextBlock FontSize="13.5" FontWeight="Medium" Foreground="{DynamicResource M3OnSurface}" Text="{Binding Loc.IgnorePatternsLabel}" />
                 <TextBox AcceptsReturn="True"

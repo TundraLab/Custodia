@@ -13,6 +13,7 @@ public interface IGoogleDriveClient
     Task<DriveAccount> GetAccountInfoAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RemoteDriveNode>> ListChildrenAsync(string parentFolderId = "root", bool foldersOnly = false, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RemoteDriveNode>> ListAllRemoteFilesAsync(int maxResults = 200, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RemoteDriveNode>> ListStarredFilesAsync(int maxResults = 200, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RemoteDriveNode>> ListTrashedFilesAsync(int maxResults = 200, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RemoteDriveNode>> SearchRemoteFilesAsync(string query, int maxResults = 50, CancellationToken cancellationToken = default);
     Task<RemoteDriveNode?> GetFileMetadataAsync(string remoteFileId, CancellationToken cancellationToken = default);
@@ -22,6 +23,7 @@ public interface IGoogleDriveClient
     Task<RemoteDriveNode> MoveFileAsync(string remoteFileId, string? destinationParentFolderId = null, string? newName = null, CancellationToken cancellationToken = default);
     Task DownloadFileAsync(string remoteFileId, string destinationLocalPath, Action<long>? onBytesTransferred = null, CancellationToken cancellationToken = default);
     Task ExportFileAsync(string remoteFileId, string exportMimeType, string destinationLocalPath, Action<long>? onBytesTransferred = null, CancellationToken cancellationToken = default);
+    Task SetStarredAsync(string remoteFileId, bool starred, CancellationToken cancellationToken = default);
     Task TrashFileAsync(string remoteFileId, CancellationToken cancellationToken = default);
     Task RestoreFileAsync(string remoteFileId, CancellationToken cancellationToken = default);
     Task DeletePermanentlyAsync(string remoteFileId, CancellationToken cancellationToken = default);

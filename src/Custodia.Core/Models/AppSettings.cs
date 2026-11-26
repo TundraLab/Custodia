@@ -7,6 +7,9 @@ public sealed record FolderAppearanceOverride(
 
 public sealed class AppSettings
 {
+    public const int MinConcurrentTransfers = 1;
+    public const int MaxConcurrentTransfersCap = 6;
+
     public string Language { get; set; } = "pt-BR";
     public string UiTheme { get; set; } = "dark";
     public string UiAccent { get; set; } = "blue";
@@ -20,10 +23,13 @@ public sealed class AppSettings
     public string MailerWebhookUrl { get; set; } = string.Empty;
     public string? AcceptedLegalVersion { get; set; }
     public Dictionary<string, FolderAppearanceOverride> FolderAppearances { get; set; } = new(StringComparer.Ordinal);
+    public List<string> FavoriteKeys { get; set; } = [];
     public bool MinimizeToTrayOnClose { get; set; } = true;
     public string DownloadDirectory { get; set; } = Configuration.AppPaths.DefaultDownloadDirectory;
     public int SyncIntervalSeconds { get; set; } = 120;
     public bool WatchLocalChanges { get; set; } = true;
+    public bool LimitConcurrentTransfers { get; set; } = true;
+    public int MaxConcurrentTransfers { get; set; } = 3;
     public bool EmbeddedApiEnabled { get; set; } = true;
     public int EmbeddedApiPort { get; set; } = 5080;
     public bool AutoMemoryCleanupEnabled { get; set; } = true;
@@ -46,4 +52,9 @@ public sealed class AppSettings
         "bin/*",
         "obj/*"
     ];
+
+    public int? GetEffectiveTransferConcurrencyLimit() =>
+        LimitConcurrentTransfers
+            ? Math.Clamp(MaxConcurrentTransfers, MinConcurrentTransfers, MaxConcurrentTransfersCap)
+            : null;
 }

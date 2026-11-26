@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform;
+using Avalonia.Platform.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using TundraDrive.Api;
 using TundraDrive.Core.Configuration;
@@ -118,7 +119,7 @@ public partial class App : Application
                     });
 
                 return result
-                    .Select(f => f.Path.LocalPath)
+                    .Select(f => f.TryGetLocalPath() ?? f.Path.LocalPath)
                     .Where(p => !string.IsNullOrWhiteSpace(p))
                     .ToList();
             };

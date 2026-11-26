@@ -39,6 +39,9 @@ public sealed class FileHubBreadcrumbItem
 public sealed partial class FileHubItemViewModel : ObservableObject, IDisposable
 {
     internal static IBrush DefaultMutedBrush => ThemeAccentService.ResolveThemeBrush("#C4C6D0", "#44474F");
+    private static IBrush StarGoldBrush => ThemeAccentService.ResolveThemeBrush("#F5C26B", "#9A5B00");
+    private const string StarFilledIconSvg = "M 12,2.4 L 14.9,8.3 L 21.4,9.2 L 16.7,13.8 L 17.8,20.3 L 12,17.2 L 6.2,20.3 L 7.3,13.8 L 2.6,9.2 L 9.1,8.3 Z";
+    private const string StarOutlineIconSvg = "M 22,9.24 L 14.81,8.62 L 12,2 L 9.19,8.63 L 2,9.24 L 7.46,13.97 L 5.82,21 L 12,17.27 L 18.18,21 L 16.55,13.97 Z M 12,15.4 L 8.24,17.67 L 9.24,13.39 L 5.92,10.51 L 10.3,10.13 L 12,6.1 L 13.71,10.14 L 18.09,10.52 L 14.77,13.4 L 15.77,17.68 Z";
 
     private bool _isDisposed;
 
@@ -68,6 +71,7 @@ public sealed partial class FileHubItemViewModel : ObservableObject, IDisposable
     public bool CanMoveToTrash => !IsInTrash && !string.IsNullOrWhiteSpace(RemoteFileId);
     public bool CanCopyDriveLink => !IsInTrash && !string.IsNullOrWhiteSpace(RemoteFileId);
     public bool CanOpenNormal => !IsInTrash;
+    public bool CanToggleFavorite => !IsInTrash && (!string.IsNullOrWhiteSpace(RemoteFileId) || HasLocalFile);
     public string DownloadLabel { get; init; } = string.Empty;
     public string PreviewLabel { get; init; } = string.Empty;
     public string OpenInDriveLabel { get; init; } = string.Empty;
@@ -76,6 +80,8 @@ public sealed partial class FileHubItemViewModel : ObservableObject, IDisposable
     public string DeletePermanentlyLabel { get; init; } = string.Empty;
     public string CopyNameLabel { get; init; } = string.Empty;
     public string CopyLinkLabel { get; init; } = string.Empty;
+    public string AddToFavoritesLabel { get; init; } = string.Empty;
+    public string RemoveFromFavoritesLabel { get; init; } = string.Empty;
     public string FileIconData { get; init; } = string.Empty;
     public IBrush FileIconBrush { get; init; } = DefaultMutedBrush;
     public IBrush OriginBrush { get; init; } = DefaultMutedBrush;
@@ -88,9 +94,20 @@ public sealed partial class FileHubItemViewModel : ObservableObject, IDisposable
     public IAsyncRelayCommand? DeletePermanentlyCommand { get; init; }
     public IAsyncRelayCommand? CopyNameCommand { get; init; }
     public IAsyncRelayCommand? CopyDriveLinkCommand { get; init; }
+    public IAsyncRelayCommand? ToggleFavoriteCommand { get; set; }
 
     [ObservableProperty]
     private bool _isSelected;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FavoriteIconData))]
+    [NotifyPropertyChangedFor(nameof(FavoriteIconBrush))]
+    [NotifyPropertyChangedFor(nameof(FavoriteTooltip))]
+    private bool _isStarred;
+
+    public string FavoriteIconData => IsStarred ? StarFilledIconSvg : StarOutlineIconSvg;
+    public IBrush FavoriteIconBrush => IsStarred ? StarGoldBrush : DefaultMutedBrush;
+    public string FavoriteTooltip => IsStarred ? RemoveFromFavoritesLabel : AddToFavoritesLabel;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasThumbnail))]
@@ -150,8 +167,13 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private const int ItemsPerPage = 48;
     private const string LocalRootCrumbId = "__local_root__";
     private const string LocalFolderCrumbPrefix = "local:";
+    private const string DriveFavoritePrefix = "drive:";
+    private const string LocalFavoritePrefix = "local:";
     private readonly List<FileHubBreadcrumbItem> _driveBreadcrumbs = [];
     private readonly List<FileHubBreadcrumbItem> _localBreadcrumbs = [];
+    private readonly HashSet<string> _knownStarredRemoteIds = new(StringComparer.Ordinal);
+    private readonly Lock _refreshApplyLock = new();
+    private bool _hasLoadedRemoteStarredIds;
     private string _driveFolderId = "root";
     private string _driveFolderName = string.Empty;
     private string? _localSyncFolderId;
@@ -159,6 +181,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private IReadOnlyList<Func<FileHubItemViewModel>> _allPageFactories = [];
     private string _activePageContextLabel = string.Empty;
     private bool _isBatchUpdatingFiles;
+    private bool _suppressNextFilterRefresh;
 
     public ILocalizationService Loc { get; }
 
@@ -338,6 +361,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(CanMoveSelected))]
     [NotifyPropertyChangedFor(nameof(CanDownloadSelected))]
     [NotifyPropertyChangedFor(nameof(CanOpenSelectedInDrive))]
+    [NotifyPropertyChangedFor(nameof(CanToggleFavoriteSelected))]
+    [NotifyPropertyChangedFor(nameof(FavoriteSelectedLabel))]
     [NotifyPropertyChangedFor(nameof(CanTrashSelected))]
     [NotifyPropertyChangedFor(nameof(CanRestoreSelected))]
     [NotifyPropertyChangedFor(nameof(CanDeleteSelectedPermanently))]
@@ -349,6 +374,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     public bool IsDriveFilter => SelectedSourceFilterIndex == 0;
     public bool IsLocalFilter => SelectedSourceFilterIndex == 1;
     public bool IsTrashView => SelectedSourceFilterIndex == 2;
+    public bool IsFavoritesView => SelectedSourceFilterIndex == 3;
     public string TrashTabDisplay => string.IsNullOrWhiteSpace(TrashQuotaBadge)
         ? Loc.TrashTabButton
         : $"{Loc.TrashTabButton} ({TrashQuotaBadge})";
@@ -368,12 +394,27 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                                      !string.IsNullOrWhiteSpace(i.RemoteFileId) || i.HasLocalFile);
     public bool CanDownloadSelected => GetEffectiveSelectedItems().Any(i => i.CanDownload);
     public bool CanOpenSelectedInDrive => GetSingleEffectiveSelectedItem() is { } single && !string.IsNullOrWhiteSpace(single.RemoteFileId);
+    public bool CanToggleFavoriteSelected => !IsTrashView && GetEffectiveSelectedItems().Any(i => i.CanToggleFavorite);
+    public string FavoriteSelectedLabel
+    {
+        get
+        {
+            var eligible = GetEffectiveSelectedItems().Where(i => i.CanToggleFavorite).ToList();
+            return eligible.Count > 0 && eligible.All(i => i.IsStarred)
+                ? Loc.Text("RemoveFromFavoritesButton")
+                : Loc.Text("AddToFavoritesButton");
+        }
+    }
     public bool CanTrashSelected => !IsTrashView && GetEffectiveSelectedItems().Any(i => i.CanMoveToTrash);
     public bool CanRestoreSelected => IsTrashView && GetEffectiveSelectedItems().Any(i => i.IsInTrash);
     public bool CanDeleteSelectedPermanently => IsTrashView && GetEffectiveSelectedItems().Any(i => i.IsInTrash);
     public string SelectionCountDisplay => SelectedCount > 0 ? Loc.Format("FileHubSelectedCountFmt", SelectedCount) : string.Empty;
     public bool CanEmptyTrash => IsTrashView && IsAccountConnected && Files.Count > 0 && !IsLoading;
-    public string EmptyStateText => IsTrashView ? Loc.Text("TrashEmptyHint") : Loc.Text("FileHubEmptyFolder");
+    public string EmptyStateText => IsTrashView
+        ? Loc.Text("TrashEmptyHint")
+        : IsFavoritesView
+            ? Loc.Text("FavoritesEmptyHint")
+            : Loc.Text("FileHubEmptyFolder");
     public bool IsImageOrPdfPreview => CurrentPreviewKind is PreviewKind.Image or PreviewKind.Pdf;
     public bool IsVideoPreview => CurrentPreviewKind == PreviewKind.Video;
     public bool IsAudioPreview => CurrentPreviewKind == PreviewKind.Audio;
@@ -409,6 +450,21 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         _previewService = previewService;
         _settingsService = settingsService;
         Loc = localization;
+
+        if (_settingsService?.Current.FavoriteKeys is { Count: > 0 } savedFavorites)
+        {
+            foreach (var key in savedFavorites)
+            {
+                if (key.StartsWith(DriveFavoritePrefix, StringComparison.Ordinal))
+                {
+                    var remoteId = key[DriveFavoritePrefix.Length..];
+                    if (!string.IsNullOrWhiteSpace(remoteId))
+                    {
+                        _knownStarredRemoteIds.Add(remoteId);
+                    }
+                }
+            }
+        }
 
         _driveFolderId = "root";
         _driveFolderName = Loc.Text("MyDriveLabel");
@@ -620,6 +676,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(CanMoveSelected));
         OnPropertyChanged(nameof(CanDownloadSelected));
         OnPropertyChanged(nameof(CanOpenSelectedInDrive));
+        OnPropertyChanged(nameof(CanToggleFavoriteSelected));
+        OnPropertyChanged(nameof(FavoriteSelectedLabel));
         OnPropertyChanged(nameof(CanTrashSelected));
         OnPropertyChanged(nameof(CanRestoreSelected));
         OnPropertyChanged(nameof(CanDeleteSelectedPermanently));
@@ -638,17 +696,20 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsDriveFilter));
         OnPropertyChanged(nameof(IsLocalFilter));
         OnPropertyChanged(nameof(IsTrashView));
+        OnPropertyChanged(nameof(IsFavoritesView));
         OnPropertyChanged(nameof(ShowSelectionBar));
         OnPropertyChanged(nameof(ShowTrashSelectionActions));
         OnPropertyChanged(nameof(TrashTabDisplay));
         OnPropertyChanged(nameof(CanEmptyTrash));
+        OnPropertyChanged(nameof(CanToggleFavoriteSelected));
+        OnPropertyChanged(nameof(FavoriteSelectedLabel));
         OnPropertyChanged(nameof(CanTrashSelected));
         OnPropertyChanged(nameof(CanRenameSelected));
         OnPropertyChanged(nameof(CanMoveSelected));
         OnPropertyChanged(nameof(CanRestoreSelected));
         OnPropertyChanged(nameof(CanDeleteSelectedPermanently));
         OnPropertyChanged(nameof(EmptyStateText));
-        if (value >= 0)
+        if (value >= 0 && !_suppressNextFilterRefresh)
         {
             _ = RefreshAsync();
         }
@@ -724,62 +785,87 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        var filesToDownload = await ExpandRemoteDownloadTargetsAsync(targets);
-        if (filesToDownload.Count == 0)
+        if (!_syncService.IsOnline)
         {
-            return;
-        }
-
-        if (filesToDownload.Count == 1)
-        {
-            var single = filesToDownload[0];
-            await DownloadFileAsync(single.RemoteFileId, single.Name, single.SizeBytes, single.IsGoogleWorkspaceDoc, single.MimeType);
+            StatusSummary = Loc.Text("OfflineModeNotice");
             return;
         }
 
         TransferErrorBannerText = string.Empty;
-        var total = filesToDownload.Count;
-        var completed = 0;
-        var downloadedCount = 0;
-        using var gate = new SemaphoreSlim(3, 3);
-
-        var tasks = filesToDownload.Select(async item =>
+        IsLoading = true;
+        try
         {
-            await gate.WaitAsync();
-            try
+            var filesToDownload = await ExpandRemoteDownloadTargetsAsync(targets);
+            if (filesToDownload.Count == 0)
             {
-                var current = Interlocked.Increment(ref completed);
-                Dispatcher.UIThread.Post(() =>
-                    StatusSummary = $"({current}/{total}) {Loc.Format("DownloadingFileFmt", item.Name)}");
-
-                await _syncService.DownloadRemoteFileAsync(
-                    item.RemoteFileId,
-                    item.Name,
-                    item.SizeBytes,
-                    item.IsGoogleWorkspaceDoc,
-                    item.MimeType);
-                Interlocked.Increment(ref downloadedCount);
+                return;
             }
-            catch (Exception ex)
+
+            if (filesToDownload.Count == 1)
             {
-                var err = Loc.Format("DownloadErrorBannerFmt", item.Name, ex.Message);
-                Dispatcher.UIThread.Post(() =>
+                var single = filesToDownload[0];
+                await DownloadFileAsync(single.RemoteFileId, single.Name, single.SizeBytes, single.IsGoogleWorkspaceDoc, single.MimeType);
+                return;
+            }
+
+            var total = filesToDownload.Count;
+            var completed = 0;
+            var downloadedCount = 0;
+            var concurrencyLimit = GetEffectiveTransferConcurrencyLimit();
+            using var gate = concurrencyLimit is int limit ? new SemaphoreSlim(limit, limit) : null;
+
+            var tasks = filesToDownload.Select(async item =>
+            {
+                if (gate is not null)
                 {
-                    TransferErrorBannerText = err;
-                    StatusSummary = err;
-                });
-            }
-            finally
+                    await gate.WaitAsync();
+                }
+
+                try
+                {
+                    var current = Interlocked.Increment(ref completed);
+                    Dispatcher.UIThread.Post(() =>
+                        StatusSummary = $"({current}/{total}) {Loc.Format("DownloadingFileFmt", item.Name)}");
+
+                    await _syncService.DownloadRemoteFileAsync(
+                        item.RemoteFileId,
+                        item.Name,
+                        item.SizeBytes,
+                        item.IsGoogleWorkspaceDoc,
+                        item.MimeType);
+                    Interlocked.Increment(ref downloadedCount);
+                }
+                catch (Exception ex)
+                {
+                    var err = Loc.Format("DownloadErrorBannerFmt", item.Name, ex.Message);
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        TransferErrorBannerText = err;
+                        StatusSummary = err;
+                    });
+                }
+                finally
+                {
+                    gate?.Release();
+                }
+            });
+
+            await Task.WhenAll(tasks);
+
+            if (downloadedCount > 0)
             {
-                gate.Release();
+                StatusSummary = Loc.Format("FilesDownloadedBatchFmt", downloadedCount);
             }
-        });
-
-        await Task.WhenAll(tasks);
-
-        if (downloadedCount > 0)
+        }
+        catch (Exception ex)
         {
-            StatusSummary = Loc.Format("FilesDownloadedBatchFmt", downloadedCount);
+            var err = Loc.Format("FileHubErrorFmt", ex.Message);
+            TransferErrorBannerText = err;
+            StatusSummary = err;
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 
@@ -1002,9 +1088,180 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private void SelectTrashFilter() => SelectedSourceFilterIndex = 2;
 
     [RelayCommand]
+    private void SelectFavoritesFilter() => SelectedSourceFilterIndex = 3;
+
+    [RelayCommand]
     private void ToggleTrashView()
     {
         SelectedSourceFilterIndex = IsTrashView ? 0 : 2;
+    }
+
+    [RelayCommand]
+    private async Task ToggleFavoriteSelectedAsync()
+    {
+        var targets = GetEffectiveSelectedItems()
+            .Where(i => i.CanToggleFavorite)
+            .ToList();
+        if (targets.Count == 0)
+        {
+            return;
+        }
+
+        var targetStarred = targets.Any(i => !i.IsStarred);
+        await ApplyFavoriteStateAsync(targets, targetStarred);
+    }
+
+    private Task ToggleItemFavoriteAsync(FileHubItemViewModel item)
+    {
+        if (!item.CanToggleFavorite)
+        {
+            return Task.CompletedTask;
+        }
+
+        return ApplyFavoriteStateAsync([item], !item.IsStarred);
+    }
+
+    private async Task ApplyFavoriteStateAsync(IReadOnlyList<FileHubItemViewModel> targets, bool targetStarred)
+    {
+        if (targets.Count == 0)
+        {
+            return;
+        }
+
+        var hasRemoteTargets = targets.Any(t => !string.IsNullOrWhiteSpace(t.RemoteFileId) && _driveClient.IsConnected);
+        if (hasRemoteTargets && !_syncService.IsOnline)
+        {
+            StatusSummary = Loc.Text("OfflineModeNotice");
+            return;
+        }
+
+        IsLoading = hasRemoteTargets;
+        var updatedCount = 0;
+        var settingsChanged = false;
+        try
+        {
+            foreach (var item in targets)
+            {
+                if (!string.IsNullOrWhiteSpace(item.RemoteFileId) && _driveClient.IsConnected)
+                {
+                    await _driveClient.SetStarredAsync(item.RemoteFileId, targetStarred);
+                    if (targetStarred)
+                    {
+                        _knownStarredRemoteIds.Add(item.RemoteFileId);
+                    }
+                    else
+                    {
+                        _knownStarredRemoteIds.Remove(item.RemoteFileId);
+                    }
+
+                    settingsChanged |= SetFavoriteKeyInSettings(DriveFavoritePrefix + item.RemoteFileId, targetStarred);
+                }
+                else if (!string.IsNullOrWhiteSpace(item.LocalFullPath))
+                {
+                    settingsChanged |= SetFavoriteKeyInSettings(
+                        LocalFavoritePrefix + NormalizeLocalFavoritePath(item.LocalFullPath),
+                        targetStarred);
+                }
+                else
+                {
+                    continue;
+                }
+
+                item.IsStarred = targetStarred;
+                updatedCount++;
+            }
+
+            if (settingsChanged && _settingsService is not null)
+            {
+                await _settingsService.SaveSilentlyAsync(_settingsService.Current);
+            }
+
+            if (updatedCount > 0 && IsFavoritesView && !targetStarred)
+            {
+                IsLoading = false;
+                await RefreshAsync();
+            }
+
+            if (updatedCount == 1)
+            {
+                StatusSummary = Loc.Format(
+                    targetStarred ? "ItemAddedToFavoritesFmt" : "ItemRemovedFromFavoritesFmt",
+                    targets[0].Name);
+            }
+            else if (updatedCount > 1)
+            {
+                StatusSummary = Loc.Format(
+                    targetStarred ? "FilesAddedToFavoritesBatchFmt" : "FilesRemovedFromFavoritesBatchFmt",
+                    updatedCount);
+            }
+
+            NotifySelectionStateChanged();
+        }
+        catch (Exception ex)
+        {
+            StatusSummary = Loc.Format("FileHubErrorFmt", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private bool SetFavoriteKeyInSettings(string key, bool add)
+    {
+        if (_settingsService is null || string.IsNullOrWhiteSpace(key))
+        {
+            return false;
+        }
+
+        var keys = _settingsService.Current.FavoriteKeys;
+        var existingIndex = keys.FindIndex(k => string.Equals(k, key, StringComparison.Ordinal));
+        if (add)
+        {
+            if (existingIndex >= 0)
+            {
+                return false;
+            }
+
+            keys.Add(key);
+            return true;
+        }
+
+        if (existingIndex < 0)
+        {
+            return false;
+        }
+
+        keys.RemoveAt(existingIndex);
+        return true;
+    }
+
+    private bool IsItemStarred(string? remoteFileId, string? localFullPath)
+    {
+        if (!string.IsNullOrWhiteSpace(remoteFileId) && _knownStarredRemoteIds.Contains(remoteFileId))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(localFullPath) && _settingsService?.Current.FavoriteKeys is { Count: > 0 } keys)
+        {
+            var localKey = LocalFavoritePrefix + NormalizeLocalFavoritePath(localFullPath);
+            return keys.Any(k => string.Equals(k, localKey, StringComparison.Ordinal));
+        }
+
+        return false;
+    }
+
+    private static string NormalizeLocalFavoritePath(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch
+        {
+            return path;
+        }
     }
 
     [RelayCommand]
@@ -1172,9 +1429,21 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
-        _refreshCts?.Cancel();
-        _refreshCts?.Dispose();
-        _refreshCts = null;
+        var refreshCts = Interlocked.Exchange(ref _refreshCts, null);
+        if (refreshCts is not null)
+        {
+            try
+            {
+                refreshCts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            finally
+            {
+                refreshCts.Dispose();
+            }
+        }
 
         _previewCts?.Cancel();
         _previewCts?.Dispose();
@@ -1491,7 +1760,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     {
         var filter = SelectedSourceFilterIndex;
         var hasNetwork = _driveClient.IsConnected && _syncService.IsOnline;
-        if (!hasNetwork && filter != 1)
+        var hasSavedFavorites = (_settingsService?.Current.FavoriteKeys.Count ?? 0) > 0;
+        if (!hasNetwork && filter != 1 && !(filter == 3 && hasSavedFavorites))
         {
             ClearWhenDisconnected();
             StatusSummary = !_driveClient.IsConnected
@@ -1500,10 +1770,19 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             return false;
         }
 
-        _refreshCts?.Cancel();
-        _refreshCts?.Dispose();
         var refreshCts = new CancellationTokenSource();
-        _refreshCts = refreshCts;
+        var previousCts = Interlocked.Exchange(ref _refreshCts, refreshCts);
+        if (previousCts is not null)
+        {
+            try
+            {
+                previousCts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+        }
+
         var ct = refreshCts.Token;
 
         OnPropertyChanged(nameof(ShowBreadcrumbs));
@@ -1541,8 +1820,140 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                     }
                 }
             }
+            else if (filter == 3)
+            {
+                var allTracked = activeFolderIds.Count > 0
+                    ? (await _repository.SearchTrackedFilesAsync(string.Empty, null, 2000, ct))
+                        .Where(t => activeFolderIds.Contains(t.SyncFolderId))
+                        .ToList()
+                    : [];
+                var trackedByRemoteId = allTracked
+                    .Where(t => !string.IsNullOrWhiteSpace(t.RemoteFileId))
+                    .GroupBy(t => t.RemoteFileId, StringComparer.Ordinal)
+                    .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+                var mappedByRemoteId = syncFolders.Values
+                    .Where(f => !string.IsNullOrWhiteSpace(f.RemoteFolderId))
+                    .GroupBy(f => f.RemoteFolderId, StringComparer.Ordinal)
+                    .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
+                var addedRemoteIds = new HashSet<string>(StringComparer.Ordinal);
+                var addedLocalPaths = new HashSet<string>(StringComparer.Ordinal);
+
+                if (hasNetwork)
+                {
+                    var starredNodes = await _driveClient.ListStarredFilesAsync(200, ct) ?? [];
+                    await SyncKnownStarredRemoteIdsAsync(starredNodes);
+
+                    foreach (var node in starredNodes)
+                    {
+                        if (node.Trashed)
+                        {
+                            continue;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(query) &&
+                            !node.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        var captured = node;
+                        captured.Starred = true;
+                        if (!string.IsNullOrWhiteSpace(captured.Id))
+                        {
+                            addedRemoteIds.Add(captured.Id);
+                        }
+
+                        if (captured.IsFolder)
+                        {
+                            mappedByRemoteId.TryGetValue(captured.Id, out var mappedFolder);
+                            if (mappedFolder is not null)
+                            {
+                                addedLocalPaths.Add(NormalizeLocalFavoritePath(mappedFolder.LocalPath));
+                            }
+
+                            factories.Add(() => CreateRemoteFolderItem(captured, culture, mappedFolder));
+                        }
+                        else
+                        {
+                            if (trackedByRemoteId.TryGetValue(captured.Id, out var trackedFile) &&
+                                syncFolders.TryGetValue(trackedFile.SyncFolderId, out var ownerFolder))
+                            {
+                                var diskPath = Path.Combine(
+                                    ownerFolder.LocalPath,
+                                    trackedFile.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+                                addedLocalPaths.Add(NormalizeLocalFavoritePath(diskPath));
+                            }
+
+                            factories.Add(() => CreateRemoteFileItem(captured, trackedByRemoteId, syncFolders, culture));
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (var entry in allTracked)
+                    {
+                        if (string.IsNullOrWhiteSpace(entry.RemoteFileId) ||
+                            !_knownStarredRemoteIds.Contains(entry.RemoteFileId) ||
+                            !syncFolders.TryGetValue(entry.SyncFolderId, out var syncFolder))
+                        {
+                            continue;
+                        }
+
+                        var diskPath = Path.Combine(
+                            syncFolder.LocalPath,
+                            entry.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+                        var exists = entry.IsFolder ? Directory.Exists(diskPath) : File.Exists(diskPath);
+                        if (!exists)
+                        {
+                            continue;
+                        }
+
+                        var name = Path.GetFileName(entry.RelativePath);
+                        if (!string.IsNullOrWhiteSpace(query) &&
+                            !name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        addedRemoteIds.Add(entry.RemoteFileId);
+                        addedLocalPaths.Add(NormalizeLocalFavoritePath(diskPath));
+                        var capturedEntry = entry;
+                        factories.Add(() => CreateTrackedItem(capturedEntry, syncFolders, culture, true));
+                    }
+                }
+
+                AddLocalFavoriteFactories(
+                    factories,
+                    syncFolders,
+                    allTracked,
+                    addedRemoteIds,
+                    addedLocalPaths,
+                    query,
+                    culture);
+            }
             else if (filter == 1)
             {
+                if (hasNetwork && !_hasLoadedRemoteStarredIds)
+                {
+                    try
+                    {
+                        var starredNodes = await _driveClient.ListStarredFilesAsync(200, ct);
+                        if (starredNodes is not null)
+                        {
+                            await SyncKnownStarredRemoteIdsAsync(starredNodes);
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch
+                    {
+                        // Starred state is non-critical when listing local synced items.
+                    }
+                }
+
                 if (!string.IsNullOrWhiteSpace(query))
                 {
                     var rawLocal = await _repository.SearchTrackedFilesAsync(query, null, 2000, ct);
@@ -1618,6 +2029,18 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                         continue;
                     }
 
+                    if (!string.IsNullOrWhiteSpace(node.Id))
+                    {
+                        if (node.Starred)
+                        {
+                            _knownStarredRemoteIds.Add(node.Id);
+                        }
+                        else
+                        {
+                            _knownStarredRemoteIds.Remove(node.Id);
+                        }
+                    }
+
                     var captured = node;
                     if (node.IsFolder)
                     {
@@ -1631,13 +2054,16 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                 }
             }
 
-            if (ct.IsCancellationRequested)
+            lock (_refreshApplyLock)
             {
-                return false;
-            }
+                if (ct.IsCancellationRequested || !ReferenceEquals(_refreshCts, refreshCts))
+                {
+                    return false;
+                }
 
-            _allPageFactories = factories;
-            ApplyPage(1);
+                _allPageFactories = factories;
+                ApplyPage(1);
+            }
 
             StatusSummary = filter == 1 && !string.IsNullOrWhiteSpace(query)
                 ? (!hasNetwork
@@ -1649,6 +2075,12 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                         : Loc.Format("FileHubCountFmt", factories.Count, CurrentFolderName))
                 : filter == 2
                     ? Loc.Format("FileHubCountFmt", factories.Count, Loc.Text("FileHubFilterTrash"))
+                : filter == 3
+                    ? (!hasNetwork
+                        ? $"{Loc.Format("FileHubCountFmt", factories.Count, Loc.Text("FileHubFilterFavorites"))} • {Loc.Text("OfflineModeNotice")}"
+                        : string.IsNullOrWhiteSpace(query)
+                            ? Loc.Format("FileHubCountFmt", factories.Count, Loc.Text("FileHubFilterFavorites"))
+                            : Loc.Format("FileHubSearchCountFmt", factories.Count))
                     : string.IsNullOrWhiteSpace(query) && filter == 0
                         ? Loc.Format("FileHubCountFmt", factories.Count, CurrentFolderName)
                         : Loc.Format("FileHubSearchCountFmt", factories.Count);
@@ -1666,9 +2098,177 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         }
         finally
         {
-            if (ReferenceEquals(_refreshCts, refreshCts))
+            if (ReferenceEquals(Interlocked.CompareExchange(ref _refreshCts, null, refreshCts), refreshCts))
             {
                 IsLoading = false;
+            }
+
+            refreshCts.Dispose();
+        }
+    }
+
+    private async Task SyncKnownStarredRemoteIdsAsync(IReadOnlyList<RemoteDriveNode> starredNodes)
+    {
+        _knownStarredRemoteIds.Clear();
+        var activeRemoteKeys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var node in starredNodes)
+        {
+            if (!node.Trashed && !string.IsNullOrWhiteSpace(node.Id))
+            {
+                _knownStarredRemoteIds.Add(node.Id);
+                activeRemoteKeys.Add(DriveFavoritePrefix + node.Id);
+            }
+        }
+
+        _hasLoadedRemoteStarredIds = true;
+        if (_settingsService is null)
+        {
+            return;
+        }
+
+        var keys = _settingsService.Current.FavoriteKeys;
+        var changed = false;
+        for (var i = keys.Count - 1; i >= 0; i--)
+        {
+            if (keys[i].StartsWith(DriveFavoritePrefix, StringComparison.Ordinal) &&
+                !activeRemoteKeys.Contains(keys[i]))
+            {
+                keys.RemoveAt(i);
+                changed = true;
+            }
+        }
+
+        foreach (var key in activeRemoteKeys)
+        {
+            if (!keys.Contains(key, StringComparer.Ordinal))
+            {
+                keys.Add(key);
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            await _settingsService.SaveSilentlyAsync(_settingsService.Current);
+        }
+    }
+
+    private void AddLocalFavoriteFactories(
+        List<Func<FileHubItemViewModel>> factories,
+        IReadOnlyDictionary<string, LocalSyncFolder> syncFolders,
+        IReadOnlyList<TrackedFileEntry> allTracked,
+        HashSet<string> addedRemoteIds,
+        HashSet<string> addedLocalPaths,
+        string query,
+        CultureInfo culture)
+    {
+        if (_settingsService?.Current.FavoriteKeys is not { Count: > 0 } keys)
+        {
+            return;
+        }
+
+        var trackedByFullPath = new Dictionary<string, TrackedFileEntry>(StringComparer.Ordinal);
+        foreach (var entry in allTracked)
+        {
+            if (syncFolders.TryGetValue(entry.SyncFolderId, out var owner))
+            {
+                var full = NormalizeLocalFavoritePath(Path.Combine(
+                    owner.LocalPath,
+                    entry.RelativePath.Replace('/', Path.DirectorySeparatorChar)));
+                trackedByFullPath.TryAdd(full, entry);
+            }
+        }
+
+        var folderByFullPath = syncFolders.Values
+            .GroupBy(f => NormalizeLocalFavoritePath(f.LocalPath), StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
+        foreach (var key in keys)
+        {
+            if (!key.StartsWith(LocalFavoritePrefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var path = key[LocalFavoritePrefix.Length..];
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                continue;
+            }
+
+            var normalized = NormalizeLocalFavoritePath(path);
+            if (addedLocalPaths.Contains(normalized))
+            {
+                continue;
+            }
+
+            var name = Path.GetFileName(normalized.TrimEnd(Path.DirectorySeparatorChar));
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(query) &&
+                !name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (folderByFullPath.TryGetValue(normalized, out var mappedSyncFolder) &&
+                Directory.Exists(normalized))
+            {
+                if (!string.IsNullOrWhiteSpace(mappedSyncFolder.RemoteFolderId) &&
+                    addedRemoteIds.Contains(mappedSyncFolder.RemoteFolderId))
+                {
+                    continue;
+                }
+
+                addedLocalPaths.Add(normalized);
+                var capturedFolder = mappedSyncFolder;
+                factories.Add(() => CreateLocalFolderItem(
+                    capturedFolder.Id,
+                    string.Empty,
+                    GetSyncFolderDisplayName(capturedFolder),
+                    capturedFolder.LocalPath,
+                    capturedFolder.RemoteFolderId,
+                    Directory.GetLastWriteTimeUtc(normalized),
+                    culture,
+                    capturedFolder));
+                continue;
+            }
+
+            if (trackedByFullPath.TryGetValue(normalized, out var trackedEntry))
+            {
+                if (!string.IsNullOrWhiteSpace(trackedEntry.RemoteFileId) &&
+                    addedRemoteIds.Contains(trackedEntry.RemoteFileId))
+                {
+                    continue;
+                }
+
+                var exists = trackedEntry.IsFolder ? Directory.Exists(normalized) : File.Exists(normalized);
+                if (!exists)
+                {
+                    continue;
+                }
+
+                addedLocalPaths.Add(normalized);
+                if (trackedEntry.IsFolder && syncFolders.TryGetValue(trackedEntry.SyncFolderId, out _))
+                {
+                    var capturedTracked = trackedEntry;
+                    factories.Add(() => CreateLocalFolderItem(
+                        capturedTracked.SyncFolderId,
+                        capturedTracked.RelativePath.Replace('\\', '/').Trim('/'),
+                        name,
+                        normalized,
+                        capturedTracked.RemoteFileId,
+                        capturedTracked.LocalModifiedAtUtc,
+                        culture));
+                }
+                else
+                {
+                    var capturedTracked = trackedEntry;
+                    factories.Add(() => CreateTrackedItem(capturedTracked, syncFolders, culture, true));
+                }
             }
         }
     }
@@ -1762,7 +2362,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             ? SolidColorBrush.Parse(normalizedHex)
             : BrushMutedGray;
 
-        return new FileHubItemViewModel
+        FileHubItemViewModel? item = null;
+        item = new FileHubItemViewModel
         {
             Name = displayName,
             OriginalFolderName = folderName,
@@ -1773,6 +2374,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             ModifiedDisplay = node.ModifiedTimeUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm", culture),
             MimeType = node.MimeType,
             IsFolder = true,
+            IsStarred = node.Starred,
             HasLocalFile = false,
             RemoteFileId = folderId,
             SyncFolderId = mappedFolder?.Id,
@@ -1787,12 +2389,16 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             TrashLabel = Loc.Text("MoveToTrashButton"),
             CopyNameLabel = Loc.Text("CopyNameMenu"),
             CopyLinkLabel = Loc.Text("CopyDriveLinkMenu"),
+            AddToFavoritesLabel = Loc.Text("AddToFavoritesButton"),
+            RemoveFromFavoritesLabel = Loc.Text("RemoveFromFavoritesButton"),
             OpenActionCommand = new AsyncRelayCommand(() => OpenRemoteFolderAsync(folderId, displayName)),
             OpenInDriveCommand = new AsyncRelayCommand(() => OpenRemoteInDriveBrowserAsync(folderId, true)),
             TrashCommand = new AsyncRelayCommand(() => MoveToTrashAsync(folderId, folderName)),
             CopyNameCommand = new AsyncRelayCommand(() => CopyToClipboardAsync(folderName)),
-            CopyDriveLinkCommand = new AsyncRelayCommand(() => CopyToClipboardAsync($"https://drive.google.com/drive/folders/{folderId}"))
+            CopyDriveLinkCommand = new AsyncRelayCommand(() => CopyToClipboardAsync($"https://drive.google.com/drive/folders/{folderId}")),
+            ToggleFavoriteCommand = new AsyncRelayCommand(() => ToggleItemFavoriteAsync(item!))
         };
+        return item;
     }
 
     private FileHubItemViewModel CreateRemoteFileItem(
@@ -1822,7 +2428,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         var nodeId = node.Id;
         var nodeName = node.Name;
         var (iconData, iconBrush, isVideo) = ResolveFileVisualStyle(node.Name, node.MimeType);
-        var item = new FileHubItemViewModel
+        FileHubItemViewModel? item = null;
+        item = new FileHubItemViewModel
         {
             Name = node.Name,
             PathDisplay = relativeDisplay,
@@ -1835,6 +2442,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             IsFolder = false,
             IsVideoFile = isVideo,
             IsGoogleWorkspaceDoc = node.IsGoogleWorkspaceDoc,
+            IsStarred = node.Starred,
             HasLocalFile = isSynced,
             LocalFullPath = resolvedLocalPath,
             RemoteFileId = nodeId,
@@ -1847,12 +2455,15 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             TrashLabel = Loc.Text("MoveToTrashButton"),
             CopyNameLabel = Loc.Text("CopyNameMenu"),
             CopyLinkLabel = Loc.Text("CopyDriveLinkMenu"),
+            AddToFavoritesLabel = Loc.Text("AddToFavoritesButton"),
+            RemoveFromFavoritesLabel = Loc.Text("RemoveFromFavoritesButton"),
             OpenActionCommand = new AsyncRelayCommand(() => OpenFileItemAsync(isSynced, resolvedLocalPath, nodeId)),
             DownloadCommand = new AsyncRelayCommand(() => DownloadFileAsync(nodeId, nodeName, node.SizeBytes, node.IsGoogleWorkspaceDoc, node.MimeType)),
             OpenInDriveCommand = new AsyncRelayCommand(() => OpenRemoteInDriveBrowserAsync(nodeId, false)),
             TrashCommand = new AsyncRelayCommand(() => MoveToTrashAsync(nodeId, nodeName)),
             CopyNameCommand = new AsyncRelayCommand(() => CopyToClipboardAsync(nodeName)),
-            CopyDriveLinkCommand = new AsyncRelayCommand(() => CopyToClipboardAsync($"https://drive.google.com/file/d/{nodeId}/view"))
+            CopyDriveLinkCommand = new AsyncRelayCommand(() => CopyToClipboardAsync($"https://drive.google.com/file/d/{nodeId}/view")),
+            ToggleFavoriteCommand = new AsyncRelayCommand(() => ToggleItemFavoriteAsync(item!))
         };
 
         item.PreviewCommand = new AsyncRelayCommand(() => LoadPreviewAsync(item, 1));
@@ -2356,6 +2967,11 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private int? GetEffectiveTransferConcurrencyLimit() =>
+        _settingsService is not null
+            ? _settingsService.Current.GetEffectiveTransferConcurrencyLimit()
+            : 3;
+
     public async Task UploadDroppedFilesAsync(IEnumerable<string> localPaths)
     {
         if (!_driveClient.IsConnected)
@@ -2364,25 +2980,41 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        TransferErrorBannerText = string.Empty;
-        var rootTargetFolder = SelectedSourceFilterIndex == 0 ? CurrentFolderId : "root";
-        var jobs = await CollectUploadJobsAsync(localPaths, rootTargetFolder);
-        if (jobs.Count == 0)
+        if (!_syncService.IsOnline)
         {
+            StatusSummary = Loc.Text("OfflineModeNotice");
             return;
         }
 
-        var total = jobs.Count;
-        var completed = 0;
-        var uploadedCount = 0;
-        using var gate = new SemaphoreSlim(3, 3);
+        TransferErrorBannerText = string.Empty;
+        var rootTargetFolder = SelectedSourceFilterIndex == 0 ? CurrentFolderId : "root";
 
         IsLoading = true;
         try
         {
+            var (jobs, createdFolders) = await CollectUploadJobsAsync(localPaths, rootTargetFolder);
+            if (jobs.Count == 0)
+            {
+                if (createdFolders > 0)
+                {
+                    await RefreshAsync();
+                }
+                return;
+            }
+
+            var total = jobs.Count;
+            var completed = 0;
+            var uploadedCount = 0;
+            var concurrencyLimit = GetEffectiveTransferConcurrencyLimit();
+            using var gate = concurrencyLimit is int limit ? new SemaphoreSlim(limit, limit) : null;
+
             var tasks = jobs.Select(async job =>
             {
-                await gate.WaitAsync();
+                if (gate is not null)
+                {
+                    await gate.WaitAsync();
+                }
+
                 var fileName = Path.GetFileName(job.LocalPath);
                 try
                 {
@@ -2406,7 +3038,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                 }
                 finally
                 {
-                    gate.Release();
+                    gate?.Release();
                 }
             });
 
@@ -2419,6 +3051,16 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                     : Loc.Format("FilesUploadedBatchFmt", uploadedCount);
                 await RefreshAsync();
             }
+            else if (createdFolders > 0)
+            {
+                await RefreshAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            var err = Loc.Format("FileHubErrorFmt", ex.Message);
+            TransferErrorBannerText = err;
+            StatusSummary = err;
         }
         finally
         {
@@ -2426,11 +3068,12 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task<List<(string LocalPath, string RemoteFolderId)>> CollectUploadJobsAsync(
+    private async Task<(List<(string LocalPath, string RemoteFolderId)> Jobs, int CreatedFolders)> CollectUploadJobsAsync(
         IEnumerable<string> localPaths,
         string rootTargetFolderId)
     {
         var jobs = new List<(string LocalPath, string RemoteFolderId)>();
+        var createdFolders = 0;
 
         async Task CollectDirectoryAsync(string directoryPath, string parentRemoteFolderId)
         {
@@ -2441,6 +3084,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             }
 
             var remoteDir = await _driveClient.FindOrCreateFolderAsync(folderName, parentRemoteFolderId);
+            createdFolders++;
             foreach (var file in Directory.EnumerateFiles(directoryPath))
             {
                 jobs.Add((file, remoteDir.Id));
@@ -2464,7 +3108,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             }
         }
 
-        return jobs;
+        return (jobs, createdFolders);
     }
 
     [RelayCommand]
@@ -2492,6 +3136,14 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
 
     private async Task LoadPreviewAsync(FileHubItemViewModel item, int pdfPage)
     {
+        if (IsPreviewLoading &&
+            IsPreviewVisible &&
+            ReferenceEquals(_previewedItem, item) &&
+            CurrentPdfPage == pdfPage)
+        {
+            return;
+        }
+
         _previewCts?.Cancel();
         _previewCts?.Dispose();
         var previewCts = new CancellationTokenSource();
@@ -2540,7 +3192,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                 PreviewMetaText = $"{item.OriginDisplay} • {item.SizeDisplay} • {result.MediaInfo}";
             }
 
-            PreviewMessage = result.Kind == PreviewKind.Unsupported
+            PreviewMessage = result.Kind == PreviewKind.Unsupported ||
+                (result.Kind is PreviewKind.Video or PreviewKind.Audio && result.VisualBitmap is null)
                 ? Loc.Text("PreviewUnsupported")
                 : string.Empty;
         }
@@ -2705,7 +3358,10 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             : ResolveFileVisualStyle(fileName, null);
 
         var isConnected = _driveClient.IsConnected;
-        var item = new FileHubItemViewModel
+        var effectiveRemoteId = isConnected ? remoteId : string.Empty;
+        var isStarred = IsItemStarred(remoteId, fullLocalPath);
+        FileHubItemViewModel? item = null;
+        item = new FileHubItemViewModel
         {
             Name = fileName,
             PathDisplay = entry.RelativePath,
@@ -2716,9 +3372,10 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             ModifiedDisplay = entry.LocalModifiedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm", culture),
             IsFolder = entry.IsFolder,
             IsVideoFile = isVideo,
+            IsStarred = isStarred,
             HasLocalFile = existsLocally,
             LocalFullPath = fullLocalPath,
-            RemoteFileId = isConnected ? remoteId : string.Empty,
+            RemoteFileId = effectiveRemoteId,
             FileIconData = iconData,
             FileIconBrush = iconBrush,
             ActionLabel = existsLocally ? Loc.Text("FileHubOpenLocal") : Loc.Text("FileHubOpenDrive"),
@@ -2728,7 +3385,9 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             TrashLabel = Loc.Text("MoveToTrashButton"),
             CopyNameLabel = Loc.Text("CopyNameMenu"),
             CopyLinkLabel = Loc.Text("CopyDriveLinkMenu"),
-            OpenActionCommand = new AsyncRelayCommand(() => OpenFileItemAsync(existsLocally, fullLocalPath, isConnected ? remoteId : string.Empty)),
+            AddToFavoritesLabel = Loc.Text("AddToFavoritesButton"),
+            RemoveFromFavoritesLabel = Loc.Text("RemoveFromFavoritesButton"),
+            OpenActionCommand = new AsyncRelayCommand(() => OpenFileItemAsync(existsLocally, fullLocalPath, effectiveRemoteId)),
             DownloadCommand = isConnected && !entry.IsFolder && !string.IsNullOrWhiteSpace(remoteId)
                 ? new AsyncRelayCommand(() => DownloadFileAsync(remoteId, fileName, entry.SizeBytes, false, null))
                 : null,
@@ -2743,7 +3402,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                 ? new AsyncRelayCommand(() => CopyToClipboardAsync(entry.IsFolder
                     ? $"https://drive.google.com/drive/folders/{remoteId}"
                     : $"https://drive.google.com/file/d/{remoteId}/view"))
-                : null
+                : null,
+            ToggleFavoriteCommand = new AsyncRelayCommand(() => ToggleItemFavoriteAsync(item!))
         };
 
         if (!entry.IsFolder)
@@ -3132,7 +3792,9 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             ? SolidColorBrush.Parse(normalizedHex)
             : BrushMutedGray;
 
-        return new FileHubItemViewModel
+        var isStarred = IsItemStarred(remoteFolderId, localFullPath);
+        FileHubItemViewModel? item = null;
+        item = new FileHubItemViewModel
         {
             Name = shownName,
             OriginalFolderName = displayName,
@@ -3142,6 +3804,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             SizeDisplay = "—",
             ModifiedDisplay = modifiedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm", culture),
             IsFolder = true,
+            IsStarred = isStarred,
             HasLocalFile = Directory.Exists(localFullPath),
             LocalFullPath = localFullPath,
             RemoteFileId = hasRemote ? remoteFolderId : string.Empty,
@@ -3156,6 +3819,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             OpenInDriveLabel = Loc.Text("OpenInDriveButton"),
             CopyNameLabel = Loc.Text("CopyNameMenu"),
             CopyLinkLabel = Loc.Text("CopyDriveLinkMenu"),
+            AddToFavoritesLabel = Loc.Text("AddToFavoritesButton"),
+            RemoveFromFavoritesLabel = Loc.Text("RemoveFromFavoritesButton"),
             OpenActionCommand = new AsyncRelayCommand(() => OpenLocalFolderAsync(syncFolderId, subPath, shownName)),
             OpenInDriveCommand = hasRemote
                 ? new AsyncRelayCommand(() => OpenRemoteInDriveBrowserAsync(remoteFolderId, true))
@@ -3163,8 +3828,10 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             CopyNameCommand = new AsyncRelayCommand(() => CopyToClipboardAsync(displayName)),
             CopyDriveLinkCommand = hasRemote
                 ? new AsyncRelayCommand(() => CopyToClipboardAsync($"https://drive.google.com/drive/folders/{remoteFolderId}"))
-                : null
+                : null,
+            ToggleFavoriteCommand = new AsyncRelayCommand(() => ToggleItemFavoriteAsync(item!))
         };
+        return item;
     }
 
     private async Task OpenLocalFolderAsync(string syncFolderId, string subPath, string displayName)
@@ -3212,8 +3879,13 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     {
         if (!_driveClient.IsConnected ||
             !_syncService.IsOnline ||
-            string.IsNullOrWhiteSpace(folderId) ||
-            string.Equals(_driveFolderId, folderId, StringComparison.Ordinal))
+            string.IsNullOrWhiteSpace(folderId))
+        {
+            return;
+        }
+
+        var switchingToDrive = SelectedSourceFilterIndex != 0;
+        if (!switchingToDrive && string.Equals(_driveFolderId, folderId, StringComparison.Ordinal))
         {
             return;
         }
@@ -3223,13 +3895,34 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         var prevCount = _driveBreadcrumbs.Count;
 
         SearchText = string.Empty;
-        if (!string.Equals(_driveBreadcrumbs.LastOrDefault()?.FolderId, folderId, StringComparison.Ordinal))
+        if (switchingToDrive)
+        {
+            ResetDriveNavigation();
+            if (!string.Equals(folderId, "root", StringComparison.Ordinal))
+            {
+                _driveBreadcrumbs.Add(new FileHubBreadcrumbItem(folderId, folderName, NavigateToBreadcrumbAsync));
+            }
+        }
+        else if (!string.Equals(_driveBreadcrumbs.LastOrDefault()?.FolderId, folderId, StringComparison.Ordinal))
         {
             _driveBreadcrumbs.Add(new FileHubBreadcrumbItem(folderId, folderName, NavigateToBreadcrumbAsync));
         }
 
         _driveFolderId = folderId;
         _driveFolderName = folderName;
+        if (switchingToDrive)
+        {
+            _suppressNextFilterRefresh = true;
+            try
+            {
+                SelectedSourceFilterIndex = 0;
+            }
+            finally
+            {
+                _suppressNextFilterRefresh = false;
+            }
+        }
+
         SyncBreadcrumbsFromActiveMode();
 
         var ok = await RefreshInternalAsync();
@@ -3267,6 +3960,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         SourceFilterOptions.Add(Loc.Text("FileHubFilterDrive"));
         SourceFilterOptions.Add(Loc.Text("FileHubFilterLocal"));
         SourceFilterOptions.Add(Loc.Text("FileHubFilterTrash"));
+        SourceFilterOptions.Add(Loc.Text("FileHubFilterFavorites"));
         SelectedSourceFilterIndex = Math.Clamp(savedIndex, 0, SourceFilterOptions.Count - 1);
     }
 }

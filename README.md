@@ -64,6 +64,16 @@
 - Testado em **Fedora** e **Pop!_OS** (incluindo hardware modesto), com suporte aos ambientes **GNOME**, **COSMIC** e **KDE Plasma 5/6** — veja a matriz completa em **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)**.
 - **Formatos distribuídos:** pacote nativo **`.rpm`** (Fedora / RHEL / openSUSE) e **`.AppImage` (`x86_64`)** independente com o runtime `.NET 10` embutido (Pop!_OS, Ubuntu, Debian e demais distribuições Linux, sem instalar dependências do `.NET`), ambos verificados por **SHA-256** (`SHA256SUMS.txt`).
 
+### Requisitos do sistema
+
+| Recurso | Mínimo | Recomendado |
+| :--- | :--- | :--- |
+| **Sistema / Arquitetura** | Linux `x86_64` (Wayland ou X11) | Fedora Workstation/KDE ou Pop!_OS (GNOME/COSMIC) |
+| **Processador** | Dual-core `x86_64` | Quad-core `x86_64` |
+| **Memória RAM** | `2 GB` | `4 GB` ou mais |
+| **Espaço em disco** | `200 MB` livres *(+ espaço dos seus arquivos)* | SSD com folga para cache e arquivos sincronizados |
+| **Dependências extras** | Nenhuma no `.rpm`; `libfuse2` no `.AppImage` *(ou `--appimage-extract-and-run`)* | `poppler-utils`, `ghostscript`, `ffmpeg`, `libreoffice`, `ImageMagick` *(para pré-visualização completa)* |
+
 ## O que o aplicativo faz
 
 - **Meus Arquivos com menu completo de botão direito:** navegação por **Meu Drive**, **Pastas Locais** e **Lixeira** em modo Lista ou Grade com miniaturas, seleção múltipla (`Ctrl + Clique`, `Shift + Clique`, `Ctrl + A`), upload por arrastar e soltar ou seleção múltipla e menu de contexto tanto sobre arquivos/pastas quanto em áreas vazias (**Nova Pasta**, **Enviar Arquivo**, **Personalizar pasta**, **Atualizar**, **Voltar**, **Selecionar Tudo** e **Mover para Lixeira** destacado em vermelho).

@@ -2,14 +2,20 @@
 
 Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJOR.MINOR.PATCH`).
 
-## [3.0.5] - 2026-11-25
+## [3.0.5] - 2026-11-26
 
 ### Adicionado
-- **Envios, downloads e sincronizações simultâneos:** agora você pode enviar vários arquivos ou pastas inteiras de uma só vez, baixar múltiplos arquivos ou pastas do Google Drive em paralelo e sincronizar diversas pastas ao mesmo tempo.
+- **Aba Favoritos no Hub de Arquivos:** agora você pode marcar arquivos e pastas com estrela em um clique, gerenciar favoritos em lote e acessá-los rapidamente na nova aba **Favoritos**, com sincronização direta com o Google Drive e suporte offline.
+- **Envios, downloads e sincronizações simultâneos com controle de limite:** agora você pode enviar vários arquivos ou pastas inteiras de uma só vez, baixar múltiplos itens em paralelo e definir em **Configurações > Sincronização** se deseja limitar entre 1 e 6 transferências simultâneas ou operar sem limite.
 
 ### Alterado
+- **Exclusão direta de pastas:** ao excluir uma pasta inteira no computador ou no Google Drive, a pasta passa a ser movida diretamente para a lixeira em bloco em vez de remover arquivo por arquivo.
+- **Transferências otimizadas para arquivos maiores:** os blocos de envio e download agora escalam conforme o tamanho do arquivo para reduzir solicitações e melhorar a velocidade.
 - **Indicador animado em Pastas de Sincronização:** a bolinha estática foi substituída por um emblema animado com pulso contínuo quando a pasta está sendo monitorada e animação de rotação durante a sincronização.
 - **Etiqueta mais limpa na Fila de Transferências:** removido o selo antigo com pontos e texto duplicado, exibindo apenas o horário e um chip de direção e status no estilo Material Design 3.
+
+### Corrigido
+- **Pré-visualização de arquivos no Hub:** corrigido o botão **Visualizar** para imagens, PDFs, documentos, textos e vídeos, eliminando travamentos e conflitos com as miniaturas em grade.
 
 ## [3.0.4] - 2026-11-25
 

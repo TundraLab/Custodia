@@ -15,8 +15,17 @@ namespace TundraDrive.Core.Drive;
 
 public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
 {
-    private const string FileFields = "id, name, mimeType, size, md5Checksum, modifiedTime, parents, trashed";
+    private const string FileFields = "id, name, mimeType, size, md5Checksum, modifiedTime, parents, trashed, starred";
     private const string ListFields = $"nextPageToken, files({FileFields})";
+    internal const int MinTransferChunkSizeBytes = 256 * 1024;
+    internal const int DownloadChunkSizeBytes = 4 * 1024 * 1024;
+
+    internal static int ResolveUploadChunkSize(long fileLengthBytes) => fileLengthBytes switch
+    {
+        >= 64L * 1024 * 1024 => 8 * 1024 * 1024,
+        >= 4L * 1024 * 1024 => 4 * 1024 * 1024,
+        _ => 1 * 1024 * 1024
+    };
 
     private readonly IAuthCredentialManager _authManager;
     private readonly ILogger<GoogleDriveClient> _logger;
@@ -168,9 +177,25 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
         return results;
     }
 
-    public async Task<IReadOnlyList<RemoteDriveNode>> ListAllRemoteFilesAsync(
+    public Task<IReadOnlyList<RemoteDriveNode>> ListAllRemoteFilesAsync(
         int maxResults = 200,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        ListFilesByQueryAsync("trashed = false", maxResults, cancellationToken);
+
+    public Task<IReadOnlyList<RemoteDriveNode>> ListStarredFilesAsync(
+        int maxResults = 200,
+        CancellationToken cancellationToken = default) =>
+        ListFilesByQueryAsync("starred = true and trashed = false", maxResults, cancellationToken);
+
+    public Task<IReadOnlyList<RemoteDriveNode>> ListTrashedFilesAsync(
+        int maxResults = 200,
+        CancellationToken cancellationToken = default) =>
+        ListFilesByQueryAsync("trashed = true", maxResults, cancellationToken);
+
+    private async Task<IReadOnlyList<RemoteDriveNode>> ListFilesByQueryAsync(
+        string query,
+        int maxResults,
+        CancellationToken cancellationToken)
     {
         var service = EnsureService();
         var results = new List<RemoteDriveNode>();
@@ -180,47 +205,7 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
         do
         {
             var request = service.Files.List();
-            request.Q = "trashed = false";
-            request.Fields = ListFields;
-            request.OrderBy = "folder,modifiedTime desc";
-            request.PageSize = Math.Min(200, limit - results.Count);
-            request.SupportsAllDrives = true;
-            request.IncludeItemsFromAllDrives = true;
-            request.PageToken = pageToken;
-
-            var response = await request.ExecuteAsync(cancellationToken);
-            if (response.Files is not null)
-            {
-                foreach (var file in response.Files)
-                {
-                    results.Add(MapNode(file));
-                    if (results.Count >= limit)
-                    {
-                        break;
-                    }
-                }
-            }
-
-            pageToken = response.NextPageToken;
-        }
-        while (!string.IsNullOrEmpty(pageToken) && results.Count < limit);
-
-        return results;
-    }
-
-    public async Task<IReadOnlyList<RemoteDriveNode>> ListTrashedFilesAsync(
-        int maxResults = 200,
-        CancellationToken cancellationToken = default)
-    {
-        var service = EnsureService();
-        var results = new List<RemoteDriveNode>();
-        string? pageToken = null;
-        var limit = Math.Clamp(maxResults, 1, 1000);
-
-        do
-        {
-            var request = service.Files.List();
-            request.Q = "trashed = true";
+            request.Q = query;
             request.Fields = ListFields;
             request.OrderBy = "folder,modifiedTime desc";
             request.PageSize = Math.Min(200, limit - results.Count);
@@ -343,6 +328,7 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
         }
 
         var mimeType = MimeTypeHelper.GetMimeTypeFromFilePath(localFilePath);
+        var chunkSize = ResolveUploadChunkSize(fileInfo.Length);
         await using var stream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
         if (!string.IsNullOrWhiteSpace(existingRemoteFileId))
@@ -356,7 +342,7 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
             var updateReq = service.Files.Update(updateMeta, existingRemoteFileId, stream, mimeType);
             updateReq.Fields = FileFields;
             updateReq.SupportsAllDrives = true;
-            updateReq.ChunkSize = 256 * 1024;
+            updateReq.ChunkSize = chunkSize;
             updateReq.ProgressChanged += progress =>
             {
                 if (progress.BytesSent > 0)
@@ -369,6 +355,11 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
             if (updateProgress.Status == UploadStatus.Failed)
             {
                 throw updateProgress.Exception ?? new IOException($"Upload failed for '{localFilePath}'.");
+            }
+
+            if (updateReq.ResponseBody is null)
+            {
+                throw new IOException($"Upload did not complete for '{localFilePath}' (status: {updateProgress.Status}).");
             }
 
             onBytesTransferred?.Invoke(fileInfo.Length);
@@ -385,7 +376,7 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
         var createReq = service.Files.Create(createMeta, stream, mimeType);
         createReq.Fields = FileFields;
         createReq.SupportsAllDrives = true;
-        createReq.ChunkSize = 256 * 1024;
+        createReq.ChunkSize = chunkSize;
         createReq.ProgressChanged += progress =>
         {
             if (progress.BytesSent > 0)
@@ -398,6 +389,11 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
         if (createProgress.Status == UploadStatus.Failed)
         {
             throw createProgress.Exception ?? new IOException($"Upload failed for '{localFilePath}'.");
+        }
+
+        if (createReq.ResponseBody is null)
+        {
+            throw new IOException($"Upload did not complete for '{localFilePath}' (status: {createProgress.Status}).");
         }
 
         onBytesTransferred?.Invoke(fileInfo.Length);
@@ -422,7 +418,7 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
         {
             var request = service.Files.Get(remoteFileId);
             request.SupportsAllDrives = true;
-            request.MediaDownloader.ChunkSize = 256 * 1024;
+            request.MediaDownloader.ChunkSize = DownloadChunkSizeBytes;
             request.MediaDownloader.ProgressChanged += progress =>
             {
                 if (progress.BytesDownloaded > 0)
@@ -499,6 +495,22 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
 
             throw;
         }
+    }
+
+    public async Task SetStarredAsync(string remoteFileId, bool starred, CancellationToken cancellationToken = default)
+    {
+        var service = EnsureService();
+        var metadata = new DriveFile
+        {
+            Starred = starred
+        };
+
+        var request = service.Files.Update(metadata, remoteFileId);
+        request.Fields = "id, starred";
+        request.SupportsAllDrives = true;
+
+        await request.ExecuteAsync(cancellationToken);
+        _logger.LogInformation("Updated Google Drive file '{RemoteFileId}' starred={Starred}.", remoteFileId, starred);
     }
 
     public async Task TrashFileAsync(string remoteFileId, CancellationToken cancellationToken = default)
@@ -626,7 +638,8 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IDisposable
         Md5Checksum = file.Md5Checksum,
         ModifiedTimeUtc = file.ModifiedTimeDateTimeOffset ?? DateTimeOffset.UtcNow,
         ParentIds = file.Parents?.ToArray() ?? Array.Empty<string>(),
-        Trashed = file.Trashed ?? false
+        Trashed = file.Trashed ?? false,
+        Starred = file.Starred ?? false
     };
 
     private static string EscapeQueryValue(string value) =>

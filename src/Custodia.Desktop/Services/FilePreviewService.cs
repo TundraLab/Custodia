@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using Avalonia.Media.Imaging;
 using TundraDrive.Core.Drive;
@@ -77,6 +78,7 @@ public sealed class FilePreviewService : IDisposable
 
     private readonly IGoogleDriveClient _driveClient;
     private readonly string _cacheDirectory;
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _cacheKeyLocks = new(StringComparer.Ordinal);
     private Process? _audioProcess;
 
     public bool IsAudioPlaying => _audioProcess is { HasExited: false };
@@ -116,26 +118,35 @@ public sealed class FilePreviewService : IDisposable
             }
 
             var safeRemoteId = DriveSyncService.SanitizeRemoteSegment(remoteFileId);
-            if (isGoogleWorkspaceDoc)
+            var keyGate = _cacheKeyLocks.GetOrAdd(safeRemoteId, _ => new SemaphoreSlim(1, 1));
+            await keyGate.WaitAsync(cancellationToken);
+            try
             {
-                var exportResult = await ResolveOrExportWorkspacePreviewFileAsync(
-                    remoteFileId,
-                    safeRemoteId,
-                    mimeType,
-                    ext,
-                    cancellationToken);
-                resolvedPath = exportResult.Path;
-                ext = exportResult.Extension;
-            }
-            else
-            {
-                var safeCacheName = $"{safeRemoteId}{(string.IsNullOrWhiteSpace(ext) ? ".bin" : ext)}";
-                resolvedPath = Path.Combine(_cacheDirectory, safeCacheName);
-
-                if (!File.Exists(resolvedPath) || new FileInfo(resolvedPath).Length == 0)
+                if (isGoogleWorkspaceDoc)
                 {
-                    await _driveClient.DownloadFileAsync(remoteFileId, resolvedPath, null, cancellationToken);
+                    var exportResult = await ResolveOrExportWorkspacePreviewFileAsync(
+                        remoteFileId,
+                        safeRemoteId,
+                        mimeType,
+                        ext,
+                        cancellationToken);
+                    resolvedPath = exportResult.Path;
+                    ext = exportResult.Extension;
                 }
+                else
+                {
+                    var safeCacheName = $"{safeRemoteId}{(string.IsNullOrWhiteSpace(ext) ? ".bin" : ext)}";
+                    resolvedPath = Path.Combine(_cacheDirectory, safeCacheName);
+
+                    if (!File.Exists(resolvedPath) || new FileInfo(resolvedPath).Length == 0)
+                    {
+                        await _driveClient.DownloadFileAsync(remoteFileId, resolvedPath, null, cancellationToken);
+                    }
+                }
+            }
+            finally
+            {
+                keyGate.Release();
             }
         }
 
@@ -264,11 +275,23 @@ public sealed class FilePreviewService : IDisposable
                 return null;
             }
 
-            var cachedSource = Path.Combine(_cacheDirectory, $"{safeThumbId}{ext}");
-            if (!File.Exists(cachedSource))
+            // Use a dedicated temp suffix for >2MB thumbnail sources so cleanup never deletes an active preview file.
+            var thumbSourceSuffix = sizeBytes > 2 * 1024 * 1024 ? "_thumbsrc" : string.Empty;
+            var cachedSource = Path.Combine(_cacheDirectory, $"{safeThumbId}{thumbSourceSuffix}{ext}");
+            var keyGate = _cacheKeyLocks.GetOrAdd($"{safeThumbId}{thumbSourceSuffix}", _ => new SemaphoreSlim(1, 1));
+            await keyGate.WaitAsync(cancellationToken);
+            try
             {
-                await _driveClient.DownloadFileAsync(remoteFileId, cachedSource, null, cancellationToken);
+                if (!File.Exists(cachedSource) || new FileInfo(cachedSource).Length == 0)
+                {
+                    await _driveClient.DownloadFileAsync(remoteFileId, cachedSource, null, cancellationToken);
+                }
+
                 downloadedTempForThumb = sizeBytes > 2 * 1024 * 1024;
+            }
+            finally
+            {
+                keyGate.Release();
             }
 
             sourcePath = cachedSource;
@@ -429,24 +452,37 @@ public sealed class FilePreviewService : IDisposable
         {
             if (NativeBitmapExtensions.Contains(ext))
             {
-                await using var fs = File.OpenRead(filePath);
-                return Bitmap.DecodeToWidth(fs, 960);
+                try
+                {
+                    return await Task.Run(() =>
+                    {
+                        using var fs = File.OpenRead(filePath);
+                        return Bitmap.DecodeToWidth(fs, 960);
+                    }, ct);
+                }
+                catch when (!ct.IsCancellationRequested)
+                {
+                    // Fall back to external conversion if format differs from file extension.
+                }
             }
 
             var pngPath = Path.Combine(_cacheDirectory, $"{key}_img.png");
-            if (!File.Exists(pngPath))
+            if (!File.Exists(pngPath) || new FileInfo(pngPath).Length == 0)
             {
                 await RunToolAsync("magick", [filePath, "-resize", "960x960>", pngPath], ct);
-                if (!File.Exists(pngPath))
+                if (!File.Exists(pngPath) || new FileInfo(pngPath).Length == 0)
                 {
                     await RunToolAsync("ffmpeg", ["-y", "-i", filePath, "-vf", "scale='min(960,iw)':-1", "-frames:v", "1", pngPath], ct);
                 }
             }
 
-            if (File.Exists(pngPath))
+            if (File.Exists(pngPath) && new FileInfo(pngPath).Length > 0)
             {
-                await using var fs = File.OpenRead(pngPath);
-                return Bitmap.DecodeToWidth(fs, 960);
+                return await Task.Run(() =>
+                {
+                    using var fs = File.OpenRead(pngPath);
+                    return Bitmap.DecodeToWidth(fs, 960);
+                }, ct);
             }
         }
         catch
@@ -459,19 +495,22 @@ public sealed class FilePreviewService : IDisposable
     private async Task<Bitmap?> ExtractVideoFrameAsync(string filePath, string key, CancellationToken ct)
     {
         var thumbPath = Path.Combine(_cacheDirectory, $"{key}_vthumb.png");
-        if (!File.Exists(thumbPath))
+        if (!File.Exists(thumbPath) || new FileInfo(thumbPath).Length == 0)
         {
             await RunToolAsync("ffmpeg", ["-y", "-ss", "00:00:02", "-i", filePath, "-vframes", "1", "-vf", "scale=720:-1", thumbPath], ct);
-            if (!File.Exists(thumbPath))
+            if (!File.Exists(thumbPath) || new FileInfo(thumbPath).Length == 0)
             {
                 await RunToolAsync("ffmpeg", ["-y", "-ss", "00:00:00", "-i", filePath, "-vframes", "1", "-vf", "scale=720:-1", thumbPath], ct);
             }
         }
 
-        if (File.Exists(thumbPath))
+        if (File.Exists(thumbPath) && new FileInfo(thumbPath).Length > 0)
         {
-            await using var fs = File.OpenRead(thumbPath);
-            return Bitmap.DecodeToWidth(fs, 720);
+            return await Task.Run(() =>
+            {
+                using var fs = File.OpenRead(thumbPath);
+                return Bitmap.DecodeToWidth(fs, 720);
+            }, ct);
         }
 
         return null;
@@ -480,7 +519,7 @@ public sealed class FilePreviewService : IDisposable
     private async Task<Bitmap?> GenerateAudioWaveformAsync(string filePath, string key, CancellationToken ct)
     {
         var wavePath = Path.Combine(_cacheDirectory, $"{key}_wave.png");
-        if (!File.Exists(wavePath))
+        if (!File.Exists(wavePath) || new FileInfo(wavePath).Length == 0)
         {
             await RunToolAsync("ffmpeg",
             [
@@ -490,10 +529,13 @@ public sealed class FilePreviewService : IDisposable
             ], ct);
         }
 
-        if (File.Exists(wavePath))
+        if (File.Exists(wavePath) && new FileInfo(wavePath).Length > 0)
         {
-            await using var fs = File.OpenRead(wavePath);
-            return Bitmap.DecodeToWidth(fs, 640);
+            return await Task.Run(() =>
+            {
+                using var fs = File.OpenRead(wavePath);
+                return Bitmap.DecodeToWidth(fs, 640);
+            }, ct);
         }
 
         return null;
@@ -529,8 +571,11 @@ public sealed class FilePreviewService : IDisposable
         {
             try
             {
-                await using var fs = File.OpenRead(expectedPng);
-                return Bitmap.DecodeToWidth(fs, 960);
+                return await Task.Run(() =>
+                {
+                    using var fs = File.OpenRead(expectedPng);
+                    return Bitmap.DecodeToWidth(fs, 960);
+                }, ct);
             }
             catch
             {
@@ -685,6 +730,12 @@ public sealed class FilePreviewService : IDisposable
             return (fallbackTextPath, ".txt");
         }
 
+        var fallbackCsvPath = Path.Combine(_cacheDirectory, $"{safeRemoteId}.csv");
+        if (File.Exists(fallbackCsvPath) && new FileInfo(fallbackCsvPath).Length > 0)
+        {
+            return (fallbackCsvPath, ".csv");
+        }
+
         try
         {
             await _driveClient.ExportFileAsync(remoteFileId, "application/pdf", pdfPath, null, cancellationToken);
@@ -778,8 +829,13 @@ public sealed class FilePreviewService : IDisposable
                 return 0;
             }
 
-            var output = await proc.StandardOutput.ReadToEndAsync(ct);
-            await proc.WaitForExitAsync(ct);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
+            var stdoutTask = proc.StandardOutput.ReadToEndAsync(timeoutCts.Token);
+            var stderrTask = proc.StandardError.ReadToEndAsync(timeoutCts.Token);
+            await proc.WaitForExitAsync(timeoutCts.Token);
+            var output = await stdoutTask;
+            await stderrTask;
 
             foreach (var line in output.Split('\n'))
             {
@@ -891,8 +947,13 @@ public sealed class FilePreviewService : IDisposable
                 return null;
             }
 
-            var output = (await proc.StandardOutput.ReadToEndAsync(ct)).Trim();
-            await proc.WaitForExitAsync(ct);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
+            var stdoutTask = proc.StandardOutput.ReadToEndAsync(timeoutCts.Token);
+            var stderrTask = proc.StandardError.ReadToEndAsync(timeoutCts.Token);
+            await proc.WaitForExitAsync(timeoutCts.Token);
+            var output = (await stdoutTask).Trim();
+            await stderrTask;
 
             if (double.TryParse(output, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var secs))
             {
@@ -928,7 +989,29 @@ public sealed class FilePreviewService : IDisposable
             using var proc = Process.Start(psi);
             if (proc is not null)
             {
-                await proc.WaitForExitAsync(ct);
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(25));
+                try
+                {
+                    var stdoutTask = proc.StandardOutput.ReadToEndAsync(timeoutCts.Token);
+                    var stderrTask = proc.StandardError.ReadToEndAsync(timeoutCts.Token);
+                    await proc.WaitForExitAsync(timeoutCts.Token);
+                    await Task.WhenAll(stdoutTask, stderrTask);
+                }
+                catch
+                {
+                    try
+                    {
+                        if (!proc.HasExited)
+                        {
+                            proc.Kill(entireProcessTree: true);
+                        }
+                    }
+                    catch
+                    {
+                    }
+                    throw;
+                }
             }
         }
         catch

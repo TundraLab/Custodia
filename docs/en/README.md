@@ -64,6 +64,16 @@
 - Tested on **Fedora** and **Pop!_OS** (including modest hardware), with support for **GNOME**, **COSMIC**, and **KDE Plasma 5/6** — see the full matrix in **[COMPATIBILITY.md](COMPATIBILITY.md)**.
 - **Distributed formats:** native **`.rpm`** package (Fedora / RHEL / openSUSE) and standalone **`.AppImage` (`x86_64`)** with the `.NET 10` runtime bundled (Pop!_OS, Ubuntu, Debian, and other Linux distros, without installing `.NET` dependencies), both verified by **SHA-256** (`SHA256SUMS.txt`).
 
+### System Requirements
+
+| Resource | Minimum | Recommended |
+| :--- | :--- | :--- |
+| **OS / Architecture** | Linux `x86_64` (Wayland or X11) | Fedora Workstation/KDE or Pop!_OS (GNOME/COSMIC) |
+| **Processor** | Dual-core `x86_64` | Quad-core `x86_64` |
+| **Memory (RAM)** | `2 GB` | `4 GB` or more |
+| **Disk space** | `200 MB` free *(+ space for your synced files)* | SSD with headroom for cache and synced files |
+| **Extra dependencies** | None for `.rpm`; `libfuse2` for `.AppImage` *(or `--appimage-extract-and-run`)* | `poppler-utils`, `ghostscript`, `ffmpeg`, `libreoffice`, `ImageMagick` *(for full media/doc previews)* |
+
 ## What the App Does
 
 - **My Files with full right-click context menu:** browse **My Drive**, **Local Folders**, and **Trash** in List or Grid mode with thumbnails, multi-selection (`Ctrl + Click`, `Shift + Click`, `Ctrl + A`), drag-and-drop or multi-file upload, and context menus on both files/folders and empty areas (**New Folder**, **Upload File**, **Customize folder**, **Refresh**, **Back**, **Select All**, and **Move to Trash** highlighted in red).

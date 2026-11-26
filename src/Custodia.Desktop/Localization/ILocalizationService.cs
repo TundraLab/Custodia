@@ -97,10 +97,14 @@ public interface ILocalizationService : INotifyPropertyChanged
     string ColOrigin { get; }
     string FileHubFilterDrive { get; }
     string FileHubFilterLocal { get; }
+    string FileHubFilterFavorites { get; }
     string FileHubFoldersSection { get; }
     string FileHubFilesSection { get; }
     string ClearSearchTooltip { get; }
+    string OpenFavoritesTooltip { get; }
     string OpenTrashTooltip { get; }
+    string AddToFavoritesButton { get; }
+    string RemoveFromFavoritesButton { get; }
     string TrashBannerTitle { get; }
     string MappedFoldersButton { get; }
     string RemoteBrowserButton { get; }
@@ -186,6 +190,9 @@ public interface ILocalizationService : INotifyPropertyChanged
     string ConflictPolicyLabel { get; }
     string ConflictPolicyHint { get; }
     string WatchLocalChangesCheckbox { get; }
+    string LimitConcurrentTransfersCheckbox { get; }
+    string LimitConcurrentTransfersHint { get; }
+    string MaxConcurrentTransfersLabel { get; }
     string IgnorePatternsLabel { get; }
     string LocalApiSectionTitle { get; }
     string EnableLocalApiCheckbox { get; }

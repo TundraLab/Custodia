@@ -226,6 +226,12 @@ public sealed partial class SettingsViewModel : ViewModelBase
     private bool _watchLocalChanges = true;
 
     [ObservableProperty]
+    private bool _limitConcurrentTransfers = true;
+
+    [ObservableProperty]
+    private decimal? _maxConcurrentTransfers = 3;
+
+    [ObservableProperty]
     private bool _embeddedApiEnabled = true;
 
     [ObservableProperty]
@@ -543,6 +549,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
             : current.DownloadDirectory;
         SyncIntervalSeconds = current.SyncIntervalSeconds;
         WatchLocalChanges = current.WatchLocalChanges;
+        LimitConcurrentTransfers = current.LimitConcurrentTransfers;
+        MaxConcurrentTransfers = Math.Clamp(
+            current.MaxConcurrentTransfers,
+            AppSettings.MinConcurrentTransfers,
+            AppSettings.MaxConcurrentTransfersCap);
         EmbeddedApiEnabled = current.EmbeddedApiEnabled;
         EmbeddedApiPort = current.EmbeddedApiPort;
         AutoMemoryCleanupEnabled = current.AutoMemoryCleanupEnabled;
@@ -1091,6 +1102,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
                     : Path.GetFullPath(DownloadDirectory.Trim()),
                 SyncIntervalSeconds = Math.Clamp(intervalValue, 30, 86400),
                 WatchLocalChanges = WatchLocalChanges,
+                LimitConcurrentTransfers = LimitConcurrentTransfers,
+                MaxConcurrentTransfers = Math.Clamp(
+                    (int)(MaxConcurrentTransfers ?? 3),
+                    AppSettings.MinConcurrentTransfers,
+                    AppSettings.MaxConcurrentTransfersCap),
                 EmbeddedApiEnabled = EmbeddedApiEnabled,
                 EmbeddedApiPort = portValue is >= 1024 and <= 65535 ? portValue : 5080,
                 AutoMemoryCleanupEnabled = AutoMemoryCleanupEnabled,

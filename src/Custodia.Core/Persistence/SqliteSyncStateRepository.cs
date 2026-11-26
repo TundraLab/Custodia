@@ -64,6 +64,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
 
     public async Task DeleteAccountAsync(string accountId, CancellationToken cancellationToken = default)
     {
+        using var writeLock = await _connectionFactory.AcquireWriteLockAsync(cancellationToken);
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         await connection.ExecuteAsync(new CommandDefinition(
             "DELETE FROM drive_accounts WHERE id = @AccountId;",
@@ -91,6 +92,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
     public async Task UpsertAccountAsync(DriveAccount account, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(account);
+        using var writeLock = await _connectionFactory.AcquireWriteLockAsync(cancellationToken);
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
 
         const string sql = """
@@ -147,7 +149,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
                 f.custom_alias AS CustomAlias,
                 f.custom_color_hex AS CustomColorHex,
                 f.custom_icon_key AS CustomIconKey,
-                (SELECT COUNT(1) FROM tracked_file_entries t WHERE t.sync_folder_id = f.id) AS TrackedFileCount
+                (SELECT COUNT(1) FROM tracked_file_entries t WHERE t.sync_folder_id = f.id AND t.is_folder = 0) AS TrackedFileCount
             FROM local_sync_folders f
             ORDER BY f.local_path ASC;
             """;
@@ -178,7 +180,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
                 f.custom_alias AS CustomAlias,
                 f.custom_color_hex AS CustomColorHex,
                 f.custom_icon_key AS CustomIconKey,
-                (SELECT COUNT(1) FROM tracked_file_entries t WHERE t.sync_folder_id = f.id) AS TrackedFileCount
+                (SELECT COUNT(1) FROM tracked_file_entries t WHERE t.sync_folder_id = f.id AND t.is_folder = 0) AS TrackedFileCount
             FROM local_sync_folders f
             WHERE f.account_id = @AccountId
             ORDER BY f.local_path ASC;
@@ -210,7 +212,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
                 f.custom_alias AS CustomAlias,
                 f.custom_color_hex AS CustomColorHex,
                 f.custom_icon_key AS CustomIconKey,
-                (SELECT COUNT(1) FROM tracked_file_entries t WHERE t.sync_folder_id = f.id) AS TrackedFileCount
+                (SELECT COUNT(1) FROM tracked_file_entries t WHERE t.sync_folder_id = f.id AND t.is_folder = 0) AS TrackedFileCount
             FROM local_sync_folders f
             WHERE f.id = @FolderId;
             """;
@@ -222,6 +224,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
     public async Task UpsertSyncFolderAsync(LocalSyncFolder folder, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(folder);
+        using var writeLock = await _connectionFactory.AcquireWriteLockAsync(cancellationToken);
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
 
         const string findExistingSql = "SELECT id FROM local_sync_folders WHERE local_path = @LocalPath LIMIT 1;";
@@ -289,6 +292,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
             return 0;
         }
 
+        using var writeLock = await _connectionFactory.AcquireWriteLockAsync(cancellationToken);
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         var normalizedEmail = accountEmail.Trim().ToLowerInvariant();
         const string sql = """
@@ -307,6 +311,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
 
     public async Task DeleteSyncFolderAsync(string folderId, CancellationToken cancellationToken = default)
     {
+        using var writeLock = await _connectionFactory.AcquireWriteLockAsync(cancellationToken);
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         const string sql = "DELETE FROM local_sync_folders WHERE id = @FolderId;";
         await connection.ExecuteAsync(new CommandDefinition(sql, new { FolderId = folderId }, cancellationToken: cancellationToken));
@@ -317,6 +322,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
         string? accountEmail = null,
         CancellationToken cancellationToken = default)
     {
+        using var writeLock = await _connectionFactory.AcquireWriteLockAsync(cancellationToken);
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         if (!string.IsNullOrWhiteSpace(accountEmail))
         {
@@ -425,6 +431,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
     public async Task UpsertTrackedFileAsync(TrackedFileEntry entry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
+        using var writeLock = await _connectionFactory.AcquireWriteLockAsync(cancellationToken);
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
 
         const string sql = """
@@ -468,6 +475,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
 
     public async Task DeleteTrackedFileAsync(string entryId, CancellationToken cancellationToken = default)
     {
+        using var writeLock = await _connectionFactory.AcquireWriteLockAsync(cancellationToken);
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         const string sql = "DELETE FROM tracked_file_entries WHERE id = @EntryId;";
         await connection.ExecuteAsync(new CommandDefinition(sql, new { EntryId = entryId }, cancellationToken: cancellationToken));
@@ -511,6 +519,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
     public async Task<long> AddActivityLogAsync(SyncActivityLog log, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(log);
+        using var writeLock = await _connectionFactory.AcquireWriteLockAsync(cancellationToken);
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
 
         const string sql = """
@@ -570,6 +579,7 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
 
     public async Task ClearActivityLogsAsync(CancellationToken cancellationToken = default)
     {
+        using var writeLock = await _connectionFactory.AcquireWriteLockAsync(cancellationToken);
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         await connection.ExecuteAsync(new CommandDefinition("DELETE FROM sync_activity_logs;", cancellationToken: cancellationToken));
     }
