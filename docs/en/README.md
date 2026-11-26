@@ -2,7 +2,7 @@
 
 > 🌐 **Language / Idioma:** [🇧🇷 Português](../../README.md) | **🇺🇸 English (current)**
 
-![Custódia by TundraLab - My files. Always safe.](../images/custodia-promo.jpg)
+![Custódia by TundraLab - Your files. Always safe.](../images/custodia-promo-en.jpg)
 
 [![GitHub](https://img.shields.io/badge/GitHub-TundraLab%2FCustodia-181717?logo=github)](https://github.com/TundraLab/Custodia)
 [![Sole Author](https://img.shields.io/badge/Author%20%26%20Lead%20Dev-%40GustaHerin-181717?logo=github)](https://github.com/GustaHerin)
