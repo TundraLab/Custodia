@@ -1,5 +1,7 @@
 # Matriz de Compatibilidade Linux
 
+> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](en/COMPATIBILITY.md)
+
 O Custódia é construído em **.NET 10.0** + **Avalonia UI 11.3.8** para Linux `x86_64`, com foco em compatibilidade ampla entre ambientes gráficos e distribuições. Esta matriz diferencia explicitamente o que foi **efetivamente testado** do que possui **suporte declarado pela arquitetura**.
 
 ---

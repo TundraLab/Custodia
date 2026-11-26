@@ -1,5 +1,7 @@
 # Como Configurar o Google Drive (`credentials.json`)
 
+> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](en/OAUTH_SETUP.md)
+
 Para conectar sua conta diretamente ao Google sem servidores intermediários, crie suas credenciais OAuth2 Desktop no Google Cloud Console seguindo os passos abaixo.
 
 ---

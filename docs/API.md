@@ -1,5 +1,7 @@
 # Custódia: Documentação da API REST Local e Integração com Agentes de IA
 
+> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](en/API.md)
+
 - Versão da API: `v1` (`3.0.5`)
 - Endereço padrão: `http://127.0.0.1:5080` (somente loopback local)
 - Especificação OpenAPI: `GET http://127.0.0.1:5080/api/v1/openapi.json`

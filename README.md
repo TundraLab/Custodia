@@ -1,5 +1,7 @@
 # Custódia v3.0.5
 
+> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](README.en.md)
+
 ![Custódia by TundraLab - Meus arquivos. Sempre seguros.](docs/images/custodia-promo.jpg)
 
 [![GitHub](https://img.shields.io/badge/GitHub-TundraLab%2FCustodia-181717?logo=github)](https://github.com/TundraLab/Custodia)
@@ -31,6 +33,8 @@
 - **Documentação técnica:** OpenAPI `3.0.3` em tempo real (`GET /api/v1/openapi.json`), guia [docs/API.md](docs/API.md), [Custodia-API.pdf](Custodia-API.pdf) e histórico completo em [CHANGELOG.md](CHANGELOG.md)
 
 ## Documentação
+
+> Disponível em **[🇧🇷 Português](README.md)** e **[🇺🇸 English](README.en.md)**.
 
 | Guia | Conteúdo |
 | :--- | :--- |

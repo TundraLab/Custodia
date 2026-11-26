@@ -1,5 +1,7 @@
 # Solução de Problemas (Troubleshooting)
 
+> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](en/TROUBLESHOOTING.md)
+
 Guia prático para diagnosticar e resolver problemas comuns de instalação, integração com o desktop, autenticação OAuth2 e pré-visualização multimídia.
 
 ---

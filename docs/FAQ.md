@@ -1,5 +1,7 @@
 # Perguntas Frequentes (FAQ)
 
+> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](en/FAQ.md)
+
 Respostas rápidas sobre funcionamento offline, resolução de conflitos, recuperação de arquivos, segurança de credenciais e remoção do Custódia.
 
 ---

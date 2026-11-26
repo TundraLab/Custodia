@@ -1,5 +1,7 @@
 # Segurança e Privacidade
 
+> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](en/SECURITY.md)
+
 O Custódia foi projetado sob o princípio de **execução local direta** (*local-first*): seus arquivos, metadados e tokens OAuth2 permanecem exclusivamente na sua máquina e trafegam diretamente entre o seu Linux e a API oficial do Google Drive, sem servidores intermediários da TundraLab.
 
 ---

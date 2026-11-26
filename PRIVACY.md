@@ -1,5 +1,7 @@
 # Política de Privacidade — Custódia
 
+> 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](PRIVACY.en.md)
+
 **Última atualização:** 24 de novembro de 2026  
 **Responsável:** TundraLab (`contato.tundralab@gmail.com`)  
 **Repositório oficial:** https://github.com/TundraLab/Custodia

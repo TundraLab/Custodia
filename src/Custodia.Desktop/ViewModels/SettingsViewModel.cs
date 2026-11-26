@@ -1223,17 +1223,25 @@ public sealed partial class SettingsViewModel : ViewModelBase
             return;
         }
 
-        var pdfPath = ResolveLocalDocsPath("Custodia-API.pdf") ?? ResolveLocalDocsPath("TundraDrive-API.pdf");
+        var pdfPath = Loc.IsEnglish
+            ? ResolveLocalDocsPath("Custodia-API.en.pdf")
+              ?? ResolveLocalDocsPath("Custodia-API.pdf")
+              ?? ResolveLocalDocsPath("TundraDrive-API.pdf")
+            : ResolveLocalDocsPath("Custodia-API.pdf")
+              ?? ResolveLocalDocsPath("TundraDrive-API.pdf");
         if (pdfPath is not null)
         {
             await OpenExternalUriCallback.Invoke(new Uri(pdfPath));
             return;
         }
 
-        var localDocsPath = ResolveLocalDocsPath("docs", "API.md");
+        var localDocsPath = Loc.IsEnglish
+            ? ResolveLocalDocsPath("docs", "en", "API.md") ?? ResolveLocalDocsPath("docs", "API.md")
+            : ResolveLocalDocsPath("docs", "API.md");
+        var remotePdf = Loc.IsEnglish ? "Custodia-API.en.pdf" : "Custodia-API.pdf";
         var target = localDocsPath is not null
             ? new Uri(localDocsPath)
-            : new Uri($"{RepositoryUrl}/blob/main/Custodia-API.pdf");
+            : new Uri($"{RepositoryUrl}/blob/main/{remotePdf}");
         await OpenExternalUriCallback.Invoke(target);
     }
 

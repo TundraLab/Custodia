@@ -29,6 +29,7 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
     <None Include="..\..\Custodia-API.pdf" Link="Custodia-API.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Custodia-API.en.pdf" Link="Custodia-API.en.pdf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
