@@ -74,6 +74,7 @@ public sealed partial class InstallerViewModel : ViewModelBase, IDisposable
     public Action? RequestCloseCallback { get; set; }
     public Action? RequestShutdownForUpdateCallback { get; set; }
     internal string? AppImageTargetPathOverride { get; set; }
+    internal string? SelfInstallerPathOverride { get; set; }
 
     public ObservableCollection<InstallerStepViewModel> Steps { get; } = [];
 
@@ -260,6 +261,7 @@ public sealed partial class InstallerViewModel : ViewModelBase, IDisposable
 
                 var installedTargetLabel = ResolveInstalledBinaryDisplayPath();
                 SetStepRunning(4, installedTargetLabel);
+                TrySelfDeleteInstallerFile();
                 await Task.Delay(250, ct);
                 CompleteStep(4);
                 IsCompleted = true;
@@ -313,9 +315,17 @@ public sealed partial class InstallerViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        // Native RPM background install using pkexec graphical auth dialog (no visible terminal window)
+        // Native .deb or .rpm background install using pkexec graphical auth dialog (no visible terminal window)
         var escapedPkg = downloaded.LocalFilePath.Replace("'", "'\\''", StringComparison.Ordinal);
-        var cmd = $"if command -v dnf >/dev/null 2>&1; then pkexec dnf install -y '{escapedPkg}'; elif command -v zypper >/dev/null 2>&1; then pkexec zypper --non-interactive install -y --allow-unsigned-rpm '{escapedPkg}'; else pkexec rpm -Uvh --replacepkgs --nosignature '{escapedPkg}'; fi";
+        string cmd;
+        if (downloaded.LocalFilePath.EndsWith(".deb", StringComparison.OrdinalIgnoreCase))
+        {
+            cmd = $"if command -v apt-get >/dev/null 2>&1; then pkexec apt-get install -y '{escapedPkg}'; else pkexec dpkg -i '{escapedPkg}'; fi";
+        }
+        else
+        {
+            cmd = $"if command -v dnf >/dev/null 2>&1; then pkexec dnf install -y '{escapedPkg}'; elif command -v zypper >/dev/null 2>&1; then pkexec zypper --non-interactive install -y --allow-unsigned-rpm '{escapedPkg}'; else pkexec rpm -Uvh --replacepkgs --nosignature '{escapedPkg}'; fi";
+        }
         var psi = new ProcessStartInfo("bash")
         {
             UseShellExecute = false,
@@ -348,6 +358,36 @@ public sealed partial class InstallerViewModel : ViewModelBase, IDisposable
         }
 
         LinuxDesktopIntegrationHelper.InstallPostInstallDesktopIntegration(installedAppImagePath: null, enableAutostart: true);
+    }
+
+    private void TrySelfDeleteInstallerFile()
+    {
+        try
+        {
+            var selfPath = !string.IsNullOrWhiteSpace(SelfInstallerPathOverride)
+                ? SelfInstallerPathOverride
+                : Environment.GetEnvironmentVariable("CUSTODIA_INSTALLER_SELF_PATH");
+
+            if (string.IsNullOrWhiteSpace(selfPath))
+            {
+                return;
+            }
+
+            var fullPath = Path.GetFullPath(selfPath);
+            if (fullPath.StartsWith("/opt/", StringComparison.Ordinal) ||
+                fullPath.StartsWith("/usr/", StringComparison.Ordinal) ||
+                !File.Exists(fullPath))
+            {
+                return;
+            }
+
+            File.Delete(fullPath);
+            AppendLog($"Removed installer file: {fullPath}");
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"Could not auto-delete installer file: {ex.Message}");
+        }
     }
 
     private async Task RunElapsedTickerAsync(Stopwatch sw, CancellationToken ct)

@@ -49,7 +49,8 @@ public enum AppInstallKind
 {
     Standalone = 0,
     Rpm = 1,
-    AppImage = 2
+    AppImage = 2,
+    Deb = 3
 }
 
 public sealed record ReleaseAssetInfo(
@@ -67,6 +68,7 @@ public sealed record AppUpdateCheckResult
     public string ReleaseNotes { get; init; } = string.Empty;
     public DateTimeOffset? PublishedAtUtc { get; init; }
     public ReleaseAssetInfo? RpmAsset { get; init; }
+    public ReleaseAssetInfo? DebAsset { get; init; }
     public ReleaseAssetInfo? AppImageAsset { get; init; }
     public ReleaseAssetInfo? InstallerScriptAsset { get; init; }
     public ReleaseAssetInfo? ChecksumsAsset { get; init; }
@@ -75,15 +77,17 @@ public sealed record AppUpdateCheckResult
 
     public ReleaseAssetInfo? PreferredAsset => InstallKind switch
     {
-        AppInstallKind.Rpm => RpmAsset ?? AppImageAsset,
-        AppInstallKind.AppImage => AppImageAsset ?? RpmAsset,
-        _ => AppImageAsset ?? RpmAsset
+        AppInstallKind.Rpm => RpmAsset ?? AppImageAsset ?? DebAsset,
+        AppInstallKind.Deb => DebAsset ?? AppImageAsset ?? RpmAsset,
+        AppInstallKind.AppImage => AppImageAsset ?? DebAsset ?? RpmAsset,
+        _ => AppImageAsset ?? DebAsset ?? RpmAsset
     };
 
     public bool CanSelfInstall =>
         IsUpdateAvailable &&
         ((InstallKind == AppInstallKind.AppImage && AppImageAsset is not null && !string.IsNullOrWhiteSpace(InstalledPackagePath)) ||
-         (InstallKind == AppInstallKind.Rpm && RpmAsset is not null));
+         (InstallKind == AppInstallKind.Rpm && RpmAsset is not null) ||
+         (InstallKind == AppInstallKind.Deb && DebAsset is not null));
 }
 
 public sealed record UpdateDownloadProgress(

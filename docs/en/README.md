@@ -5,8 +5,8 @@
 ![Custódia by TundraLab - Your files. Always safe.](../images/custodia-promo-en.jpg)
 
 [![Release](https://img.shields.io/badge/Release-v4.0.0-2563EB?style=flat-square&logo=github&labelColor=1D2024)](https://github.com/TundraLab/Custodia/releases)
-[![xUnit Tests](https://img.shields.io/badge/xUnit%20Tests-91%20passed-16A34A?style=flat-square&labelColor=1D2024)](../../tests/Custodia.Tests)
-[![Linux](https://img.shields.io/badge/Linux-x86__64%20(Installer%20%7C%20.rpm%20%7C%20.AppImage)-334155?style=flat-square&logo=linux&logoColor=white&labelColor=1D2024)](#installation)
+[![xUnit Tests](https://img.shields.io/badge/xUnit%20Tests-94%20passed-16A34A?style=flat-square&labelColor=1D2024)](../../tests/Custodia.Tests)
+[![Linux](https://img.shields.io/badge/Linux-x86__64%20(Installer%20%7C%20.deb%20%7C%20.rpm%20%7C%20.AppImage)-334155?style=flat-square&logo=linux&logoColor=white&labelColor=1D2024)](#installation)
 [![.NET 10](https://img.shields.io/badge/.NET%2010-Avalonia%2011.3.8-3B82F6?style=flat-square&logo=dotnet&logoColor=white&labelColor=1D2024)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-475569?style=flat-square&labelColor=1D2024)](../../LICENSE)
 [![Privacy](https://img.shields.io/badge/Privacy-EN-0F766E?style=flat-square&labelColor=1D2024)](PRIVACY.md)
@@ -22,7 +22,7 @@
 ## Quality
 
 - **Build & distribution:** clean `.NET 10.0` compilation for Linux `x86_64` with native `.rpm` and `.AppImage` packaging verified by SHA-256
-- **Test suite:** **91 xUnit unit & UI tests passing (`0` failures)** covering sync engine, transfer queue & retry, SQLite persistence, OAuth2 account isolation, updater, support diagnostics sanitization, terms/privacy acceptance, and lifecycle emails
+- **Test suite:** **94 xUnit unit & UI tests passing (`0` failures)** covering sync engine, transfer queue & retry, SQLite persistence, OAuth2 account isolation, updater, support diagnostics sanitization, terms/privacy acceptance, and lifecycle emails
 - **Primary platform:** Linux `x86_64` (Fedora Workstation/KDE, Pop!_OS GNOME/COSMIC, and KDE Plasma 5/6)
 - **Technical documentation:** live OpenAPI `3.0.3` (`GET /api/v1/openapi.json`), [API.md](API.md), [Custodia-API.en.pdf](Custodia-API.en.pdf), and full history in [CHANGELOG.md](../../CHANGELOG.md)
 
@@ -129,27 +129,32 @@ Each mapped folder can operate in **Two-Way Mirror (`PC <-> Drive`)** or **One-W
 
 ### 1. Custom Graphical Installer (`Custódia by TundraLab` — Recommended)
 
-The simplest and recommended way to install with zero terminal steps:
+The simplest and recommended way to install with zero terminal steps (does not depend on AppImage or FUSE):
 
-1. Download the official installer: **[Custodia-Installer-x86_64.AppImage](https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-Installer-x86_64.AppImage)**
-2. Right-click the file → **Properties** → allow executing as a program *(or `chmod +x Custodia-Installer-x86_64.AppImage`)*, then open it.
-3. The graphical installer detects your Linux distribution (**`.rpm`** on Fedora/RHEL/openSUSE or **`.AppImage`** on Ubuntu/Pop!_OS/Mint/Debian), verifies the **SHA-256** checksum, installs silently in the background, creates app menu shortcuts, and enables autostart.
+1. Download the official installer: **[Custodia-Installer-x86_64.run](https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-Installer-x86_64.run)**
+2. Right-click the file → **Properties** → allow executing as a program *(or `chmod +x Custodia-Installer-x86_64.run`)*, then open it.
+3. The graphical installer detects your Linux distribution (**`.deb`** on Ubuntu/Pop!_OS/Mint/Debian, **`.rpm`** on Fedora/RHEL/openSUSE, or universal **`.AppImage`**), verifies the **SHA-256** checksum, installs silently in the background, creates shortcuts, and **auto-deletes itself once finished**.
 
 <details>
-<summary>Other installation methods (direct .AppImage / .rpm packages, terminal, and advanced options)</summary>
+<summary>Other installation methods (direct .deb / .rpm / .AppImage packages, terminal, and advanced options)</summary>
 
-#### Direct package download (without the graphical installer)
+#### Direct package download
 
-- **AppImage (`x86_64`, portable):**
+- **Ubuntu / Debian / Pop!_OS / Linux Mint (`.deb`):**
   ```bash
-  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-4.0.0-x86_64.AppImage
-  chmod +x Custodia-4.0.0-x86_64.AppImage
-  ./Custodia-4.0.0-x86_64.AppImage
+  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-4.0.0_amd64.deb
+  sudo apt install -y ./Custodia-4.0.0_amd64.deb
   ```
 - **Fedora / RHEL / openSUSE (`.rpm`):**
   ```bash
   curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-4.0.0-1.x86_64.rpm
   sudo dnf install -y ./Custodia-4.0.0-1.x86_64.rpm
+  ```
+- **AppImage (`x86_64`, portable):**
+  ```bash
+  curl -fLO https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-4.0.0-x86_64.AppImage
+  chmod +x Custodia-4.0.0-x86_64.AppImage
+  ./Custodia-4.0.0-x86_64.AppImage
   ```
 
 #### Terminal installer (`install-custodia.sh`)

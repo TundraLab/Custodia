@@ -109,7 +109,7 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
                 : File.Exists("/usr/bin/tundradrive")
                     ? "/usr/bin/tundradrive"
                     : processPath;
-            return AppInstallKind.Rpm;
+            return IsDebianLikeSystem() ? AppInstallKind.Deb : AppInstallKind.Rpm;
         }
 
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -128,13 +128,16 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
 
         if (isInstallerProcess)
         {
-            if (File.Exists("/usr/bin/custodia") ||
-                File.Exists("/etc/fedora-release") ||
-                File.Exists("/etc/redhat-release") ||
-                File.Exists("/usr/bin/dnf"))
+            if (IsRpmLikeSystem())
             {
                 installedPackagePath = File.Exists("/usr/bin/custodia") ? "/usr/bin/custodia" : null;
                 return AppInstallKind.Rpm;
+            }
+
+            if (IsDebianLikeSystem())
+            {
+                installedPackagePath = File.Exists("/usr/bin/custodia") ? "/usr/bin/custodia" : null;
+                return AppInstallKind.Deb;
             }
 
             installedPackagePath = null;
@@ -144,6 +147,18 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
         installedPackagePath = null;
         return AppInstallKind.Standalone;
     }
+
+    private static bool IsRpmLikeSystem() =>
+        File.Exists("/etc/fedora-release") ||
+        File.Exists("/etc/redhat-release") ||
+        File.Exists("/usr/bin/dnf") ||
+        File.Exists("/usr/bin/zypper");
+
+    private static bool IsDebianLikeSystem() =>
+        !IsRpmLikeSystem() &&
+        (File.Exists("/etc/debian_version") ||
+         File.Exists("/usr/bin/dpkg") ||
+         File.Exists("/usr/bin/apt-get"));
 
     public async Task<AppUpdateCheckResult> CheckForUpdatesAsync(CancellationToken cancellationToken = default)
     {
@@ -192,6 +207,7 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
             }
 
             ReleaseAssetInfo? rpmAsset = null;
+            ReleaseAssetInfo? debAsset = null;
             ReleaseAssetInfo? appImageAsset = null;
             ReleaseAssetInfo? installerAsset = null;
             ReleaseAssetInfo? checksumsAsset = null;
@@ -213,6 +229,10 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
                     if (name.EndsWith(".rpm", StringComparison.OrdinalIgnoreCase))
                     {
                         rpmAsset = info;
+                    }
+                    else if (name.EndsWith(".deb", StringComparison.OrdinalIgnoreCase))
+                    {
+                        debAsset = info;
                     }
                     else if (name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase) &&
                              !name.Contains("Installer", StringComparison.OrdinalIgnoreCase))
@@ -240,6 +260,7 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
                 ReleaseNotes = releaseNotes.Trim(),
                 PublishedAtUtc = publishedAt,
                 RpmAsset = rpmAsset,
+                DebAsset = debAsset,
                 AppImageAsset = appImageAsset,
                 InstallerScriptAsset = installerAsset,
                 ChecksumsAsset = checksumsAsset,
@@ -280,6 +301,7 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
             IsUpdateAvailable = AppVersionInfo.IsNewerVersion(latestVersion, _currentVersion),
             ReleaseUrl = finalUri,
             RpmAsset = new ReleaseAssetInfo($"Custodia-{latestVersion}-1.x86_64.rpm", $"{dlBase}/Custodia-{latestVersion}-1.x86_64.rpm", 0),
+            DebAsset = new ReleaseAssetInfo($"Custodia-{latestVersion}_amd64.deb", $"{dlBase}/Custodia-{latestVersion}_amd64.deb", 0),
             AppImageAsset = new ReleaseAssetInfo($"Custodia-{latestVersion}-x86_64.AppImage", $"{dlBase}/Custodia-{latestVersion}-x86_64.AppImage", 0),
             InstallerScriptAsset = new ReleaseAssetInfo("Custodia-Installer-x86_64.sh", $"{dlBase}/Custodia-Installer-x86_64.sh", 0),
             ChecksumsAsset = new ReleaseAssetInfo("SHA256SUMS.txt", $"{dlBase}/SHA256SUMS.txt", 0),
@@ -476,6 +498,30 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
                 {replaceSnippet}
                 rm -f {escapedPackage}
                 nohup {escapedTarget} >/dev/null 2>&1 &
+                """;
+        }
+        else if (kind == AppInstallKind.Deb)
+        {
+            var escapedLog = EscapeShellSingleQuoted(Path.Combine(_updatesDirectory, "last-update.log"));
+            scriptBody = $"""
+                #!/usr/bin/env bash
+                set -euo pipefail
+                PID={currentPid}
+                for _ in $(seq 1 150); do
+                  if ! kill -0 "$PID" 2>/dev/null; then
+                    break
+                  fi
+                  sleep 0.2
+                done
+                if command -v apt-get >/dev/null 2>&1; then
+                  pkexec apt-get install -y {escapedPackage} > {escapedLog} 2>&1
+                else
+                  pkexec dpkg -i {escapedPackage} > {escapedLog} 2>&1
+                fi
+                rm -f {escapedPackage}
+                if [[ -x /usr/bin/custodia ]]; then
+                  nohup /usr/bin/custodia >/dev/null 2>&1 &
+                fi
                 """;
         }
         else

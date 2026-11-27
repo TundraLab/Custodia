@@ -785,8 +785,8 @@ public sealed class Release400FeatureTests
 
             var rtInline = ExtractRotateTransform(iconInlineTransform.RenderTransform);
             var rtStyleOnly = ExtractRotateTransform(iconStyleOnly.RenderTransform);
-            Assert.True(rtInline.Angle > 0, $"Expected inline RotateTransform to advance, got {rtInline.Angle}.");
-            Assert.True(rtStyleOnly.Angle > 0, $"Expected style RotateTransform to advance, got {rtStyleOnly.Angle}.");
+            Assert.True(rtInline.Angle < 0, $"Expected inline RotateTransform to advance counter-clockwise, got {rtInline.Angle}.");
+            Assert.True(rtStyleOnly.Angle < 0, $"Expected style RotateTransform to advance counter-clockwise, got {rtStyleOnly.Angle}.");
         }
         finally
         {
@@ -976,6 +976,11 @@ public sealed class Release400FeatureTests
                   "size": 59000000
                 },
                 {
+                  "name": "Custodia-4.0.0_amd64.deb",
+                  "browser_download_url": "https://github.com/TundraLab/Custodia/releases/download/v4.0.0/Custodia-4.0.0_amd64.deb",
+                  "size": 59000000
+                },
+                {
                   "name": "SHA256SUMS.txt",
                   "browser_download_url": "https://github.com/TundraLab/Custodia/releases/download/v4.0.0/SHA256SUMS.txt",
                   "size": 256
@@ -995,6 +1000,12 @@ public sealed class Release400FeatureTests
         Assert.Equal("Custodia-4.0.0-x86_64.AppImage", result.AppImageAsset.Name);
         Assert.NotNull(result.RpmAsset);
         Assert.Equal("Custodia-4.0.0-1.x86_64.rpm", result.RpmAsset.Name);
+        Assert.NotNull(result.DebAsset);
+        Assert.Equal("Custodia-4.0.0_amd64.deb", result.DebAsset.Name);
+
+        var debCheck = result with { InstallKind = AppInstallKind.Deb };
+        Assert.Equal("Custodia-4.0.0_amd64.deb", debCheck.PreferredAsset?.Name);
+        Assert.True(debCheck.CanSelfInstall);
     }
 
     private sealed class StaticJsonResponseHandler(string json) : HttpMessageHandler
@@ -1019,10 +1030,11 @@ public sealed class Release400FeatureTests
             var client = new VidsCapturingDriveClient();
             using var preview = new FilePreviewService(client);
 
+            var vidsPreviewId = $"vids-preview-{Guid.NewGuid():N}";
             var previewResult = await preview.BuildPreviewAsync(
                 "Minha Apresentação Vids",
                 null,
-                "vids-file-1",
+                vidsPreviewId,
                 isGoogleWorkspaceDoc: true,
                 mimeType: "application/vnd.google-apps.vid",
                 pdfPage: 1,
@@ -1153,5 +1165,77 @@ public sealed class Release400FeatureTests
         public Task RestoreFileAsync(string remoteFileId, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task DeletePermanentlyAsync(string remoteFileId, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task EmptyTrashAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task InstallerViewModel_AutoDeletesSelfInstallerFileOnSuccess_AndTrashBannerHasNoEmDash()
+    {
+        var loc = new LocalizationService();
+        loc.SetLanguage("pt-BR");
+        Assert.DoesNotContain("—", loc.Text("TrashBannerTitle"));
+        loc.SetLanguage("en-US");
+        Assert.DoesNotContain("—", loc.Text("TrashBannerTitle"));
+
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"custodia-selfdel-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+        try
+        {
+            var fakeInstaller = Path.Combine(tempRoot, "Custodia-Installer-x86_64.run");
+            await File.WriteAllTextAsync(fakeInstaller, "#!/bin/sh\necho installer\n");
+            var fakePayload = Path.Combine(tempRoot, "Custodia-4.0.0-x86_64.AppImage");
+            await File.WriteAllBytesAsync(fakePayload, new byte[64]);
+            var targetAppImage = Path.Combine(tempRoot, "installed", "Custodia.AppImage");
+
+            var fakeUpdater = new FakeSelfDeleteUpdateService(fakePayload);
+            using var vm = new InstallerViewModel(fakeUpdater, loc)
+            {
+                AppImageTargetPathOverride = targetAppImage,
+                SelfInstallerPathOverride = fakeInstaller
+            };
+
+            await vm.RunInstallationAsync();
+
+            Assert.True(vm.IsCompleted);
+            Assert.False(vm.IsFailed);
+            Assert.True(File.Exists(targetAppImage));
+            Assert.False(File.Exists(fakeInstaller));
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    private sealed class FakeSelfDeleteUpdateService(string payloadPath) : IAppUpdateService
+    {
+        public AppInstallKind DetectInstallKind(out string? installedPackagePath)
+        {
+            installedPackagePath = null;
+            return AppInstallKind.AppImage;
+        }
+
+        public Task<AppUpdateCheckResult> CheckForUpdatesAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new AppUpdateCheckResult
+            {
+                CurrentVersion = "3.0.5",
+                LatestVersion = "4.0.0",
+                TagName = "v4.0.0",
+                IsUpdateAvailable = true,
+                ReleaseUrl = "https://github.com/TundraLab/Custodia/releases/tag/v4.0.0",
+                AppImageAsset = new ReleaseAssetInfo("Custodia-4.0.0-x86_64.AppImage", "https://example.invalid/app.AppImage", 64),
+                InstallKind = AppInstallKind.AppImage
+            });
+
+        public Task<DownloadedUpdatePackage> DownloadUpdatePackageAsync(
+            AppUpdateCheckResult checkResult,
+            IProgress<UpdateDownloadProgress>? progress = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new DownloadedUpdatePackage(checkResult, checkResult.AppImageAsset!, payloadPath, Sha256Verified: true));
+
+        public Task<UpdateApplyLaunchResult> LaunchUpdateInstallerAsync(DownloadedUpdatePackage package, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new UpdateApplyLaunchResult(true, false, "ok"));
     }
 }

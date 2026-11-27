@@ -5,7 +5,7 @@ Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJ
 ## [4.0.0] - 2026-11-27
 
 ### Adicionado
-- **Instalador gráfico personalizado para Linux:** agora é possível baixar um instalador visual próprio (`Custodia-Installer-x86_64.AppImage`) que detecta automaticamente sua distribuição (`.rpm` ou `.AppImage`), verifica o pacote via SHA-256, exibe progresso com velocidade e tempo restante e conclui tudo sem precisar abrir o terminal.
+- **Instalador gráfico personalizado nativo (`.run`) e suporte nativo a `.deb`:** novo instalador gráfico próprio (`Custodia-Installer-x86_64.run`, sem depender de AppImage/FUSE) que detecta automaticamente sua distribuição (`.deb` para Ubuntu/Debian/Pop!_OS/Mint, `.rpm` para Fedora/RHEL/openSUSE ou `.AppImage` universal), valida via SHA-256, instala em segundo plano e se remove automaticamente ao concluir.
 - **Aba "Compartilhados comigo" e painel de Compartilhamento:** liste, navegue e baixe arquivos compartilhados com sua conta, gere ou revogue links públicos de leitura/edição e convide colaboradores por e-mail diretamente em **Meus Arquivos**.
 - **Filtros e retomada na Fila de Transferências:** filtre facilmente por **Envios**, **Downloads** e **Falhas**, retome transferências individuais ou todas as falhas com um clique e conte com retomada automática de envios e downloads grandes caso a conexão caia ou o aplicativo feche.
 - **Escolha rápida de pasta ao baixar e limite de banda:** nova opção **Salvar como...** em **Meus Arquivos** e controle opcional de velocidade máxima nas configurações de sincronização.

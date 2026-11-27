@@ -786,7 +786,7 @@
           <Setter Property="RotateTransform.Angle" Value="0" />
         </KeyFrame>
         <KeyFrame Cue="100%">
-          <Setter Property="RotateTransform.Angle" Value="360" />
+          <Setter Property="RotateTransform.Angle" Value="-360" />
         </KeyFrame>
       </Animation>
     </Style.Animations>

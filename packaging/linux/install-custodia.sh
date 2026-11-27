@@ -54,6 +54,7 @@ resolve_latest_release_version "$@"
 RELEASE_TAG="v${VERSION}"
 APPIMAGE_ASSET="Custodia-${VERSION}-x86_64.AppImage"
 RPM_ASSET="Custodia-${VERSION}-1.x86_64.rpm"
+DEB_ASSET="Custodia-${VERSION}_amd64.deb"
 SUMS_ASSET="SHA256SUMS.txt"
 
 if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; then
@@ -117,6 +118,10 @@ get_appimage_status() {
 
 is_fedora_like() {
   command -v dnf >/dev/null 2>&1 || [[ -f /etc/fedora-release ]] || [[ -f /etc/redhat-release ]]
+}
+
+is_debian_like() {
+  ! is_fedora_like && { command -v apt-get >/dev/null 2>&1 || command -v dpkg >/dev/null 2>&1 || [[ -f /etc/debian_version ]]; }
 }
 
 box_border() {
@@ -923,17 +928,73 @@ download_menu() {
   esac
 }
 
+install_deb_flow() {
+  local interactive="${1:-0}"
+  confirm_legal_terms || return 1
+  echo ""
+  local stage_dir
+  stage_dir="$(mktemp -d /tmp/tundra-stage.XXXXXX)"
+  ACTIVE_TMP_STAGE="${stage_dir}"
+
+  step_info "[1/4] Obtendo pacote oficial .deb..."
+  local deb_path="${DIST_DIR}/${DEB_ASSET}"
+  if [[ ! -f "${deb_path}" ]]; then
+    download_release_asset "${DEB_ASSET}" "${stage_dir}"
+    deb_path="${stage_dir}/${DEB_ASSET}"
+  fi
+
+  step_info "[2/4] Verificando integridade do pacote..."
+  verify_sha256_if_available "${deb_path}"
+
+  local enable_autostart=1
+  if [[ "${interactive}" == "1" ]] && [[ -t 0 ]]; then
+    prompt_yes_no "Ativar inicialização automática ao ligar o PC? [S/n]:" "S" || enable_autostart=0
+  fi
+
+  step_info "[3/4] Instalando pacote DEB no sistema (/opt/custodia)..."
+  stop_running_instance_if_any
+  sudo -v
+  if command -v apt-get >/dev/null 2>&1; then
+    run_with_spinner "Aplicando pacote ${DEB_ASSET} via APT" sudo apt-get install -y "${deb_path}"
+  else
+    run_with_spinner "Aplicando pacote ${DEB_ASSET} via DPKG" sudo dpkg -i "${deb_path}"
+  fi
+
+  rm -rf "${HOME}/.local/opt/custodia" "${HOME}/.local/opt/tundradrive"
+  rm -f "${HOME}/.local/bin/custodia" "${HOME}/.local/bin/tundradrive"
+
+  step_info "[4/4] Atualizando menu de aplicativos e ícones..."
+  write_user_desktop_files "\"/usr/bin/custodia\"" "${enable_autostart}"
+
+  if [[ -n "${stage_dir:-}" && -d "${stage_dir}" ]]; then
+    rm -rf "${stage_dir}"
+    ACTIVE_TMP_STAGE=""
+  fi
+
+  echo ""
+  step_ok "${BOLD}Custódia v${VERSION} (.deb) instalado com sucesso!${RESET}"
+  echo -e "  ${DIM}Executável: /usr/bin/custodia  |  Menu: Custódia${RESET}"
+  if [[ "${interactive}" == "1" ]]; then
+    offer_launch_app "\"/usr/bin/custodia\""
+  fi
+}
+
 update_flow() {
   local interactive="${1:-0}"
   echo ""
   step_info "Verificando instalação atual para atualizar para v${VERSION}..."
   if command -v rpm >/dev/null 2>&1 && { rpm -q custodia >/dev/null 2>&1 || rpm -q tundradrive >/dev/null 2>&1; }; then
     install_rpm_flow "${interactive}"
+  elif command -v dpkg >/dev/null 2>&1 && dpkg -s custodia >/dev/null 2>&1; then
+    install_deb_flow "${interactive}"
   elif [[ -x "${HOME}/.local/opt/custodia/Custodia.AppImage" || -x "${HOME}/.local/opt/tundradrive/TundraDrive.AppImage" ]]; then
     install_appimage_flow "${interactive}"
   elif is_fedora_like; then
     step_warn "Nenhuma instalação anterior detectada; instalando pacote .rpm v${VERSION}..."
     install_rpm_flow "${interactive}"
+  elif is_debian_like; then
+    step_warn "Nenhuma instalação anterior detectada; instalando pacote .deb v${VERSION}..."
+    install_deb_flow "${interactive}"
   else
     step_warn "Nenhuma instalação anterior detectada; instalando pacote .AppImage v${VERSION}..."
     install_appimage_flow "${interactive}"
@@ -949,13 +1010,14 @@ show_help() {
   echo "  --update            Atualiza a instalação existente para a versão mais recente (v${VERSION})"
   echo "  --gui               Abre o instalador gráfico do Custódia (quando disponível)"
   echo "  --background        Executa a instalação/atualização silenciosamente em segundo plano"
+  echo "  --deb               Baixa, valida SHA-256 e instala/atualiza o pacote .deb"
   echo "  --rpm               Baixa, valida SHA-256 e instala/atualiza o pacote .rpm"
   echo "  --appimage          Baixa, valida SHA-256 e instala/atualiza o .AppImage integrado"
   echo "  --download-rpm      Baixa apenas o arquivo .rpm no diretório atual"
   echo "  --download-appimage Baixa apenas o arquivo .AppImage no diretório atual"
-  echo "  --download-only     Baixa ambos (.rpm e .AppImage) no diretório atual"
+  echo "  --download-only     Baixa os pacotes oficiais no diretório atual"
   echo "  --uninstall         Remove a instalação mantendo suas configurações"
-  echo "  --build-all         Compila .AppImage e .rpm localmente (requer SDK .NET 10)"
+  echo "  --build-all         Compila .deb, .rpm, .AppImage e instalador .run localmente"
   echo "  --yes, -y           Aceita automaticamente os Termos de Uso e Política de Privacidade"
   echo "  --help              Exibe esta ajuda"
 }
@@ -984,6 +1046,11 @@ case "${MODE}" in
   --update)
     print_header 0
     update_flow 0 || exit 1
+    exit 0
+    ;;
+  --deb)
+    print_header 0
+    install_deb_flow 0 || exit 1
     exit 0
     ;;
   --rpm)
@@ -1029,10 +1096,11 @@ case "${MODE}" in
     print_header 0
     "${SCRIPT_DIR}/build-appimage.sh"
     FORCE_PUBLISH=0 "${SCRIPT_DIR}/build-rpm.sh"
-    FORCE_PUBLISH=0 "${SCRIPT_DIR}/build-installer-appimage.sh"
+    FORCE_PUBLISH=0 "${SCRIPT_DIR}/build-deb.sh"
+    FORCE_PUBLISH=0 "${SCRIPT_DIR}/build-installer-run.sh"
     cp -f "${SCRIPT_DIR}/install-custodia.sh" "${DIST_DIR}/Custodia-Installer-x86_64.sh"
     chmod +x "${DIST_DIR}/Custodia-Installer-x86_64.sh"
-    (cd "${DIST_DIR}" && sha256sum "Custodia-${VERSION}-x86_64.AppImage" "Custodia-${VERSION}-1.x86_64.rpm" "Custodia-Installer-x86_64.AppImage" "Custodia-Installer-x86_64.sh" > SHA256SUMS.txt)
+    (cd "${DIST_DIR}" && sha256sum "Custodia-Installer-x86_64.run" "Custodia-${VERSION}_amd64.deb" "Custodia-${VERSION}-1.x86_64.rpm" "Custodia-${VERSION}-x86_64.AppImage" "Custodia-Installer-x86_64.sh" > SHA256SUMS.txt)
     exit 0
     ;;
   --menu|--cli)
@@ -1046,19 +1114,16 @@ case "${MODE}" in
       exit 0
     fi
     gui_cache="${HOME}/.cache/custodia-installer"
-    gui_bin="${gui_cache}/Custodia-Installer-x86_64.AppImage"
+    gui_bin="${gui_cache}/Custodia-Installer-x86_64.run"
     mkdir -p "${gui_cache}"
-    if [[ -x "${DIST_DIR}/Custodia-Installer-x86_64.AppImage" ]]; then
-      cp -f "${DIST_DIR}/Custodia-Installer-x86_64.AppImage" "${gui_bin}"
+    if [[ -x "${DIST_DIR}/Custodia-Installer-x86_64.run" ]]; then
+      cp -f "${DIST_DIR}/Custodia-Installer-x86_64.run" "${gui_bin}"
     else
-      curl -fsSL -L -o "${gui_bin}" "${RELEASE_BASE_URL}/Custodia-Installer-x86_64.AppImage" || true
+      curl -fsSL -L -o "${gui_bin}" "${RELEASE_BASE_URL}/Custodia-Installer-x86_64.run" || true
     fi
     if [[ -s "${gui_bin}" ]]; then
       chmod +x "${gui_bin}"
-      if nohup "${gui_bin}" >/dev/null 2>&1 & then
-        exit 0
-      fi
-      nohup "${gui_bin}" --appimage-extract-and-run >/dev/null 2>&1 &
+      nohup "${gui_bin}" >/dev/null 2>&1 &
       exit 0
     fi
     print_header 0
