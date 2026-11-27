@@ -216,13 +216,15 @@ public sealed class GoogleDriveClient : IGoogleDriveClient, IResumableDriveClien
 
         try
         {
-            using var response = await service.HttpClient.GetAsync(thumbnailLink, cancellationToken);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
+            using var response = await service.HttpClient.GetAsync(thumbnailLink, timeoutCts.Token);
             if (!response.IsSuccessStatusCode)
             {
                 return null;
             }
 
-            return await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            return await response.Content.ReadAsByteArrayAsync(timeoutCts.Token);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {

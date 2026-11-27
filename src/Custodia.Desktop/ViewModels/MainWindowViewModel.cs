@@ -661,6 +661,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _lastUiStatusById[item.Id] = (item.Status, item.Status == TransferStatus.InProgress ? nowMs : prev.LastTickMs);
 
         var isActiveTransfer = item.Status is TransferStatus.Queued or TransferStatus.InProgress;
+        var isProgressTickOnly = hasPrev && prev.Status == TransferStatus.InProgress && item.Status == TransferStatus.InProgress;
 
         Dispatcher.UIThread.Post(() =>
         {
@@ -670,11 +671,18 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             if (isActiveTransfer)
             {
+                var uiNowMs = Environment.TickCount64;
+                var shouldScheduleHold = _heldSidebarErrorUntilMs != 0
+                    || _heldSidebarDirection != item.Direction
+                    || (_sidebarHoldUntilMs - uiNowMs) < 500;
                 _heldSidebarErrorUntilMs = 0;
                 _heldSidebarDirection = item.Direction;
-                _sidebarHoldUntilMs = Environment.TickCount64 + 1200;
-                var version = ++_sidebarHoldVersion;
-                _ = ReleaseSidebarDirectionHoldAsync(version, 1250);
+                _sidebarHoldUntilMs = uiNowMs + 1200;
+                if (shouldScheduleHold)
+                {
+                    var version = ++_sidebarHoldVersion;
+                    _ = ReleaseSidebarDirectionHoldAsync(version, 1250);
+                }
             }
             else if (item.Status == TransferStatus.Failed)
             {
@@ -684,13 +692,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             }
 
             TransferQueueVm.UpsertTransfer(item);
-            RefreshSidebarSyncState("SidebarMonitoring");
-            if (prevActive != TransferQueueVm.ActiveCount
-                || prevDirection != TransferQueueVm.ActiveDirection
-                || !string.Equals(prevStatusText, SidebarSyncStatusText, StringComparison.Ordinal)
-                || item.Status == TransferStatus.Failed)
+            if (!isProgressTickOnly || prevActive != TransferQueueVm.ActiveCount || prevDirection != TransferQueueVm.ActiveDirection)
             {
-                TraySummaryChanged?.Invoke(this, EventArgs.Empty);
+                RefreshSidebarSyncState("SidebarMonitoring");
+                if (prevActive != TransferQueueVm.ActiveCount
+                    || prevDirection != TransferQueueVm.ActiveDirection
+                    || !string.Equals(prevStatusText, SidebarSyncStatusText, StringComparison.Ordinal)
+                    || item.Status == TransferStatus.Failed)
+                {
+                    TraySummaryChanged?.Invoke(this, EventArgs.Empty);
+                }
             }
         });
     }

@@ -315,7 +315,7 @@ public sealed partial class InstallerViewModel : ViewModelBase, IDisposable
 
         // Native RPM background install using pkexec graphical auth dialog (no visible terminal window)
         var escapedPkg = downloaded.LocalFilePath.Replace("'", "'\\''", StringComparison.Ordinal);
-        var cmd = $"if command -v dnf >/dev/null 2>&1; then pkexec dnf install -y '{escapedPkg}'; elif command -v zypper >/dev/null 2>&1; then pkexec zypper --non-interactive install -y --allow-unsigned-rpm '{escapedPkg}'; else pkexec rpm -Uvh --replacepkgs '{escapedPkg}'; fi";
+        var cmd = $"if command -v dnf >/dev/null 2>&1; then pkexec dnf install -y '{escapedPkg}'; elif command -v zypper >/dev/null 2>&1; then pkexec zypper --non-interactive install -y --allow-unsigned-rpm '{escapedPkg}'; else pkexec rpm -Uvh --replacepkgs --nosignature '{escapedPkg}'; fi";
         var psi = new ProcessStartInfo("bash")
         {
             UseShellExecute = false,

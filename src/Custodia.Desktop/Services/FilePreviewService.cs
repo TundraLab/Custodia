@@ -64,6 +64,10 @@ public sealed class FilePreviewService : IDisposable
         ".rs", ".rb", ".php", ".swift", ".dart", ".vue", ".svelte", ".ps1", ".bat", ".cmd"
     };
 
+    private const string GoogleVidsMimeType = "application/vnd.google-apps.vid";
+    private const string GoogleDrawingMimeType = "application/vnd.google-apps.drawing";
+    private const long MaxRemoteMediaPreviewBytes = 100L * 1024 * 1024;
+
     private static readonly HashSet<string> NonExportableGoogleWorkspaceMimes = new(StringComparer.OrdinalIgnoreCase)
     {
         "application/vnd.google-apps.shortcut",
@@ -100,7 +104,9 @@ public sealed class FilePreviewService : IDisposable
         bool isGoogleWorkspaceDoc,
         string? mimeType,
         int pdfPage = 1,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        long sizeBytes = 0,
+        string? thumbnailLink = null)
     {
         if (isGoogleWorkspaceDoc && IsNonExportableWorkspaceMime(mimeType))
         {
@@ -117,6 +123,23 @@ public sealed class FilePreviewService : IDisposable
                 return new FilePreviewResult(PreviewKind.Unsupported, string.Empty);
             }
 
+            var isLargeRemoteMedia = !isGoogleWorkspaceDoc &&
+                sizeBytes > MaxRemoteMediaPreviewBytes &&
+                (VideoExtensions.Contains(ext) || AudioExtensions.Contains(ext));
+
+            if (isLargeRemoteMedia)
+            {
+                var mediaThumb = await TryLoadGridThumbnailAsync(
+                    fileName,
+                    localFullPath,
+                    remoteFileId,
+                    sizeBytes,
+                    cancellationToken,
+                    thumbnailLink);
+                var kind = VideoExtensions.Contains(ext) ? PreviewKind.Video : PreviewKind.Audio;
+                return new FilePreviewResult(kind, string.Empty, VisualBitmap: mediaThumb);
+            }
+
             var safeRemoteId = DriveSyncService.SanitizeRemoteSegment(remoteFileId);
             var keyGate = _cacheKeyLocks.GetOrAdd(safeRemoteId, _ => new SemaphoreSlim(1, 1));
             await keyGate.WaitAsync(cancellationToken);
@@ -124,14 +147,36 @@ public sealed class FilePreviewService : IDisposable
             {
                 if (isGoogleWorkspaceDoc)
                 {
-                    var exportResult = await ResolveOrExportWorkspacePreviewFileAsync(
-                        remoteFileId,
-                        safeRemoteId,
-                        mimeType,
-                        ext,
-                        cancellationToken);
-                    resolvedPath = exportResult.Path;
-                    ext = exportResult.Extension;
+                    try
+                    {
+                        var exportResult = await ResolveOrExportWorkspacePreviewFileAsync(
+                            remoteFileId,
+                            safeRemoteId,
+                            mimeType,
+                            ext,
+                            cancellationToken);
+                        resolvedPath = exportResult.Path;
+                        ext = exportResult.Extension;
+                    }
+                    catch (Google.GoogleApiException) when (!cancellationToken.IsCancellationRequested)
+                    {
+                        var thumb = await TryLoadGridThumbnailAsync(
+                            fileName,
+                            localFullPath,
+                            remoteFileId,
+                            sizeBytes,
+                            cancellationToken,
+                            thumbnailLink);
+                        if (thumb is not null)
+                        {
+                            var fallbackKind = string.Equals(mimeType, GoogleVidsMimeType, StringComparison.OrdinalIgnoreCase)
+                                ? PreviewKind.Video
+                                : PreviewKind.Image;
+                            return new FilePreviewResult(fallbackKind, string.Empty, VisualBitmap: thumb);
+                        }
+
+                        return new FilePreviewResult(PreviewKind.Unsupported, string.Empty);
+                    }
                 }
                 else
                 {
@@ -254,8 +299,11 @@ public sealed class FilePreviewService : IDisposable
         {
             try
             {
-                await using var cachedStream = File.OpenRead(cachedThumb);
-                return Bitmap.DecodeToWidth(cachedStream, 320);
+                return await Task.Run(() =>
+                {
+                    using var cachedStream = File.OpenRead(cachedThumb);
+                    return Bitmap.DecodeToWidth(cachedStream, 320);
+                }, cancellationToken);
             }
             catch
             {
@@ -292,8 +340,11 @@ public sealed class FilePreviewService : IDisposable
         {
             try
             {
-                await using var cachedStream = File.OpenRead(cachedThumb);
-                return Bitmap.DecodeToWidth(cachedStream, 160);
+                return await Task.Run(() =>
+                {
+                    using var cachedStream = File.OpenRead(cachedThumb);
+                    return Bitmap.DecodeToWidth(cachedStream, 160);
+                }, cancellationToken);
             }
             catch
             {
@@ -317,8 +368,11 @@ public sealed class FilePreviewService : IDisposable
 
                 try
                 {
-                    await using var mem = new MemoryStream(thumbBytes, writable: false);
-                    return Bitmap.DecodeToWidth(mem, 160);
+                    return await Task.Run(() =>
+                    {
+                        using var mem = new MemoryStream(thumbBytes, writable: false);
+                        return Bitmap.DecodeToWidth(mem, 160);
+                    }, cancellationToken);
                 }
                 catch
                 {
@@ -369,8 +423,11 @@ public sealed class FilePreviewService : IDisposable
             {
                 if (NativeBitmapExtensions.Contains(ext))
                 {
-                    await using var fs = File.OpenRead(sourcePath);
-                    return Bitmap.DecodeToWidth(fs, 160);
+                    return await Task.Run(() =>
+                    {
+                        using var fs = File.OpenRead(sourcePath);
+                        return Bitmap.DecodeToWidth(fs, 160);
+                    }, cancellationToken);
                 }
 
                 await RunToolAsync("magick", [sourcePath, "-resize", "140x140>", cachedThumb], cancellationToken);
@@ -386,8 +443,11 @@ public sealed class FilePreviewService : IDisposable
 
             if (File.Exists(cachedThumb))
             {
-                await using var fs = File.OpenRead(cachedThumb);
-                return Bitmap.DecodeToWidth(fs, 160);
+                return await Task.Run(() =>
+                {
+                    using var fs = File.OpenRead(cachedThumb);
+                    return Bitmap.DecodeToWidth(fs, 160);
+                }, cancellationToken);
             }
         }
         catch
@@ -655,6 +715,16 @@ public sealed class FilePreviewService : IDisposable
     {
         if (isGoogleWorkspaceDoc)
         {
+            if (string.Equals(mimeType, GoogleVidsMimeType, StringComparison.OrdinalIgnoreCase))
+            {
+                return ".mp4";
+            }
+
+            if (string.Equals(mimeType, GoogleDrawingMimeType, StringComparison.OrdinalIgnoreCase))
+            {
+                return ".png";
+            }
+
             return string.Equals(mimeType, "application/vnd.google-apps.script", StringComparison.OrdinalIgnoreCase)
                 ? ".json"
                 : ".pdf";
@@ -773,6 +843,28 @@ public sealed class FilePreviewService : IDisposable
         string initialExtension,
         CancellationToken cancellationToken)
     {
+        if (string.Equals(mimeType, GoogleVidsMimeType, StringComparison.OrdinalIgnoreCase))
+        {
+            var vidPath = Path.Combine(_cacheDirectory, $"{safeRemoteId}.mp4");
+            if (!File.Exists(vidPath) || new FileInfo(vidPath).Length == 0)
+            {
+                await _driveClient.DownloadFileAsync(remoteFileId, vidPath, null, cancellationToken);
+            }
+
+            return (vidPath, ".mp4");
+        }
+
+        if (string.Equals(mimeType, GoogleDrawingMimeType, StringComparison.OrdinalIgnoreCase))
+        {
+            var drawingPath = Path.Combine(_cacheDirectory, $"{safeRemoteId}.png");
+            if (!File.Exists(drawingPath) || new FileInfo(drawingPath).Length == 0)
+            {
+                await _driveClient.ExportFileAsync(remoteFileId, "image/png", drawingPath, null, cancellationToken);
+            }
+
+            return (drawingPath, ".png");
+        }
+
         if (string.Equals(mimeType, "application/vnd.google-apps.script", StringComparison.OrdinalIgnoreCase))
         {
             var scriptPath = Path.Combine(_cacheDirectory, $"{safeRemoteId}.json");

@@ -3809,7 +3809,9 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                 item.IsGoogleWorkspaceDoc,
                 item.MimeType,
                 pdfPage,
-                ct);
+                ct,
+                item.SizeBytes,
+                item.ThumbnailLink);
 
             if (ct.IsCancellationRequested)
             {
@@ -3866,62 +3868,65 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        using var gate = new SemaphoreSlim(6, 6);
-        var tasks = candidates.Select(async item =>
+        using var gate = new SemaphoreSlim(4, 4);
+        try
         {
-            await gate.WaitAsync(ct);
-            try
+            await Task.Run(async () =>
             {
-                if (ct.IsCancellationRequested || item.IsDisposed)
+                var tasks = candidates.Select(async item =>
                 {
-                    return;
-                }
-
-                var thumb = await _previewService.TryLoadGridThumbnailAsync(
-                    item.Name,
-                    item.LocalFullPath,
-                    item.RemoteFileId,
-                    item.SizeBytes,
-                    ct,
-                    item.ThumbnailLink);
-
-                if (thumb is not null)
-                {
-                    if (ct.IsCancellationRequested || item.IsDisposed)
-                    {
-                        thumb.Dispose();
-                        return;
-                    }
-
-                    Dispatcher.UIThread.Post(() =>
+                    await gate.WaitAsync(ct);
+                    try
                     {
                         if (ct.IsCancellationRequested || item.IsDisposed)
                         {
-                            thumb.Dispose();
                             return;
                         }
 
-                        var old = item.ThumbnailBitmap;
-                        item.ThumbnailBitmap = thumb;
-                        if (old is not null && !ReferenceEquals(old, thumb))
-                        {
-                            old.Dispose();
-                        }
-                    });
-                }
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            finally
-            {
-                gate.Release();
-            }
-        });
+                        var thumb = await _previewService.TryLoadGridThumbnailAsync(
+                            item.Name,
+                            item.LocalFullPath,
+                            item.RemoteFileId,
+                            item.SizeBytes,
+                            ct,
+                            item.ThumbnailLink);
 
-        try
-        {
-            await Task.WhenAll(tasks);
+                        if (thumb is not null)
+                        {
+                            if (ct.IsCancellationRequested || item.IsDisposed)
+                            {
+                                thumb.Dispose();
+                                return;
+                            }
+
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                if (ct.IsCancellationRequested || item.IsDisposed)
+                                {
+                                    thumb.Dispose();
+                                    return;
+                                }
+
+                                var old = item.ThumbnailBitmap;
+                                item.ThumbnailBitmap = thumb;
+                                if (old is not null && !ReferenceEquals(old, thumb))
+                                {
+                                    old.Dispose();
+                                }
+                            }, DispatcherPriority.Background);
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
+                    finally
+                    {
+                        gate.Release();
+                    }
+                });
+
+                await Task.WhenAll(tasks);
+            }, ct);
         }
         catch (OperationCanceledException)
         {
@@ -3955,7 +3960,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             return (DocIconSvg, BrushSlideAmber, false);
         }
 
-        if (ext is ".mp4" or ".mkv" or ".avi" or ".mov" or ".webm" or ".flv" or ".m4v" or ".wmv" or ".3gp")
+        if (ext is ".mp4" or ".mkv" or ".avi" or ".mov" or ".webm" or ".flv" or ".m4v" or ".wmv" or ".3gp" ||
+            string.Equals(mimeType, "application/vnd.google-apps.vid", StringComparison.OrdinalIgnoreCase))
         {
             return (VideoIconSvg, BrushVideoCyan, true);
         }

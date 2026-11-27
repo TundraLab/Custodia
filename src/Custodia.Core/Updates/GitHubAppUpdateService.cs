@@ -496,7 +496,7 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
                 elif command -v zypper >/dev/null 2>&1; then
                   pkexec zypper --non-interactive install -y --allow-unsigned-rpm {escapedPackage} > {escapedLog} 2>&1
                 else
-                  pkexec rpm -Uvh --replacepkgs {escapedPackage} > {escapedLog} 2>&1
+                  pkexec rpm -Uvh --replacepkgs --nosignature {escapedPackage} > {escapedLog} 2>&1
                 fi
                 rm -f {escapedPackage}
                 if [[ -x /usr/bin/custodia ]]; then

@@ -1216,6 +1216,8 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
                 "application/vnd.google-apps.document" => ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"),
                 "application/vnd.google-apps.spreadsheet" => ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx"),
                 "application/vnd.google-apps.presentation" => ("application/vnd.openxmlformats-officedocument.presentationml.presentation", ".pptx"),
+                "application/vnd.google-apps.drawing" => ("image/png", ".png"),
+                "application/vnd.google-apps.vid" => ((string?)null, ".mp4"),
                 _ => ("application/pdf", ".pdf")
             };
 

@@ -1008,4 +1008,150 @@ public sealed class Release400FeatureTests
             return Task.FromResult(resp);
         }
     }
+
+    [Fact]
+    public async Task GoogleVids_UsesDownloadInsteadOfExport_ForPreviewAndDownload()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"custodia-vids-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+        try
+        {
+            var client = new VidsCapturingDriveClient();
+            using var preview = new FilePreviewService(client);
+
+            var previewResult = await preview.BuildPreviewAsync(
+                "Minha Apresentação Vids",
+                null,
+                "vids-file-1",
+                isGoogleWorkspaceDoc: true,
+                mimeType: "application/vnd.google-apps.vid",
+                pdfPage: 1,
+                CancellationToken.None,
+                sizeBytes: 1024);
+
+            Assert.Equal(PreviewKind.Video, previewResult.Kind);
+            Assert.EndsWith(".mp4", previewResult.LocalFilePath, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(0, client.ExportCallCount);
+            Assert.Equal(1, client.DownloadCallCount);
+
+            var dbPath = Path.Combine(tempRoot, "state.db");
+            var factory = new SqliteConnectionFactory(dbPath);
+            await DatabaseInitializer.InitializeAsync(factory);
+            var repo = new SqliteSyncStateRepository(factory);
+            var settings = new FakeSettingsService(tempRoot);
+            var auth = new AuthCredentialManager(NullLogger<AuthCredentialManager>.Instance);
+            using var watcher = new LocalFolderWatcherService(settings, NullLogger<LocalFolderWatcherService>.Instance);
+            using var sync = new DriveSyncService(
+                client,
+                repo,
+                settings,
+                auth,
+                watcher,
+                NullLogger<DriveSyncService>.Instance,
+                connectivityProbe: _ => Task.FromResult(true));
+
+            var destPath = Path.Combine(tempRoot, "downloads", "MeuVideo");
+            var savedPath = await sync.DownloadRemoteFileToAsync(
+                "vids-file-2",
+                "MeuVideo",
+                destPath,
+                treatAsFullFilePath: true,
+                sizeBytes: 2048,
+                isGoogleWorkspaceDoc: true,
+                mimeType: "application/vnd.google-apps.vid");
+
+            Assert.True(File.Exists(savedPath));
+            Assert.Equal(0, client.ExportCallCount);
+            Assert.True(client.DownloadCallCount >= 2);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void TransferQueueViewModel_InProgressTicks_DoNotResetFilteredItemsCollection()
+    {
+        var loc = new LocalizationService();
+        var syncProxy = DispatchProxy.Create<IDriveSyncService, QueueRetrySyncProxy>();
+        var vm = new TransferQueueViewModel(syncProxy, loc);
+
+        var item = new TransferQueueItem
+        {
+            Id = "tx-1",
+            FileName = "video.mp4",
+            Direction = TransferDirection.Upload,
+            Status = TransferStatus.InProgress,
+            TotalBytes = 1000,
+            TransferredBytes = 100
+        };
+        vm.UpsertTransfer(item);
+
+        var resetCount = 0;
+        vm.FilteredItems.CollectionChanged += (_, e) =>
+        {
+            if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+            {
+                resetCount++;
+            }
+        };
+
+        for (var i = 2; i <= 10; i++)
+        {
+            item.TransferredBytes = i * 100;
+            vm.UpsertTransfer(item);
+        }
+
+        Assert.Equal(0, resetCount);
+        Assert.Single(vm.FilteredItems);
+        Assert.Equal(1000, vm.FilteredItems[0].TransferredBytes);
+    }
+
+    private sealed class VidsCapturingDriveClient : IGoogleDriveClient
+    {
+        public bool IsConnected => true;
+        public string ActiveAccountKey => "default";
+        public int ExportCallCount { get; private set; }
+        public int DownloadCallCount { get; private set; }
+
+        public Task<DriveAccount> ConnectInteractiveAsync(string userKey = "default", CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<DriveAccount?> TryRestoreSessionAsync(string userKey = "default", CancellationToken cancellationToken = default) => Task.FromResult<DriveAccount?>(new DriveAccount { IsConnected = true });
+        public Task<DriveAccount?> SwitchSessionAsync(string userKey, CancellationToken cancellationToken = default) => Task.FromResult<DriveAccount?>(null);
+        public Task DisconnectAsync(string? userKey = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<DriveAccount> GetAccountInfoAsync(CancellationToken cancellationToken = default) => Task.FromResult(new DriveAccount { IsConnected = true });
+        public Task<IReadOnlyList<RemoteDriveNode>> ListChildrenAsync(string parentFolderId = "root", bool foldersOnly = false, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<RemoteDriveNode>>([]);
+        public Task<IReadOnlyList<RemoteDriveNode>> ListAllRemoteFilesAsync(int maxResults = 200, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<RemoteDriveNode>>([]);
+        public Task<IReadOnlyList<RemoteDriveNode>> ListStarredFilesAsync(int maxResults = 200, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<RemoteDriveNode>>([]);
+        public Task<IReadOnlyList<RemoteDriveNode>> ListTrashedFilesAsync(int maxResults = 200, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<RemoteDriveNode>>([]);
+        public Task<IReadOnlyList<RemoteDriveNode>> SearchRemoteFilesAsync(string query, int maxResults = 50, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<RemoteDriveNode>>([]);
+        public Task<RemoteDriveNode?> GetFileMetadataAsync(string remoteFileId, CancellationToken cancellationToken = default) => Task.FromResult<RemoteDriveNode?>(null);
+        public Task<RemoteDriveNode> CreateFolderAsync(string folderName, string parentFolderId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<RemoteDriveNode> FindOrCreateFolderAsync(string folderName, string parentFolderId = "root", CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<RemoteDriveNode> UploadFileAsync(string localFilePath, string parentFolderId, string? existingRemoteFileId = null, Action<long>? onBytesTransferred = null, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<RemoteDriveNode> MoveFileAsync(string remoteFileId, string? destinationParentFolderId = null, string? newName = null, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public async Task DownloadFileAsync(string remoteFileId, string destinationLocalPath, Action<long>? onBytesTransferred = null, CancellationToken cancellationToken = default)
+        {
+            DownloadCallCount++;
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationLocalPath)!);
+            await File.WriteAllBytesAsync(destinationLocalPath, new byte[64], cancellationToken);
+            onBytesTransferred?.Invoke(64);
+        }
+
+        public Task ExportFileAsync(string remoteFileId, string exportMimeType, string destinationLocalPath, Action<long>? onBytesTransferred = null, CancellationToken cancellationToken = default)
+        {
+            ExportCallCount++;
+            throw new InvalidOperationException("Google Vids does not support files.export.");
+        }
+
+        public Task SetStarredAsync(string remoteFileId, bool starred, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task TrashFileAsync(string remoteFileId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task RestoreFileAsync(string remoteFileId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task DeletePermanentlyAsync(string remoteFileId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task EmptyTrashAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
 }

@@ -73,6 +73,10 @@ public sealed partial class TransferItemViewModel : ViewModelBase
 
     public void UpdateFrom(TransferQueueItem item)
     {
+        var previousStatus = Status;
+        var previousRemoteId = RemoteFileId;
+        var previousError = ErrorMessage;
+
         RemoteFileId = item.RemoteFileId ?? RemoteFileId;
         Status = item.Status;
         TotalBytes = item.TotalBytes;
@@ -103,14 +107,31 @@ public sealed partial class TransferItemViewModel : ViewModelBase
             }
         }
 
+        var isProgressOnlyTick = previousStatus == TransferStatus.InProgress &&
+            item.Status == TransferStatus.InProgress &&
+            string.Equals(previousRemoteId, RemoteFileId, StringComparison.Ordinal) &&
+            string.Equals(previousError, ErrorMessage, StringComparison.Ordinal);
+
+        if (isProgressOnlyTick)
+        {
+            OnPropertyChanged(nameof(ProgressPercentage));
+            OnPropertyChanged(nameof(ProgressDisplay));
+            return;
+        }
+
         RefreshLocalizedProperties();
     }
 
     private void LatchAnimationHold()
     {
-        _animateUntilMs = Environment.TickCount64 + 1600;
-        var version = ++_holdVersion;
-        _ = ReleaseAnimationHoldAsync(version, 1650);
+        var now = Environment.TickCount64;
+        var shouldScheduleTimer = _animateUntilMs - now < 600;
+        _animateUntilMs = now + 1600;
+        if (shouldScheduleTimer)
+        {
+            var version = ++_holdVersion;
+            _ = ReleaseAnimationHoldAsync(version, 1650);
+        }
     }
 
     private void LatchErrorAnimationHold()
@@ -556,6 +577,9 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
     {
         var becameCompleted = false;
         var existing = Items.FirstOrDefault(x => x.Id == item.Id);
+        var isNewItem = existing is null;
+        var previousStatus = existing?.Status;
+
         if (existing is not null)
         {
             var wasCompleted = existing.Status == TransferStatus.Completed;
@@ -602,13 +626,17 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
             ScrollToTopRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        if (item.Status == TransferStatus.Failed)
+        var statusChanged = isNewItem || previousStatus != item.Status;
+        if (item.Status == TransferStatus.Failed && statusChanged)
         {
             LastErrorMessage = existing.ErrorHeadlineText;
         }
 
-        ApplyFilter();
-        UpdateCounters();
+        if (isNewItem || becameCompleted || statusChanged)
+        {
+            ApplyFilter();
+            UpdateCounters();
+        }
     }
 
     partial void OnSelectedFilterIndexChanged(int value) => ApplyFilter();
@@ -711,10 +739,13 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
             _ => true
         }).ToList();
 
-        FilteredItems.Clear();
-        foreach (var item in matching)
+        if (!FilteredItems.SequenceEqual(matching))
         {
-            FilteredItems.Add(item);
+            FilteredItems.Clear();
+            foreach (var item in matching)
+            {
+                FilteredItems.Add(item);
+            }
         }
 
         HasNoFilteredItems = FilteredItems.Count == 0;
