@@ -24,7 +24,14 @@
                 Padding="0"
                 ToolTip.Tip="{Binding Loc.RefreshButton}"
                 Command="{Binding RefreshLogsCommand}">
-          <PathIcon Width="15" Height="15" Data="{StaticResource TundraRefreshGeometry}" />
+          <PathIcon Width="15" Height="15"
+                    Classes.m3-spinning="{Binding IsRefreshing}"
+                    RenderTransformOrigin="50%,50%"
+                    Data="{StaticResource TundraRefreshGeometry}">
+            <PathIcon.RenderTransform>
+              <RotateTransform />
+            </PathIcon.RenderTransform>
+          </PathIcon>
         </Button>
         <Button Classes="m3-danger-outlined"
                 IsEnabled="{Binding !HasNoLogs}"

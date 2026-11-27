@@ -28,4 +28,50 @@ public interface IGoogleDriveClient
     Task RestoreFileAsync(string remoteFileId, CancellationToken cancellationToken = default);
     Task DeletePermanentlyAsync(string remoteFileId, CancellationToken cancellationToken = default);
     Task EmptyTrashAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<RemoteDriveNode>> ListSharedWithMeAsync(int maxResults = 200, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<RemoteDriveNode>>(Array.Empty<RemoteDriveNode>());
+
+    Task<string?> GetShareLinkAsync(string remoteFileId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<string?>(null);
+
+    Task<IReadOnlyList<DrivePermissionEntry>> ListPermissionsAsync(string remoteFileId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<DrivePermissionEntry>>(Array.Empty<DrivePermissionEntry>());
+
+    Task<DrivePermissionEntry> ShareAnyoneAsync(string remoteFileId, string role, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new DrivePermissionEntry { Id = "anyone", Type = "anyone", Role = role });
+
+    Task<DrivePermissionEntry> InviteUserPermissionAsync(string remoteFileId, string emailAddress, string role, bool sendNotificationEmail = true, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new DrivePermissionEntry { Id = Guid.NewGuid().ToString("N"), Type = "user", Role = role, EmailAddress = emailAddress });
+
+    Task RevokePermissionAsync(string remoteFileId, string permissionId, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
+}
+
+public interface IResumableDriveClient
+{
+    Task<byte[]?> DownloadThumbnailAsync(string remoteFileId, string? thumbnailLink, CancellationToken cancellationToken = default);
+
+    Task<RemoteDriveNode> ResumableUploadAsync(
+        string localFilePath,
+        string parentFolderId,
+        string? existingRemoteFileId = null,
+        string? resumeSessionUri = null,
+        Func<string, Task>? onSessionCreated = null,
+        Action<long>? onBytesTransferred = null,
+        Func<long>? getBandwidthLimitBytesPerSecond = null,
+        Sync.TransferBandwidthLimiter? bandwidthLimiter = null,
+        CancellationToken cancellationToken = default);
+
+    Task ResumableDownloadAsync(
+        string remoteFileId,
+        string destinationLocalPath,
+        string? resumeTempPath = null,
+        long knownTotalBytes = 0,
+        Func<string, Task>? onTempPathAssigned = null,
+        Action<long>? onBytesTransferred = null,
+        Func<long>? getBandwidthLimitBytesPerSecond = null,
+        Sync.TransferBandwidthLimiter? bandwidthLimiter = null,
+        bool keepTempOnInterrupt = true,
+        CancellationToken cancellationToken = default);
 }

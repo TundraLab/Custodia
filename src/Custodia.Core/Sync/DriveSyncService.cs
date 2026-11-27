@@ -30,6 +30,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
     private readonly Dictionary<string, int> _suppressedWatcherCounts = new(StringComparer.Ordinal);
     private readonly object _downloadPathLock = new();
     private readonly HashSet<string> _reservedDownloadPaths = new(StringComparer.Ordinal);
+    private readonly TransferBandwidthLimiter _bandwidthLimiter = new();
 
     private PeriodicTimer? _periodicTimer;
     private CancellationTokenSource? _lifecycleCts;
@@ -954,10 +955,18 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         }
     }
 
-    public async Task<RemoteDriveNode> UploadSingleFileAsync(
+    public Task<RemoteDriveNode> UploadSingleFileAsync(
         string localFilePath,
         string remoteFolderId = "root",
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        UploadSingleFileCoreAsync(localFilePath, remoteFolderId, existingRemoteFileId: null, existingQueueItem: null, cancellationToken);
+
+    private async Task<RemoteDriveNode> UploadSingleFileCoreAsync(
+        string localFilePath,
+        string remoteFolderId,
+        string? existingRemoteFileId,
+        TransferQueueItem? existingQueueItem,
+        CancellationToken cancellationToken)
     {
         if (!_driveClient.IsConnected)
         {
@@ -971,14 +980,19 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         }
 
         var fileInfo = new FileInfo(fullPath);
-        var queueItem = CreateTransferItem(
+        var normalizedParent = string.IsNullOrWhiteSpace(remoteFolderId) ? "root" : remoteFolderId;
+        var queueItem = existingQueueItem ?? CreateTransferItem(
             syncFolderId: "api-upload",
             fileName: fileInfo.Name,
             relativePath: fileInfo.Name,
             localPath: fullPath,
-            remoteFileId: null,
+            remoteFileId: existingRemoteFileId,
             direction: TransferDirection.Upload,
             totalBytes: fileInfo.Length);
+        queueItem.RemoteParentId = normalizedParent;
+        queueItem.TotalBytes = fileInfo.Length;
+        queueItem.ErrorMessage = null;
+        queueItem.CompletedAtUtc = null;
 
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _transferCancellations[queueItem.Id] = linkedCts;
@@ -988,16 +1002,13 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             queueItem.Status = TransferStatus.InProgress;
             PublishTransfer(queueItem);
 
-            var uploaded = await _driveClient.UploadFileAsync(
-                fullPath,
-                string.IsNullOrWhiteSpace(remoteFolderId) ? "root" : remoteFolderId,
-                existingRemoteFileId: null,
-                bytes =>
-                {
-                    queueItem.TransferredBytes = bytes;
-                    PublishTransfer(queueItem);
-                },
-                linkedCts.Token);
+            var uploaded = await UploadFileWithResumeAsync(
+                syncFolderId: queueItem.SyncFolderId,
+                fileInfo: fileInfo,
+                parentFolderId: normalizedParent,
+                existingRemoteFileId: existingRemoteFileId,
+                queueItem: queueItem,
+                cancellationToken: linkedCts.Token);
 
             queueItem.RemoteFileId = uploaded.Id;
             queueItem.TransferredBytes = queueItem.TotalBytes;
@@ -1006,7 +1017,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             PublishTransfer(queueItem);
 
             await LogAsync(ActivitySeverity.Success, "ApiUpload",
-                $"Arquivo enviado via API local: {fileInfo.Name}.",
+                $"Arquivo enviado: {fileInfo.Name}.",
                 null, fullPath, cancellationToken);
 
             return uploaded;
@@ -1025,7 +1036,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             queueItem.CompletedAtUtc = DateTimeOffset.UtcNow;
             PublishTransfer(queueItem);
             await LogAsync(ActivitySeverity.Error, "ApiUploadFailed",
-                $"Falha no envio via API ({fileInfo.Name}): {ex.Message}",
+                $"Falha no envio ({fileInfo.Name}): {ex.Message}",
                 null, fullPath, CancellationToken.None);
             throw;
         }
@@ -1124,7 +1135,7 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         }
     }
 
-    public async Task<string> DownloadRemoteFileAsync(
+    public Task<string> DownloadRemoteFileAsync(
         string remoteFileId,
         string fileName,
         long sizeBytes = 0,
@@ -1132,18 +1143,66 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         string? mimeType = null,
         CancellationToken cancellationToken = default)
     {
-        if (!_driveClient.IsConnected)
-        {
-            throw new InvalidOperationException("Conta Google Drive não conectada.");
-        }
-
         var downloadDir = _settingsService.Current.DownloadDirectory;
         if (string.IsNullOrWhiteSpace(downloadDir))
         {
             downloadDir = AppPaths.DefaultDownloadDirectory;
         }
 
-        Directory.CreateDirectory(downloadDir);
+        return DownloadRemoteFileCoreAsync(
+            remoteFileId,
+            fileName,
+            downloadDir,
+            treatAsFullFilePath: false,
+            sizeBytes,
+            isGoogleWorkspaceDoc,
+            mimeType,
+            existingQueueItem: null,
+            cancellationToken);
+    }
+
+    public Task<string> DownloadRemoteFileToAsync(
+        string remoteFileId,
+        string fileName,
+        string destinationPathOrDirectory,
+        bool treatAsFullFilePath = false,
+        long sizeBytes = 0,
+        bool isGoogleWorkspaceDoc = false,
+        string? mimeType = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(destinationPathOrDirectory))
+        {
+            return DownloadRemoteFileAsync(remoteFileId, fileName, sizeBytes, isGoogleWorkspaceDoc, mimeType, cancellationToken);
+        }
+
+        return DownloadRemoteFileCoreAsync(
+            remoteFileId,
+            fileName,
+            destinationPathOrDirectory,
+            treatAsFullFilePath,
+            sizeBytes,
+            isGoogleWorkspaceDoc,
+            mimeType,
+            existingQueueItem: null,
+            cancellationToken);
+    }
+
+    private async Task<string> DownloadRemoteFileCoreAsync(
+        string remoteFileId,
+        string fileName,
+        string destinationPathOrDirectory,
+        bool treatAsFullFilePath,
+        long sizeBytes,
+        bool isGoogleWorkspaceDoc,
+        string? mimeType,
+        TransferQueueItem? existingQueueItem,
+        CancellationToken cancellationToken)
+    {
+        if (!_driveClient.IsConnected)
+        {
+            throw new InvalidOperationException("Conta Google Drive não conectada.");
+        }
 
         var safeName = string.IsNullOrWhiteSpace(fileName)
             ? $"arquivo_{remoteFileId}"
@@ -1167,13 +1226,26 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         }
 
         string targetPath;
-        lock (_downloadPathLock)
+        if (treatAsFullFilePath)
         {
-            targetPath = GetUniqueDestinationPath(downloadDir, safeName, _reservedDownloadPaths);
-            _reservedDownloadPaths.Add(targetPath);
+            targetPath = Path.GetFullPath(destinationPathOrDirectory);
+            var parentDir = Path.GetDirectoryName(targetPath);
+            if (!string.IsNullOrWhiteSpace(parentDir))
+            {
+                Directory.CreateDirectory(parentDir);
+            }
+        }
+        else
+        {
+            Directory.CreateDirectory(destinationPathOrDirectory);
+            lock (_downloadPathLock)
+            {
+                targetPath = GetUniqueDestinationPath(destinationPathOrDirectory, safeName, _reservedDownloadPaths);
+                _reservedDownloadPaths.Add(targetPath);
+            }
         }
 
-        var queueItem = CreateTransferItem(
+        var queueItem = existingQueueItem ?? CreateTransferItem(
             syncFolderId: "manual-download",
             fileName: Path.GetFileName(targetPath),
             relativePath: Path.GetFileName(targetPath),
@@ -1181,6 +1253,10 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             remoteFileId: remoteFileId,
             direction: TransferDirection.Download,
             totalBytes: sizeBytes);
+        queueItem.IsGoogleWorkspaceDoc = isGoogleWorkspaceDoc;
+        queueItem.MimeType = mimeType;
+        queueItem.ErrorMessage = null;
+        queueItem.CompletedAtUtc = null;
 
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _transferCancellations[queueItem.Id] = linkedCts;
@@ -1205,15 +1281,12 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             }
             else
             {
-                await _driveClient.DownloadFileAsync(
-                    remoteFileId,
-                    targetPath,
-                    bytes =>
-                    {
-                        queueItem.TransferredBytes = bytes;
-                        PublishTransfer(queueItem);
-                    },
-                    linkedCts.Token);
+                await DownloadFileWithResumeAsync(
+                    remoteFileId: remoteFileId,
+                    targetLocalPath: targetPath,
+                    knownTotalBytes: sizeBytes,
+                    queueItem: queueItem,
+                    cancellationToken: linkedCts.Token);
             }
 
             if (File.Exists(targetPath))
@@ -1253,11 +1326,458 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         }
         finally
         {
-            lock (_downloadPathLock)
+            if (!treatAsFullFilePath)
             {
-                _reservedDownloadPaths.Remove(targetPath);
+                lock (_downloadPathLock)
+                {
+                    _reservedDownloadPaths.Remove(targetPath);
+                }
             }
             _transferCancellations.TryRemove(queueItem.Id, out _);
+        }
+    }
+
+    public async Task<IReadOnlyList<DrivePermissionEntry>> GetRemotePermissionsAsync(
+        string remoteFileId,
+        CancellationToken cancellationToken = default) =>
+        await _driveClient.ListPermissionsAsync(remoteFileId, cancellationToken);
+
+    public async Task<string> EnableAnyoneLinkAsync(
+        string remoteFileId,
+        string itemName,
+        bool canEdit,
+        CancellationToken cancellationToken = default)
+    {
+        var role = canEdit ? "writer" : "reader";
+        await _driveClient.ShareAnyoneAsync(remoteFileId, role, cancellationToken);
+        var link = await _driveClient.GetShareLinkAsync(remoteFileId, cancellationToken)
+            ?? $"https://drive.google.com/file/d/{Uri.EscapeDataString(remoteFileId)}/view";
+
+        await LogAsync(ActivitySeverity.Success, "ShareLinkEnabled",
+            $"Link compartilhável ({(canEdit ? "edição" : "leitura")}) ativado para {itemName}.",
+            null, itemName, cancellationToken);
+        return link;
+    }
+
+    public async Task DisableAnyoneLinkAsync(
+        string remoteFileId,
+        string itemName,
+        CancellationToken cancellationToken = default)
+    {
+        var permissions = await _driveClient.ListPermissionsAsync(remoteFileId, cancellationToken);
+        var anyone = permissions.FirstOrDefault(p => string.Equals(p.Type, "anyone", StringComparison.OrdinalIgnoreCase));
+        if (anyone is not null)
+        {
+            await _driveClient.RevokePermissionAsync(remoteFileId, anyone.Id, cancellationToken);
+            await LogAsync(ActivitySeverity.Info, "ShareLinkRevoked",
+                $"Link compartilhável revogado para {itemName}.",
+                null, itemName, cancellationToken);
+        }
+    }
+
+    public async Task<DrivePermissionEntry> ShareWithEmailAsync(
+        string remoteFileId,
+        string itemName,
+        string emailAddress,
+        bool canEdit,
+        CancellationToken cancellationToken = default)
+    {
+        var role = canEdit ? "writer" : "reader";
+        var perm = await _driveClient.InviteUserPermissionAsync(remoteFileId, emailAddress, role, true, cancellationToken);
+        await LogAsync(ActivitySeverity.Success, "SharedWithUser",
+            $"Compartilhado ({(canEdit ? "edição" : "leitura")}) com {emailAddress.Trim()}: {itemName}.",
+            null, itemName, cancellationToken);
+        return perm;
+    }
+
+    public async Task RevokeRemotePermissionAsync(
+        string remoteFileId,
+        string itemName,
+        string permissionId,
+        CancellationToken cancellationToken = default)
+    {
+        await _driveClient.RevokePermissionAsync(remoteFileId, permissionId, cancellationToken);
+        await LogAsync(ActivitySeverity.Info, "PermissionRevoked",
+            $"Permissão removida de {itemName}.",
+            null, itemName, cancellationToken);
+    }
+
+    public async Task<bool> RetryTransferAsync(string transferId, CancellationToken cancellationToken = default)
+    {
+        if (!_transfers.TryGetValue(transferId, out var item) || !item.CanRetry)
+        {
+            return false;
+        }
+
+        if (!_driveClient.IsConnected || !IsOnline)
+        {
+            item.Status = TransferStatus.Failed;
+            item.ErrorMessage = !_driveClient.IsConnected
+                ? "Conta Google Drive não conectada."
+                : "Sem conexão com a internet no momento.";
+            item.CompletedAtUtc = DateTimeOffset.UtcNow;
+            PublishTransfer(item);
+            return false;
+        }
+
+        if (item.Direction == TransferDirection.Download)
+        {
+            if (string.IsNullOrWhiteSpace(item.RemoteFileId))
+            {
+                item.Status = TransferStatus.Failed;
+                item.ErrorMessage = "Arquivo remoto não identificado para retomada.";
+                item.CompletedAtUtc = DateTimeOffset.UtcNow;
+                PublishTransfer(item);
+                return false;
+            }
+
+            await DownloadRemoteFileCoreAsync(
+                item.RemoteFileId,
+                item.FileName,
+                item.LocalPath,
+                treatAsFullFilePath: true,
+                item.TotalBytes,
+                item.IsGoogleWorkspaceDoc,
+                item.MimeType,
+                existingQueueItem: item,
+                cancellationToken);
+
+            // Sync tracked metadata when retrying a mapped-folder download.
+            if (!string.IsNullOrWhiteSpace(item.SyncFolderId) &&
+                item.SyncFolderId != "api-download" &&
+                File.Exists(item.LocalPath))
+            {
+                var syncFolder = await _repository.GetSyncFolderByIdAsync(item.SyncFolderId, CancellationToken.None);
+                var remoteNode = await _driveClient.GetFileMetadataAsync(item.RemoteFileId, CancellationToken.None);
+                if (syncFolder is not null && remoteNode is not null)
+                {
+                    var localInfo = new FileInfo(item.LocalPath);
+                    var hashes = await FileHashUtility.ComputeHashesAsync(localInfo.FullName, CancellationToken.None);
+                    var localModUtc = new DateTimeOffset(localInfo.LastWriteTimeUtc, TimeSpan.Zero);
+                    await UpsertTrackedAsync(syncFolder.Id, item.RelativePath, remoteNode, hashes, localInfo.Length, localModUtc, CancellationToken.None);
+                }
+            }
+
+            return true;
+        }
+
+        if (item.Direction == TransferDirection.Upload)
+        {
+            if (string.IsNullOrWhiteSpace(item.LocalPath) || !File.Exists(item.LocalPath))
+            {
+                item.Status = TransferStatus.Failed;
+                item.ErrorMessage = "Arquivo local não encontrado.";
+                item.CompletedAtUtc = DateTimeOffset.UtcNow;
+                PublishTransfer(item);
+                return false;
+            }
+
+            var folder = !string.IsNullOrWhiteSpace(item.SyncFolderId) && item.SyncFolderId != "api-upload"
+                ? await _repository.GetSyncFolderByIdAsync(item.SyncFolderId, cancellationToken)
+                : null;
+
+            if (folder is not null)
+            {
+                item.Status = TransferStatus.InProgress;
+                item.ErrorMessage = null;
+                item.CompletedAtUtc = null;
+                PublishTransfer(item);
+
+                try
+                {
+                    var localFile = new FileInfo(item.LocalPath);
+                    item.TotalBytes = localFile.Length;
+                    var parentId = !string.IsNullOrWhiteSpace(item.RemoteParentId)
+                        ? item.RemoteParentId
+                        : await ResolveOrCreateRemoteParentFolderAsync(folder.RemoteFolderId, item.RelativePath, cancellationToken);
+                    var hashes = await FileHashUtility.ComputeHashesAsync(localFile.FullName, cancellationToken);
+                    await UploadAndTrackAsync(
+                        folder,
+                        item.RelativePath,
+                        localFile,
+                        parentId,
+                        item.RemoteFileId,
+                        hashes,
+                        cancellationToken,
+                        existingQueueItem: item);
+                    return true;
+                }
+                catch (OperationCanceledException)
+                {
+                    if (item.Status != TransferStatus.Cancelled)
+                    {
+                        item.Status = TransferStatus.Cancelled;
+                        item.CompletedAtUtc = DateTimeOffset.UtcNow;
+                        PublishTransfer(item);
+                    }
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    if (item.Status != TransferStatus.Failed)
+                    {
+                        item.Status = TransferStatus.Failed;
+                        item.ErrorMessage = ex.Message;
+                        item.CompletedAtUtc = DateTimeOffset.UtcNow;
+                        PublishTransfer(item);
+                    }
+                    throw;
+                }
+            }
+
+            await UploadSingleFileCoreAsync(
+                item.LocalPath,
+                item.RemoteParentId ?? "root",
+                item.RemoteFileId,
+                existingQueueItem: item,
+                cancellationToken);
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task<string> ResolveOrCreateRemoteParentFolderAsync(
+        string rootRemoteFolderId,
+        string relativeFilePath,
+        CancellationToken cancellationToken)
+    {
+        var dirPart = Path.GetDirectoryName(relativeFilePath)?.Replace('\\', '/');
+        if (string.IsNullOrWhiteSpace(dirPart) || dirPart == ".")
+        {
+            return rootRemoteFolderId;
+        }
+
+        var currentParentId = rootRemoteFolderId;
+        foreach (var segment in dirPart.Split('/', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var folderNode = await _driveClient.FindOrCreateFolderAsync(segment, currentParentId, cancellationToken);
+            currentParentId = folderNode.Id;
+        }
+
+        return currentParentId;
+    }
+
+    public async Task<int> RetryAllFailedTransfersAsync(CancellationToken cancellationToken = default)
+    {
+        var retryIds = _transfers.Values
+            .Where(t => t.Status == TransferStatus.Failed && t.CanRetry)
+            .Select(t => t.Id)
+            .ToList();
+
+        var retried = 0;
+        foreach (var id in retryIds)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            try
+            {
+                if (await RetryTransferAsync(id, cancellationToken))
+                {
+                    retried++;
+                }
+            }
+            catch
+            {
+                // Individual retry failure stays visible on that transfer item.
+            }
+        }
+
+        return retried;
+    }
+
+    private long GetBandwidthLimitBytesPerSecond() =>
+        _settingsService.Current.GetEffectiveBandwidthLimitBytesPerSecond();
+
+    private async Task<RemoteDriveNode> UploadFileWithResumeAsync(
+        string syncFolderId,
+        FileInfo fileInfo,
+        string parentFolderId,
+        string? existingRemoteFileId,
+        TransferQueueItem queueItem,
+        CancellationToken cancellationToken)
+    {
+        if (_driveClient is not IResumableDriveClient resumableClient)
+        {
+            return await _driveClient.UploadFileAsync(
+                fileInfo.FullName,
+                parentFolderId,
+                existingRemoteFileId,
+                bytes =>
+                {
+                    queueItem.TransferredBytes = bytes;
+                    PublishTransfer(queueItem);
+                },
+                cancellationToken);
+        }
+
+        var resumeRepo = _repository as ITransferResumeRepository;
+        var transferKey = $"upload:{syncFolderId}:{fileInfo.FullName}";
+        var localMtimeTicks = fileInfo.LastWriteTimeUtc.Ticks;
+        var existingResume = resumeRepo is not null
+            ? await resumeRepo.GetResumeSessionAsync(transferKey, CancellationToken.None)
+            : null;
+        string? resumeUri = null;
+        if (existingResume is not null &&
+            existingResume.LocalMtimeTicks == localMtimeTicks &&
+            existingResume.TotalBytes == fileInfo.Length &&
+            !string.IsNullOrWhiteSpace(existingResume.UploadSessionUri))
+        {
+            resumeUri = existingResume.UploadSessionUri;
+        }
+
+        string? activeUri = resumeUri;
+        long lastPersistedBytes = existingResume?.TransferredBytes ?? 0;
+
+        async Task PersistUploadStateAsync(string? sessionUri, long bytes)
+        {
+            if (resumeRepo is null || string.IsNullOrWhiteSpace(sessionUri))
+            {
+                return;
+            }
+
+            await resumeRepo.UpsertResumeSessionAsync(new TransferResumeSession
+            {
+                TransferKey = transferKey,
+                Direction = TransferDirection.Upload,
+                LocalPath = fileInfo.FullName,
+                RemoteFileId = existingRemoteFileId,
+                RemoteParentId = parentFolderId,
+                UploadSessionUri = sessionUri,
+                TotalBytes = fileInfo.Length,
+                TransferredBytes = bytes,
+                LocalMtimeTicks = localMtimeTicks,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            }, CancellationToken.None);
+        }
+
+        try
+        {
+            var uploaded = await resumableClient.ResumableUploadAsync(
+                fileInfo.FullName,
+                parentFolderId,
+                existingRemoteFileId,
+                resumeUri,
+                onSessionCreated: async uri =>
+                {
+                    activeUri = uri;
+                    await PersistUploadStateAsync(uri, 0);
+                },
+                onBytesTransferred: bytes =>
+                {
+                    queueItem.TransferredBytes = bytes;
+                    PublishTransfer(queueItem);
+                    if (!string.IsNullOrWhiteSpace(activeUri) && bytes - lastPersistedBytes >= 1024 * 1024)
+                    {
+                        lastPersistedBytes = bytes;
+                        _ = PersistUploadStateAsync(activeUri, bytes);
+                    }
+                },
+                getBandwidthLimitBytesPerSecond: GetBandwidthLimitBytesPerSecond,
+                bandwidthLimiter: _bandwidthLimiter,
+                cancellationToken: cancellationToken);
+
+            if (resumeRepo is not null)
+            {
+                await resumeRepo.DeleteResumeSessionAsync(transferKey, CancellationToken.None);
+            }
+            return uploaded;
+        }
+        catch
+        {
+            await PersistUploadStateAsync(activeUri, queueItem.TransferredBytes);
+            throw;
+        }
+    }
+
+    private async Task DownloadFileWithResumeAsync(
+        string remoteFileId,
+        string targetLocalPath,
+        long knownTotalBytes,
+        TransferQueueItem queueItem,
+        CancellationToken cancellationToken)
+    {
+        if (_driveClient is not IResumableDriveClient resumableClient)
+        {
+            await _driveClient.DownloadFileAsync(
+                remoteFileId,
+                targetLocalPath,
+                bytes =>
+                {
+                    queueItem.TransferredBytes = bytes;
+                    PublishTransfer(queueItem);
+                },
+                cancellationToken);
+            return;
+        }
+
+        var resumeRepo = _repository as ITransferResumeRepository;
+        var transferKey = $"download:{remoteFileId}:{targetLocalPath}";
+        var existingResume = resumeRepo is not null
+            ? await resumeRepo.GetResumeSessionAsync(transferKey, CancellationToken.None)
+            : null;
+        var activeTempPath = existingResume?.TempFilePath;
+        long lastPersistedBytes = existingResume?.TransferredBytes ?? 0;
+
+        async Task PersistDownloadStateAsync(string? tempPath, long bytes)
+        {
+            if (resumeRepo is null || string.IsNullOrWhiteSpace(tempPath))
+            {
+                return;
+            }
+
+            await resumeRepo.UpsertResumeSessionAsync(new TransferResumeSession
+            {
+                TransferKey = transferKey,
+                Direction = TransferDirection.Download,
+                LocalPath = targetLocalPath,
+                RemoteFileId = remoteFileId,
+                TempFilePath = tempPath,
+                TotalBytes = knownTotalBytes,
+                TransferredBytes = bytes,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            }, CancellationToken.None);
+        }
+
+        try
+        {
+            await resumableClient.ResumableDownloadAsync(
+                remoteFileId,
+                targetLocalPath,
+                resumeTempPath: activeTempPath,
+                knownTotalBytes: knownTotalBytes,
+                onTempPathAssigned: async tempPath =>
+                {
+                    activeTempPath = tempPath;
+                    await PersistDownloadStateAsync(tempPath, 0);
+                },
+                onBytesTransferred: bytes =>
+                {
+                    queueItem.TransferredBytes = bytes;
+                    PublishTransfer(queueItem);
+                    if (!string.IsNullOrWhiteSpace(activeTempPath) && bytes - lastPersistedBytes >= 1024 * 1024)
+                    {
+                        lastPersistedBytes = bytes;
+                        _ = PersistDownloadStateAsync(activeTempPath, bytes);
+                    }
+                },
+                getBandwidthLimitBytesPerSecond: GetBandwidthLimitBytesPerSecond,
+                bandwidthLimiter: _bandwidthLimiter,
+                keepTempOnInterrupt: true,
+                cancellationToken: cancellationToken);
+
+            if (resumeRepo is not null)
+            {
+                await resumeRepo.DeleteResumeSessionAsync(transferKey, CancellationToken.None);
+            }
+        }
+        catch
+        {
+            await PersistDownloadStateAsync(activeTempPath, queueItem.TransferredBytes);
+            throw;
         }
     }
 
@@ -2077,6 +2597,10 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             existingRemoteFileId,
             TransferDirection.Upload,
             localFile.Length);
+        queueItem.RemoteParentId = remoteParentId;
+        queueItem.TotalBytes = localFile.Length;
+        queueItem.ErrorMessage = null;
+        queueItem.CompletedAtUtc = null;
 
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _transferCancellations[queueItem.Id] = linkedCts;
@@ -2086,16 +2610,13 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
             queueItem.Status = TransferStatus.InProgress;
             PublishTransfer(queueItem);
 
-            var uploaded = await _driveClient.UploadFileAsync(
-                localFile.FullName,
-                remoteParentId,
-                existingRemoteFileId,
-                bytes =>
-                {
-                    queueItem.TransferredBytes = bytes;
-                    PublishTransfer(queueItem);
-                },
-                linkedCts.Token);
+            var uploaded = await UploadFileWithResumeAsync(
+                syncFolderId: folder.Id,
+                fileInfo: localFile,
+                parentFolderId: remoteParentId,
+                existingRemoteFileId: existingRemoteFileId,
+                queueItem: queueItem,
+                cancellationToken: linkedCts.Token);
 
             queueItem.RemoteFileId = uploaded.Id;
             queueItem.TransferredBytes = queueItem.TotalBytes;
@@ -2157,18 +2678,18 @@ public sealed class DriveSyncService : IDriveSyncService, IDisposable
         SuppressWatcherForFolder(folder.Id);
         try
         {
+            queueItem.TotalBytes = remoteFile.SizeBytes;
+            queueItem.ErrorMessage = null;
+            queueItem.CompletedAtUtc = null;
             queueItem.Status = TransferStatus.InProgress;
             PublishTransfer(queueItem);
 
-            await _driveClient.DownloadFileAsync(
-                remoteFile.Id,
-                targetLocalPath,
-                bytes =>
-                {
-                    queueItem.TransferredBytes = bytes;
-                    PublishTransfer(queueItem);
-                },
-                linkedCts.Token);
+            await DownloadFileWithResumeAsync(
+                remoteFileId: remoteFile.Id,
+                targetLocalPath: targetLocalPath,
+                knownTotalBytes: remoteFile.SizeBytes,
+                queueItem: queueItem,
+                cancellationToken: linkedCts.Token);
 
             if (File.Exists(targetLocalPath))
             {

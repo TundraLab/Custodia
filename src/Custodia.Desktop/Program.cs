@@ -23,13 +23,23 @@ internal static class Program
     {
         ConfigureLinuxProcessIdentity("Custodia");
 
-        var singleInstanceResult = SingleInstanceGuard.TryAcquireOrActivate();
-        if (!singleInstanceResult.IsPrimary)
+        var isInstallerMode = args.Any(a =>
+            string.Equals(a, "--installer", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(a, "--install", StringComparison.OrdinalIgnoreCase));
+
+        SingleInstanceGuard? singleInstanceGuard = null;
+        if (!isInstallerMode)
         {
-            return;
+            var singleInstanceResult = SingleInstanceGuard.TryAcquireOrActivate();
+            if (!singleInstanceResult.IsPrimary)
+            {
+                return;
+            }
+
+            singleInstanceGuard = singleInstanceResult.Guard;
         }
 
-        using var singleInstanceGuard = singleInstanceResult.Guard;
+        using var guardToDispose = singleInstanceGuard;
 
         var services = ConfigureServices();
 

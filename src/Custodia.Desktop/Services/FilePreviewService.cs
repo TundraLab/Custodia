@@ -232,17 +232,14 @@ public sealed class FilePreviewService : IDisposable
         return new FilePreviewResult(PreviewKind.Unsupported, resolvedPath);
     }
 
-    public async Task<Bitmap?> TryLoadGridThumbnailAsync(
-        string fileName,
+    public async Task<Bitmap?> TryGetCachedThumbnailBitmapAsync(
+        string? remoteFileId,
         string? localFullPath,
-        string remoteFileId,
-        long sizeBytes,
+        string fileName,
         CancellationToken cancellationToken = default)
     {
         var ext = Path.GetExtension(fileName);
-        var isImage = ImageExtensions.Contains(ext);
-        var isVideo = VideoExtensions.Contains(ext);
-        if (!isImage && !isVideo)
+        if (!ImageExtensions.Contains(ext) && !VideoExtensions.Contains(ext))
         {
             return null;
         }
@@ -258,27 +255,96 @@ public sealed class FilePreviewService : IDisposable
             try
             {
                 await using var cachedStream = File.OpenRead(cachedThumb);
-                return Bitmap.DecodeToWidth(cachedStream, 128);
+                return Bitmap.DecodeToWidth(cachedStream, 320);
             }
             catch
             {
             }
         }
 
+        return null;
+    }
+
+    public async Task<Bitmap?> TryLoadGridThumbnailAsync(
+        string fileName,
+        string? localFullPath,
+        string remoteFileId,
+        long sizeBytes,
+        CancellationToken cancellationToken = default,
+        string? thumbnailLink = null)
+    {
+        var ext = Path.GetExtension(fileName);
+        var isImage = ImageExtensions.Contains(ext);
+        var isVideo = VideoExtensions.Contains(ext);
+        var hasThumbLink = !string.IsNullOrWhiteSpace(thumbnailLink);
+        if (!isImage && !isVideo && !hasThumbLink)
+        {
+            return null;
+        }
+
+        var safeThumbId = string.IsNullOrWhiteSpace(remoteFileId) ? string.Empty : DriveSyncService.SanitizeRemoteSegment(remoteFileId);
+        var thumbKey = string.IsNullOrWhiteSpace(safeThumbId)
+            ? Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(localFullPath ?? fileName))).ToLowerInvariant()[..16]
+            : safeThumbId;
+
+        var cachedThumb = Path.Combine(_cacheDirectory, $"{thumbKey}_grid.png");
+        if (File.Exists(cachedThumb))
+        {
+            try
+            {
+                await using var cachedStream = File.OpenRead(cachedThumb);
+                return Bitmap.DecodeToWidth(cachedStream, 160);
+            }
+            catch
+            {
+            }
+        }
+
+        if (hasThumbLink && !string.IsNullOrWhiteSpace(remoteFileId) && _driveClient is IResumableDriveClient resumableThumbClient && _driveClient.IsConnected)
+        {
+            var thumbBytes = await resumableThumbClient.DownloadThumbnailAsync(remoteFileId, thumbnailLink, cancellationToken);
+            if (thumbBytes is { Length: > 0 })
+            {
+                try
+                {
+                    var tmpThumb = $"{cachedThumb}.{Guid.NewGuid():N}.tmp";
+                    await File.WriteAllBytesAsync(tmpThumb, thumbBytes, cancellationToken);
+                    File.Move(tmpThumb, cachedThumb, overwrite: true);
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    await using var mem = new MemoryStream(thumbBytes, writable: false);
+                    return Bitmap.DecodeToWidth(mem, 160);
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        if (!isImage && !isVideo)
+        {
+            return null;
+        }
+
         var sourcePath = localFullPath;
         var downloadedTempForThumb = false;
         if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
         {
-            var maxRemoteBytes = isImage ? 10L * 1024 * 1024 : 20L * 1024 * 1024;
+            var maxRemoteBytes = isImage ? 4L * 1024 * 1024 : 10L * 1024 * 1024;
             if (string.IsNullOrWhiteSpace(remoteFileId) || !_driveClient.IsConnected || sizeBytes > maxRemoteBytes)
             {
                 return null;
             }
 
-            // Use a dedicated temp suffix for >2MB thumbnail sources so cleanup never deletes an active preview file.
+            // Use an isolated thumbnail cache key lock so grid loading never stalls active previews.
             var thumbSourceSuffix = sizeBytes > 2 * 1024 * 1024 ? "_thumbsrc" : string.Empty;
             var cachedSource = Path.Combine(_cacheDirectory, $"{safeThumbId}{thumbSourceSuffix}{ext}");
-            var keyGate = _cacheKeyLocks.GetOrAdd($"{safeThumbId}{thumbSourceSuffix}", _ => new SemaphoreSlim(1, 1));
+            var keyGate = _cacheKeyLocks.GetOrAdd($"thumb:{safeThumbId}{thumbSourceSuffix}", _ => new SemaphoreSlim(1, 1));
             await keyGate.WaitAsync(cancellationToken);
             try
             {
@@ -304,7 +370,7 @@ public sealed class FilePreviewService : IDisposable
                 if (NativeBitmapExtensions.Contains(ext))
                 {
                     await using var fs = File.OpenRead(sourcePath);
-                    return Bitmap.DecodeToWidth(fs, 128);
+                    return Bitmap.DecodeToWidth(fs, 160);
                 }
 
                 await RunToolAsync("magick", [sourcePath, "-resize", "140x140>", cachedThumb], cancellationToken);
@@ -321,7 +387,7 @@ public sealed class FilePreviewService : IDisposable
             if (File.Exists(cachedThumb))
             {
                 await using var fs = File.OpenRead(cachedThumb);
-                return Bitmap.DecodeToWidth(fs, 128);
+                return Bitmap.DecodeToWidth(fs, 160);
             }
         }
         catch

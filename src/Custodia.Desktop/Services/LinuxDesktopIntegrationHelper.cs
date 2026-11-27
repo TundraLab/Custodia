@@ -30,6 +30,83 @@ public static class LinuxDesktopIntegrationHelper
     private static string LegacyDesktopEntryPath =>
         Path.Combine(UserHome, ".local", "share", "applications", "tundradrive.desktop");
 
+    public static void InstallPostInstallDesktopIntegration(string? installedAppImagePath, bool enableAutostart = true)
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        try
+        {
+            CopyAssetToFileIfMissing("avares://Custodia/Assets/custodia-icon.png", InstalledPngIconPath);
+            CopyAssetToFileIfMissing("avares://Custodia/Assets/custodia-icon.svg", InstalledSvgIconPath);
+
+            var appsDir = Path.GetDirectoryName(DesktopEntryPath)!;
+            var autostartDir = Path.Combine(UserHome, ".config", "autostart");
+            var autostartFile = Path.Combine(autostartDir, "custodia.desktop");
+            Directory.CreateDirectory(appsDir);
+            Directory.CreateDirectory(autostartDir);
+
+            string execCmd;
+            if (!string.IsNullOrWhiteSpace(installedAppImagePath))
+            {
+                execCmd = $"\"{installedAppImagePath}\"";
+                var localBinDir = Path.Combine(UserHome, ".local", "bin");
+                Directory.CreateDirectory(localBinDir);
+                var wrapperPath = Path.Combine(localBinDir, "custodia");
+                var escapedAppImage = installedAppImagePath.Replace("\"", "\\\"", StringComparison.Ordinal);
+                File.WriteAllText(wrapperPath, $"#!/usr/bin/env bash\nexec \"{escapedAppImage}\" \"$@\"\n");
+                File.SetUnixFileMode(wrapperPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+
+                var menuContent = $"""
+                    [Desktop Entry]
+                    Type=Application
+                    Version=1.0
+                    Name=Custódia
+                    GenericName=Google Drive Client
+                    Comment=Custódia by TundraLab - Seus arquivos. Sempre seguros.
+                    Icon={InstalledPngIconPath}
+                    Exec={execCmd}
+                    Terminal=false
+                    Categories=Network;Utility;
+                    StartupWMClass=Custodia
+                    """;
+                File.WriteAllText(DesktopEntryPath, menuContent + Environment.NewLine);
+            }
+            else
+            {
+                execCmd = "\"/usr/bin/custodia\"";
+                if (File.Exists(DesktopEntryPath))
+                {
+                    File.Delete(DesktopEntryPath);
+                }
+            }
+
+            if (enableAutostart)
+            {
+                var autostartContent = $"""
+                    [Desktop Entry]
+                    Type=Application
+                    Version=1.0
+                    Name=Custódia
+                    Comment=Custódia by TundraLab - Seus arquivos. Sempre seguros.
+                    Icon={(string.IsNullOrWhiteSpace(installedAppImagePath) ? "custodia" : InstalledPngIconPath)}
+                    Exec={execCmd}
+                    Terminal=false
+                    X-GNOME-Autostart-enabled=true
+                    """;
+                File.WriteAllText(autostartFile, autostartContent + Environment.NewLine);
+            }
+
+            RefreshDesktopCachesInBackground(appsDir);
+        }
+        catch
+        {
+            // Non-fatal desktop integration
+        }
+    }
+
     public static void InstallDesktopAssets()
     {
         if (!OperatingSystem.IsLinux())

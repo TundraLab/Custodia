@@ -12,9 +12,9 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["BrandSubtitle"] = "Seus arquivos. Sempre seguros.",
         ["NavAccounts"] = "Contas",
         ["NavFileHub"] = "Meus Arquivos",
-        ["NavSyncFolders"] = "Pastas de Sincronização",
-        ["NavTransferQueue"] = "Fila de Transferências",
-        ["NavActivityLogs"] = "Logs de Atividade",
+        ["NavSyncFolders"] = "Sincronização",
+        ["NavTransferQueue"] = "Transferências",
+        ["NavActivityLogs"] = "Histórico",
         ["NavSettings"] = "Configurações",
         ["NavAbout"] = "Sobre",
 
@@ -22,7 +22,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["ConnectGoogleButton"] = "Conectar Conta Google",
         ["CancelAuthButton"] = "Cancelar Login",
         ["ImportCredentialsButton"] = "Importar credentials.json",
-        ["RefreshQuotaButton"] = "Atualizar Cota",
+        ["RefreshQuotaButton"] = "Atualizar Espaço",
         ["DisconnectButton"] = "Desconectar",
         ["StorageLabel"] = "Armazenamento no Google Drive",
         ["BuyMoreStorageButton"] = "Comprar mais armazenamento",
@@ -46,14 +46,14 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["SwitchedToFmt"] = "Conta ativa alternada para {0}.",
         ["StorageWarningFmt"] = "Alerta: armazenamento quase cheio ({0:0}% utilizado). Considere liberar espaço ou ampliar seu plano.",
         ["StorageFullFmt"] = "Armazenamento cheio ({0:0}% utilizado). Novos envios para o Google Drive podem falhar.",
-        ["OnboardingTitle"] = "Como conectar ao Google Drive (3 Passos)",
-        ["OnboardingStep1Title"] = "1. Crie sua chave de acesso no Google Cloud",
-        ["OnboardingStep1Desc"] = "Ative a Google Drive API, crie uma chave do tipo \"App para computador\" e baixe o arquivo JSON.",
-        ["OpenEnableDriveApiButton"] = "Ativar Google Drive API",
-        ["OpenCloudConsoleButton"] = "Abrir Credenciais Google Cloud",
-        ["OnboardingStep2Title"] = "2. Importe o arquivo JSON baixado",
-        ["OnboardingStep2Desc"] = "Escolha o arquivo JSON baixado. O Custódia guarda suas credenciais com segurança neste computador.",
-        ["OnboardingStep3Title"] = "3. Autorize o acesso no navegador",
+        ["OnboardingTitle"] = "Conectar sua conta Google (3 passos)",
+        ["OnboardingStep1Title"] = "1. Crie sua chave de acesso no Google",
+        ["OnboardingStep1Desc"] = "Ative o Google Drive no painel do Google, crie um acesso do tipo \"App para computador\" e baixe o arquivo JSON.",
+        ["OpenEnableDriveApiButton"] = "Ativar Google Drive",
+        ["OpenCloudConsoleButton"] = "Abrir painel do Google",
+        ["OnboardingStep2Title"] = "2. Escolha o arquivo baixado",
+        ["OnboardingStep2Desc"] = "Selecione o arquivo JSON que você baixou. Ele fica guardado com segurança apenas neste computador.",
+        ["OnboardingStep3Title"] = "3. Entre com sua conta no navegador",
         ["OnboardingStep3Desc"] = "Com tudo pronto, clique em \"Conectar Conta Google\" acima para entrar pelo navegador.",
         ["SecuritySectionTitle"] = "Segurança e Acesso",
         ["CredentialsFileLabel"] = "Arquivo de acesso (credentials.json)",
@@ -147,13 +147,13 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
 
         ["SyncFoldersTitle"] = "Pastas de Sincronização",
         ["SyncFoldersSubtitle"] = "Escolha quais pastas do computador sincronizam com seu Google Drive",
-        ["MappedFoldersButton"] = "Pastas Mapeadas",
-        ["RemoteBrowserButton"] = "Navegador Remoto do Drive",
-        ["MapLocalFolderButton"] = "Mapear Pasta Local",
+        ["MappedFoldersButton"] = "Pastas no PC",
+        ["RemoteBrowserButton"] = "Explorar na Nuvem",
+        ["MapLocalFolderButton"] = "Adicionar Pasta",
         ["SyncAllButton"] = "Sincronizar Tudo",
         ["SyncNowButton"] = "Sincronizar Agora",
         ["RemoveButton"] = "Remover",
-        ["EmptyFoldersHint"] = "Nenhuma pasta vinculada ainda. Adicione uma pasta do computador ou escolha uma pasta do Google Drive.",
+        ["EmptyFoldersHint"] = "Nenhuma pasta sincronizada ainda. Escolha uma pasta do computador ou do Google Drive para começar.",
         ["AllFoldersPausedHint"] = "Todas as pastas estão pausadas. Clique em \"Retomar\" em uma pasta para sincronizar.",
 
         ["MyDriveLabel"] = "Meu Drive",
@@ -190,6 +190,8 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["SaveChangesButton"] = "Salvar Alterações",
         ["SavingButton"] = "Salvando...",
         ["SavedButton"] = "Salvo!",
+        ["AutoSavedLabel"] = "Salvo automaticamente",
+        ["MoreActionsTooltip"] = "Mais ações",
         ["GeneralSectionTitle"] = "Sistema e Idioma",
         ["LanguageLabel"] = "Idioma da interface",
         ["LanguageHint"] = "Muda o idioma do aplicativo na hora.",
@@ -292,9 +294,9 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["UpdateFrequencyBiweekly"] = "A cada 15 dias",
         ["UpdateFrequencyWeekly"] = "1 vez por semana",
         ["UpdateFrequencyOnStartup"] = "Sempre ao iniciar",
-        ["UpdateSearchPhase1Fmt"] = "Conectando ao GitHub Releases... ({0}s)",
-        ["UpdateSearchPhase2Fmt"] = "Consultando versões e assinaturas SHA-256... ({0}s)",
-        ["UpdateSearchPhase3Fmt"] = "Comparando com a versão instalada (v{0})... ({1}s)",
+        ["UpdateSearchPhase1Fmt"] = "Conectando ao servidor de atualizações... ({0}s)",
+        ["UpdateSearchPhase2Fmt"] = "Verificando versão e integridade... ({0}s)",
+        ["UpdateSearchPhase3Fmt"] = "Comparando com sua versão atual (v{0})... ({1}s)",
         ["UpdateLastCheckFmt"] = "Última verificação: {0}",
         ["UpdateLastCheckWithDateFmt"] = "Última verificação: {0} ({1})",
         ["UpdateLastCheckNever"] = "Nunca verificada",
@@ -311,19 +313,19 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["UpdateOpenReleaseButton"] = "Ver notas da release",
         ["UpdateBannerActionButton"] = "Atualizar agora",
         ["UpdateCurrentVersionFmt"] = "Versão v{0} • {1}",
-        ["UpdateCheckingStatus"] = "Consultando GitHub Releases...",
+        ["UpdateCheckingStatus"] = "Verificando atualizações...",
         ["UpdateUpToDateFmt"] = "Você já está usando a versão mais recente (v{0}).",
         ["UpdateAvailableFmt"] = "Nova versão disponível: v{0}",
         ["UpdateDownloadingFmt"] = "Baixando {0}... {1:0}% ({2:0.0} / {3:0.0} MB • {4:0.0} MB/s)",
-        ["UpdateInstallingStatus"] = "Aplicando atualização verificada e reiniciando o Custódia...",
-        ["UpdateDownloadedFolderStatusFmt"] = "Pacote validado por SHA-256 salvo em: {0}",
+        ["UpdateInstallingStatus"] = "Aplicando atualização e reiniciando o Custódia...",
+        ["UpdateDownloadedFolderStatusFmt"] = "Pacote de atualização salvo em: {0}",
         ["UpdateErrorFmt"] = "Não foi possível verificar ou baixar atualização: {0}",
-        ["UpdateBannerTitleFmt"] = "Nova versão v{0} disponível no GitHub Releases",
+        ["UpdateBannerTitleFmt"] = "Nova versão v{0} disponível",
         ["InstallKindRpm"] = "Pacote RPM",
         ["InstallKindAppImage"] = "AppImage",
         ["InstallKindStandalone"] = "Execução direta",
         ["UpdateNotifyTitleFmt"] = "Custódia v{0} disponível",
-        ["UpdateNotifyBody"] = "Abra a aba Sobre para baixar e aplicar a atualização com verificação SHA-256.",
+        ["UpdateNotifyBody"] = "Abra a aba Sobre para baixar e atualizar com um clique.",
 
         ["NoAccountConnected"] = "Nenhuma conta conectada",
         ["ConnectHintSubtitle"] = "Conecte sua conta Google Drive para sincronizar pastas locais",
@@ -549,9 +551,9 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
 
         ["LegalConsentTitle"] = "Termos de Uso, Privacidade e Acesso ao Google Drive",
         ["LegalConsentSubtitle"] = "Veja como o Custódia cuida dos seus arquivos, acessos e avisos antes de começar.",
-        ["LegalConsentDriveScopeBullet"] = "Google Drive OAuth (escopo sensível drive): solicita acesso ao Drive exclusivamente para sincronizar e gerenciar seus arquivos usando suas próprias credenciais do Google Cloud Console (uso pessoal/BYO-OAuth), em conformidade com a Política de Dados do Usuário dos Serviços de API do Google (Limited Use).",
-        ["LegalConsentLocalDataBullet"] = "Privacidade local: seus arquivos, pastas, metadados, tokens (permissão 0600) e logs permanecem apenas no seu dispositivo Linux (API local em 127.0.0.1:5080). Nenhum arquivo ou token é enviado à TundraLab.",
-        ["LegalConsentEmailBullet"] = "E-mails opcionais de conta (contato.tundralab@gmail.com): nenhum escopo do Gmail é solicitado no seu projeto Google. Se você permitir abaixo, apenas seu e-mail e nome serão usados para enviar alertas transacionais ao conectar ou revogar conta.",
+        ["LegalConsentDriveScopeBullet"] = "Acesso direto ao Google Drive: o Custódia conecta usando seu próprio arquivo de acesso apenas para sincronizar e organizar seus arquivos, seguindo as regras de privacidade do Google.",
+        ["LegalConsentLocalDataBullet"] = "Tudo fica no seu computador: seus arquivos, pastas, sessões e histórico permanecem apenas neste PC. Nada é enviado para servidores da TundraLab.",
+        ["LegalConsentEmailBullet"] = "Avisos opcionais por e-mail: se você permitir abaixo, enviamos apenas avisos simples quando uma conta é conectada ou desconectada.",
         ["LegalConsentAcceptCheckbox"] = "Li e concordo com os Termos de Uso, a Licença Proprietária e a Política de Privacidade do Custódia.",
         ["LegalConsentEmailOptInCheckbox"] = "Aceito receber e-mails opcionais de boas-vindas e revogação enviados por contato.tundralab@gmail.com (envia apenas e-mail e nome; zero arquivos ou tokens).",
         ["LegalConsentContinueButton"] = "Aceitar e continuar",
@@ -594,7 +596,69 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["MovedSuccessFmt"] = "{0} item(ns) movido(s) para {1}.",
         ["MoveErrorFmt"] = "Não foi possível mover: {0}",
         ["RemoveFolderConfirmFmt"] = "Remover a pasta \"{0}\" da sincronização? Os arquivos locais e na nuvem não serão apagados.",
-        ["ClearLogsConfirmTitle"] = "Limpar todo o histórico de logs de atividade?"
+        ["ClearLogsConfirmTitle"] = "Limpar todo o histórico de logs de atividade?",
+
+        ["FileHubFilterShared"] = "Compartilhados",
+        ["OpenSharedWithMeTooltip"] = "Arquivos e pastas compartilhados comigo",
+        ["SharedEmptyHint"] = "Nenhum arquivo ou pasta compartilhado com esta conta.",
+        ["SharedWithMeRootLabel"] = "Compartilhados comigo",
+
+        ["ShareButton"] = "Compartilhar",
+        ["SharePanelTitle"] = "Compartilhamento e permissões",
+        ["ShareAnyoneSectionTitle"] = "Link compartilhável (qualquer pessoa com o link)",
+        ["ShareLinkActiveHint"] = "Link ativo ({0}). Qualquer pessoa com o link pode acessar.",
+        ["ShareLinkInactiveHint"] = "Nenhum link público ativo no momento.",
+        ["ShareEnableReadButton"] = "Gerar link (Leitura)",
+        ["ShareEnableEditButton"] = "Gerar link (Edição)",
+        ["ShareCopyLinkButton"] = "Copiar link",
+        ["ShareLinkCopiedMessage"] = "Link compartilhável copiado para a área de transferência.",
+        ["ShareRevokeLinkButton"] = "Revogar link",
+        ["ShareInviteSectionTitle"] = "Convidar por e-mail",
+        ["ShareInviteEmailPlaceholder"] = "nome@exemplo.com",
+        ["ShareRoleReader"] = "Leitor",
+        ["ShareRoleWriter"] = "Editor",
+        ["ShareRoleOwner"] = "Proprietário",
+        ["ShareInviteButton"] = "Convidar",
+        ["SharePermissionsListTitle"] = "Pessoas e links com acesso",
+        ["ShareNoPermissionsHint"] = "Somente você tem acesso no momento.",
+        ["ShareRevokePermissionButton"] = "Revogar",
+        ["ShareInvalidEmailError"] = "Digite um endereço de e-mail válido para convidar.",
+
+        ["SaveAsButton"] = "Salvar como...",
+        ["DownloadToFolderButton"] = "Baixar em pasta...",
+        ["SaveAsDialogTitle"] = "Salvar arquivo como",
+        ["ChooseDownloadFolderTitle"] = "Escolher pasta de destino para download",
+        ["SaveAsSuccessFmt"] = "Salvo em {0}.",
+
+        ["TransferFilterAll"] = "Todos",
+        ["TransferFilterUploads"] = "Envios",
+        ["TransferFilterDownloads"] = "Downloads",
+        ["TransferFilterFailed"] = "Falhas",
+        ["RetryButton"] = "Tentar novamente",
+        ["RetryAllFailedButton"] = "Retomar falhas",
+        ["TransferFilterEmptyHint"] = "Nenhuma transferência corresponde ao filtro selecionado.",
+
+        ["LimitBandwidthCheckbox"] = "Limitar largura de banda de envio/download",
+        ["LimitBandwidthHint"] = "Restringe a velocidade máxima de transferência para preservar sua conexão.",
+        ["MaxBandwidthKbpsLabel"] = "Limite (KB/s):",
+
+        ["InstallerTitleInstalling"] = "Instalando...",
+        ["InstallerTitleCompleted"] = "Instalação concluída",
+        ["InstallerTitleFailed"] = "Falha na instalação",
+        ["InstallerSubtitle"] = "Preparando e atualizando o Custódia em segundo plano sem abrir terminal.",
+        ["InstallerStepCheckEnv"] = "Verificando o ambiente",
+        ["InstallerStepDownload"] = "Baixando pacote oficial",
+        ["InstallerStepVerify"] = "Validando integridade SHA-256",
+        ["InstallerStepInstall"] = "Instalando no sistema",
+        ["InstallerStepFinish"] = "Concluindo integração",
+        ["InstallerDetailsShow"] = "Detalhes",
+        ["InstallerDetailsHide"] = "Ocultar detalhes",
+        ["InstallerElapsedFmt"] = "{0} s decorridos",
+        ["InstallerRemainingFmt"] = "~{0} restantes",
+        ["InstallerLaunchAppButton"] = "Abrir Custódia",
+        ["InstallerLinkProject"] = "Página do projeto",
+        ["InstallerLinkDocs"] = "Guia de instalação",
+        ["InstallerLinkIssue"] = "Relatar um problema"
     };
 
     private static readonly IReadOnlyDictionary<string, string> EnUs = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -603,9 +667,9 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["BrandSubtitle"] = "Your files. Always safe.",
         ["NavAccounts"] = "Accounts",
         ["NavFileHub"] = "My Files",
-        ["NavSyncFolders"] = "Sync Folders",
-        ["NavTransferQueue"] = "Transfer Queue",
-        ["NavActivityLogs"] = "Activity Logs",
+        ["NavSyncFolders"] = "Sync",
+        ["NavTransferQueue"] = "Transfers",
+        ["NavActivityLogs"] = "History",
         ["NavSettings"] = "Settings",
         ["NavAbout"] = "About",
 
@@ -613,7 +677,7 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["ConnectGoogleButton"] = "Connect Google Account",
         ["CancelAuthButton"] = "Cancel Sign-In",
         ["ImportCredentialsButton"] = "Import credentials.json",
-        ["RefreshQuotaButton"] = "Refresh Quota",
+        ["RefreshQuotaButton"] = "Refresh Storage",
         ["DisconnectButton"] = "Disconnect",
         ["StorageLabel"] = "Google Drive Storage",
         ["BuyMoreStorageButton"] = "Buy more storage",
@@ -637,14 +701,14 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["SwitchedToFmt"] = "Switched active account to {0}.",
         ["StorageWarningFmt"] = "Warning: storage almost full ({0:0}% used). Consider freeing space or upgrading your plan.",
         ["StorageFullFmt"] = "Storage full ({0:0}% used). New uploads to Google Drive may fail.",
-        ["OnboardingTitle"] = "How to connect Google Drive (3 Steps)",
-        ["OnboardingStep1Title"] = "1. Create your access key in Google Cloud",
-        ["OnboardingStep1Desc"] = "Enable the Google Drive API, create a \"Desktop app\" key, and download the JSON file.",
-        ["OpenEnableDriveApiButton"] = "Enable Google Drive API",
-        ["OpenCloudConsoleButton"] = "Open Google Cloud Credentials",
-        ["OnboardingStep2Title"] = "2. Import the downloaded JSON file",
-        ["OnboardingStep2Desc"] = "Select the downloaded JSON file. Custódia keeps your credentials safe on this computer.",
-        ["OnboardingStep3Title"] = "3. Authorize access in your browser",
+        ["OnboardingTitle"] = "Connect your Google account (3 steps)",
+        ["OnboardingStep1Title"] = "1. Create your access key on Google",
+        ["OnboardingStep1Desc"] = "Enable Google Drive in the Google console, create a \"Desktop app\" key, and download the JSON file.",
+        ["OpenEnableDriveApiButton"] = "Enable Google Drive",
+        ["OpenCloudConsoleButton"] = "Open Google Console",
+        ["OnboardingStep2Title"] = "2. Select the downloaded file",
+        ["OnboardingStep2Desc"] = "Pick the JSON file you just downloaded. It stays safely stored only on this computer.",
+        ["OnboardingStep3Title"] = "3. Sign in with your account in the browser",
         ["OnboardingStep3Desc"] = "Once ready, click \"Connect Google Account\" above to sign in through your browser.",
         ["SecuritySectionTitle"] = "Security & Access",
         ["CredentialsFileLabel"] = "Access file (credentials.json)",
@@ -738,13 +802,13 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
 
         ["SyncFoldersTitle"] = "Sync Folders",
         ["SyncFoldersSubtitle"] = "Choose which computer folders sync with your Google Drive",
-        ["MappedFoldersButton"] = "Mapped Folders",
-        ["RemoteBrowserButton"] = "Remote Drive Browser",
-        ["MapLocalFolderButton"] = "Map Local Folder",
+        ["MappedFoldersButton"] = "PC Folders",
+        ["RemoteBrowserButton"] = "Browse Cloud",
+        ["MapLocalFolderButton"] = "Add Folder",
         ["SyncAllButton"] = "Sync All",
         ["SyncNowButton"] = "Sync Now",
         ["RemoveButton"] = "Remove",
-        ["EmptyFoldersHint"] = "No folders linked yet. Add a folder from your computer or pick one from Google Drive.",
+        ["EmptyFoldersHint"] = "No synced folders yet. Pick a folder from your computer or Google Drive to get started.",
         ["AllFoldersPausedHint"] = "All folders are currently paused. Click \"Resume\" on a folder to synchronize.",
 
         ["MyDriveLabel"] = "My Drive",
@@ -781,6 +845,8 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["SaveChangesButton"] = "Save Changes",
         ["SavingButton"] = "Saving...",
         ["SavedButton"] = "Saved!",
+        ["AutoSavedLabel"] = "Saved automatically",
+        ["MoreActionsTooltip"] = "More actions",
         ["GeneralSectionTitle"] = "System & Language",
         ["LanguageLabel"] = "Interface language",
         ["LanguageHint"] = "Changes the app language right away.",
@@ -883,9 +949,9 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["UpdateFrequencyBiweekly"] = "Every 15 days",
         ["UpdateFrequencyWeekly"] = "Once a week",
         ["UpdateFrequencyOnStartup"] = "Every startup",
-        ["UpdateSearchPhase1Fmt"] = "Connecting to GitHub Releases... ({0}s)",
-        ["UpdateSearchPhase2Fmt"] = "Checking latest versions and SHA-256 signatures... ({0}s)",
-        ["UpdateSearchPhase3Fmt"] = "Comparing against installed version (v{0})... ({1}s)",
+        ["UpdateSearchPhase1Fmt"] = "Connecting to update server... ({0}s)",
+        ["UpdateSearchPhase2Fmt"] = "Checking version and integrity... ({0}s)",
+        ["UpdateSearchPhase3Fmt"] = "Comparing against your current version (v{0})... ({1}s)",
         ["UpdateLastCheckFmt"] = "Last checked: {0}",
         ["UpdateLastCheckWithDateFmt"] = "Last checked: {0} ({1})",
         ["UpdateLastCheckNever"] = "Never checked",
@@ -902,19 +968,19 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["UpdateOpenReleaseButton"] = "View release notes",
         ["UpdateBannerActionButton"] = "Update now",
         ["UpdateCurrentVersionFmt"] = "Version v{0} • {1}",
-        ["UpdateCheckingStatus"] = "Checking GitHub Releases...",
+        ["UpdateCheckingStatus"] = "Checking for updates...",
         ["UpdateUpToDateFmt"] = "You are already on the latest version (v{0}).",
         ["UpdateAvailableFmt"] = "New version available: v{0}",
         ["UpdateDownloadingFmt"] = "Downloading {0}... {1:0}% ({2:0.0} / {3:0.0} MB • {4:0.0} MB/s)",
-        ["UpdateInstallingStatus"] = "Applying verified update and restarting Custódia...",
-        ["UpdateDownloadedFolderStatusFmt"] = "SHA-256 verified package saved to: {0}",
+        ["UpdateInstallingStatus"] = "Applying update and restarting Custódia...",
+        ["UpdateDownloadedFolderStatusFmt"] = "Update package saved to: {0}",
         ["UpdateErrorFmt"] = "Failed to check or download update: {0}",
-        ["UpdateBannerTitleFmt"] = "New version v{0} available on GitHub Releases",
+        ["UpdateBannerTitleFmt"] = "New version v{0} available",
         ["InstallKindRpm"] = "RPM package",
         ["InstallKindAppImage"] = "AppImage",
         ["InstallKindStandalone"] = "Standalone build",
         ["UpdateNotifyTitleFmt"] = "Custódia v{0} available",
-        ["UpdateNotifyBody"] = "Open the About tab to download and install the SHA-256 verified update.",
+        ["UpdateNotifyBody"] = "Open the About tab to download and update with one click.",
 
         ["NoAccountConnected"] = "No account connected",
         ["ConnectHintSubtitle"] = "Connect your Google Drive account to synchronize local folders",
@@ -1140,9 +1206,9 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
 
         ["LegalConsentTitle"] = "Terms of Use, Privacy & Google Drive Access",
         ["LegalConsentSubtitle"] = "See how Custódia handles your files, access, and notifications before starting.",
-        ["LegalConsentDriveScopeBullet"] = "Google Drive OAuth (sensitive drive scope): requests Drive access solely to sync and manage your files using your own Google Cloud Console credentials (personal BYO-OAuth use), in compliance with the Google API Services User Data Policy (Limited Use).",
-        ["LegalConsentLocalDataBullet"] = "Local privacy: your files, folders, metadata, tokens (0600 permissions), and logs remain solely on your Linux device (local API on 127.0.0.1:5080). Zero files or tokens are sent to TundraLab.",
-        ["LegalConsentEmailBullet"] = "Optional account emails (contato.tundralab@gmail.com): no Gmail scope is requested on your Google project. If allowed below, only your email and name are used to send transactional connect or revoke alerts.",
+        ["LegalConsentDriveScopeBullet"] = "Direct Google Drive access: Custódia connects using your own access file solely to sync and organize your files under Google's privacy rules.",
+        ["LegalConsentLocalDataBullet"] = "Everything stays on your computer: your files, folders, sessions, and history remain strictly on this PC. Nothing is sent to TundraLab servers.",
+        ["LegalConsentEmailBullet"] = "Optional email alerts: if enabled below, we only send simple notifications when an account is connected or disconnected.",
         ["LegalConsentAcceptCheckbox"] = "I have read and agree to the Terms of Use, Proprietary License, and Privacy Policy of Custódia.",
         ["LegalConsentEmailOptInCheckbox"] = "I agree to receive optional welcome and revocation emails sent from contato.tundralab@gmail.com (sends only email and name; zero files or tokens).",
         ["LegalConsentContinueButton"] = "Accept and continue",
@@ -1185,7 +1251,69 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
         ["MovedSuccessFmt"] = "Moved {0} item(s) to {1}.",
         ["MoveErrorFmt"] = "Could not move: {0}",
         ["RemoveFolderConfirmFmt"] = "Remove folder \"{0}\" from sync? Local and cloud files will not be deleted.",
-        ["ClearLogsConfirmTitle"] = "Clear all activity log history?"
+        ["ClearLogsConfirmTitle"] = "Clear all activity log history?",
+
+        ["FileHubFilterShared"] = "Shared",
+        ["OpenSharedWithMeTooltip"] = "Files and folders shared with me",
+        ["SharedEmptyHint"] = "No files or folders shared with this account.",
+        ["SharedWithMeRootLabel"] = "Shared with me",
+
+        ["ShareButton"] = "Share",
+        ["SharePanelTitle"] = "Sharing & permissions",
+        ["ShareAnyoneSectionTitle"] = "Shareable link (anyone with the link)",
+        ["ShareLinkActiveHint"] = "Active link ({0}). Anyone with the link can access.",
+        ["ShareLinkInactiveHint"] = "No public share link active.",
+        ["ShareEnableReadButton"] = "Create link (Read)",
+        ["ShareEnableEditButton"] = "Create link (Edit)",
+        ["ShareCopyLinkButton"] = "Copy link",
+        ["ShareLinkCopiedMessage"] = "Share link copied to clipboard.",
+        ["ShareRevokeLinkButton"] = "Revoke link",
+        ["ShareInviteSectionTitle"] = "Invite by email",
+        ["ShareInviteEmailPlaceholder"] = "name@example.com",
+        ["ShareRoleReader"] = "Viewer",
+        ["ShareRoleWriter"] = "Editor",
+        ["ShareRoleOwner"] = "Owner",
+        ["ShareInviteButton"] = "Invite",
+        ["SharePermissionsListTitle"] = "People & links with access",
+        ["ShareNoPermissionsHint"] = "Only you currently have access.",
+        ["ShareRevokePermissionButton"] = "Revoke",
+        ["ShareInvalidEmailError"] = "Enter a valid email address to invite.",
+
+        ["SaveAsButton"] = "Save as...",
+        ["DownloadToFolderButton"] = "Download to folder...",
+        ["SaveAsDialogTitle"] = "Save file as",
+        ["ChooseDownloadFolderTitle"] = "Choose destination folder for download",
+        ["SaveAsSuccessFmt"] = "Saved to {0}.",
+
+        ["TransferFilterAll"] = "All",
+        ["TransferFilterUploads"] = "Uploads",
+        ["TransferFilterDownloads"] = "Downloads",
+        ["TransferFilterFailed"] = "Failed",
+        ["RetryButton"] = "Retry",
+        ["RetryAllFailedButton"] = "Retry failed",
+        ["TransferFilterEmptyHint"] = "No transfers match the selected filter.",
+
+        ["LimitBandwidthCheckbox"] = "Limit upload/download bandwidth",
+        ["LimitBandwidthHint"] = "Caps transfer speed so your internet connection stays responsive.",
+        ["MaxBandwidthKbpsLabel"] = "Limit (KB/s):",
+
+        ["InstallerTitleInstalling"] = "Installing...",
+        ["InstallerTitleCompleted"] = "Installation complete",
+        ["InstallerTitleFailed"] = "Installation failed",
+        ["InstallerSubtitle"] = "Preparing and updating Custódia silently in the background.",
+        ["InstallerStepCheckEnv"] = "Checking environment",
+        ["InstallerStepDownload"] = "Downloading official package",
+        ["InstallerStepVerify"] = "Verifying SHA-256 integrity",
+        ["InstallerStepInstall"] = "Installing on system",
+        ["InstallerStepFinish"] = "Finishing integration",
+        ["InstallerDetailsShow"] = "Details",
+        ["InstallerDetailsHide"] = "Hide details",
+        ["InstallerElapsedFmt"] = "{0} s elapsed",
+        ["InstallerRemainingFmt"] = "~{0} left",
+        ["InstallerLaunchAppButton"] = "Open Custódia",
+        ["InstallerLinkProject"] = "Project page",
+        ["InstallerLinkDocs"] = "Install guide",
+        ["InstallerLinkIssue"] = "Report an issue"
     };
 
     public string CurrentLanguage { get; private set; } = "pt-BR";
@@ -1388,6 +1516,8 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string SaveChangesButton => Text("SaveChangesButton");
     public string SavingButton => Text("SavingButton");
     public string SavedButton => Text("SavedButton");
+    public string AutoSavedLabel => Text("AutoSavedLabel");
+    public string MoreActionsTooltip => Text("MoreActionsTooltip");
     public string GeneralSectionTitle => Text("GeneralSectionTitle");
     public string LanguageLabel => Text("LanguageLabel");
     public string LanguageHint => Text("LanguageHint");
@@ -1556,4 +1686,66 @@ public sealed class LocalizationService : ObservableObject, ILocalizationService
     public string TransferCopyDriveIdButton => Text("TransferCopyDriveIdButton");
     public string SelectAllButton => Text("SelectAllButton");
     public string ClearSelectionButton => Text("ClearSelectionButton");
+
+    public string FileHubFilterShared => Text("FileHubFilterShared");
+    public string OpenSharedWithMeTooltip => Text("OpenSharedWithMeTooltip");
+    public string SharedEmptyHint => Text("SharedEmptyHint");
+    public string SharedWithMeRootLabel => Text("SharedWithMeRootLabel");
+
+    public string ShareButton => Text("ShareButton");
+    public string SharePanelTitle => Text("SharePanelTitle");
+    public string ShareAnyoneSectionTitle => Text("ShareAnyoneSectionTitle");
+    public string ShareLinkActiveHint => Text("ShareLinkActiveHint");
+    public string ShareLinkInactiveHint => Text("ShareLinkInactiveHint");
+    public string ShareEnableReadButton => Text("ShareEnableReadButton");
+    public string ShareEnableEditButton => Text("ShareEnableEditButton");
+    public string ShareCopyLinkButton => Text("ShareCopyLinkButton");
+    public string ShareLinkCopiedMessage => Text("ShareLinkCopiedMessage");
+    public string ShareRevokeLinkButton => Text("ShareRevokeLinkButton");
+    public string ShareInviteSectionTitle => Text("ShareInviteSectionTitle");
+    public string ShareInviteEmailPlaceholder => Text("ShareInviteEmailPlaceholder");
+    public string ShareRoleReader => Text("ShareRoleReader");
+    public string ShareRoleWriter => Text("ShareRoleWriter");
+    public string ShareRoleOwner => Text("ShareRoleOwner");
+    public string ShareInviteButton => Text("ShareInviteButton");
+    public string SharePermissionsListTitle => Text("SharePermissionsListTitle");
+    public string ShareNoPermissionsHint => Text("ShareNoPermissionsHint");
+    public string ShareRevokePermissionButton => Text("ShareRevokePermissionButton");
+    public string ShareInvalidEmailError => Text("ShareInvalidEmailError");
+
+    public string SaveAsButton => Text("SaveAsButton");
+    public string DownloadToFolderButton => Text("DownloadToFolderButton");
+    public string SaveAsDialogTitle => Text("SaveAsDialogTitle");
+    public string ChooseDownloadFolderTitle => Text("ChooseDownloadFolderTitle");
+    public string SaveAsSuccessFmt => Text("SaveAsSuccessFmt");
+
+    public string TransferFilterAll => Text("TransferFilterAll");
+    public string TransferFilterUploads => Text("TransferFilterUploads");
+    public string TransferFilterDownloads => Text("TransferFilterDownloads");
+    public string TransferFilterFailed => Text("TransferFilterFailed");
+    public string RetryButton => Text("RetryButton");
+    public string RetryAllFailedButton => Text("RetryAllFailedButton");
+    public string TransferFilterEmptyHint => Text("TransferFilterEmptyHint");
+
+    public string LimitBandwidthCheckbox => Text("LimitBandwidthCheckbox");
+    public string LimitBandwidthHint => Text("LimitBandwidthHint");
+    public string MaxBandwidthKbpsLabel => Text("MaxBandwidthKbpsLabel");
+
+    public string InstallerTitleInstalling => Text("InstallerTitleInstalling");
+    public string InstallerTitleCompleted => Text("InstallerTitleCompleted");
+    public string InstallerTitleFailed => Text("InstallerTitleFailed");
+    public string InstallerSubtitle => Text("InstallerSubtitle");
+    public string InstallerStepCheckEnv => Text("InstallerStepCheckEnv");
+    public string InstallerStepDownload => Text("InstallerStepDownload");
+    public string InstallerStepVerify => Text("InstallerStepVerify");
+    public string InstallerStepInstall => Text("InstallerStepInstall");
+    public string InstallerStepFinish => Text("InstallerStepFinish");
+    public string InstallerDetailsShow => Text("InstallerDetailsShow");
+    public string InstallerDetailsHide => Text("InstallerDetailsHide");
+    public string InstallerElapsedFmt => Text("InstallerElapsedFmt");
+    public string InstallerRemainingFmt => Text("InstallerRemainingFmt");
+    public string InstallerLaunchAppButton => Text("InstallerLaunchAppButton");
+    public string InstallerLinkProject => Text("InstallerLinkProject");
+    public string InstallerLinkDocs => Text("InstallerLinkDocs");
+    public string InstallerLinkIssue => Text("InstallerLinkIssue");
 }

@@ -83,10 +83,16 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
 
     public AppInstallKind DetectInstallKind(out string? installedPackagePath)
     {
+        var isInstallerProcess = Environment.GetCommandLineArgs().Any(a =>
+            string.Equals(a, "--installer", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(a, "--install", StringComparison.OrdinalIgnoreCase));
+
         var appImagePath = Environment.GetEnvironmentVariable("APPIMAGE");
         if (!string.IsNullOrWhiteSpace(appImagePath) &&
             !appImagePath.Contains("/.cache/custodia-installer/", StringComparison.Ordinal) &&
             !appImagePath.Contains("/.cache/tundradrive-installer/", StringComparison.Ordinal) &&
+            !Path.GetFileName(appImagePath).Contains("Installer", StringComparison.OrdinalIgnoreCase) &&
+            !isInstallerProcess &&
             File.Exists(appImagePath))
         {
             installedPackagePath = appImagePath;
@@ -117,6 +123,21 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
             !Path.GetFileNameWithoutExtension(processPath).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
         {
             installedPackagePath = localAppImage;
+            return AppInstallKind.AppImage;
+        }
+
+        if (isInstallerProcess)
+        {
+            if (File.Exists("/usr/bin/custodia") ||
+                File.Exists("/etc/fedora-release") ||
+                File.Exists("/etc/redhat-release") ||
+                File.Exists("/usr/bin/dnf"))
+            {
+                installedPackagePath = File.Exists("/usr/bin/custodia") ? "/usr/bin/custodia" : null;
+                return AppInstallKind.Rpm;
+            }
+
+            installedPackagePath = null;
             return AppInstallKind.AppImage;
         }
 
@@ -193,7 +214,8 @@ public sealed class GitHubAppUpdateService : IAppUpdateService, IDisposable
                     {
                         rpmAsset = info;
                     }
-                    else if (name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase))
+                    else if (name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase) &&
+                             !name.Contains("Installer", StringComparison.OrdinalIgnoreCase))
                     {
                         appImageAsset = info;
                     }

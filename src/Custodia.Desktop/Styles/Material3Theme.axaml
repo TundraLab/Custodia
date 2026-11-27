@@ -776,6 +776,7 @@
 
   <!-- Status icon animations -->
   <Style Selector="PathIcon.m3-spinning">
+    <Setter Property="RenderTransformOrigin" Value="50%,50%" />
     <Setter Property="RenderTransform">
       <RotateTransform />
     </Setter>
@@ -896,6 +897,7 @@
   </Style>
 
   <Style Selector="Border.m3-beacon-halo">
+    <Setter Property="RenderTransformOrigin" Value="50%,50%" />
     <Setter Property="RenderTransform">
       <ScaleTransform />
     </Setter>
@@ -921,6 +923,7 @@
   </Style>
 
   <Style Selector="PathIcon.m3-beacon-core">
+    <Setter Property="RenderTransformOrigin" Value="50%,50%" />
     <Setter Property="RenderTransform">
       <ScaleTransform />
     </Setter>

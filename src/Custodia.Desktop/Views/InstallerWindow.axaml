@@ -1,0 +1,186 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:TundraDrive.Desktop.ViewModels"
+        x:Class="TundraDrive.Desktop.Views.InstallerWindow"
+        x:DataType="vm:InstallerViewModel"
+        Title="Custódia"
+        Icon="avares://Custodia/Assets/custodia-icon.png"
+        Width="780"
+        Height="580"
+        MinWidth="680"
+        MinHeight="500"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource M3Surface}">
+
+  <Grid RowDefinitions="Auto,*" Margin="0">
+    <!-- Top chrome bar -->
+    <Grid Grid.Row="0" Height="48" Margin="20,8,16,0" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10">
+      <Image Grid.Column="0" Source="{DynamicResource TundraBrandGlyphDrawing}" Width="20" Height="20" VerticalAlignment="Center" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <TextBlock FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurface}" Text="Custódia" VerticalAlignment="Center" />
+        <TextBlock FontSize="12" Classes="m3-meta" Text="{Binding VersionLabel}" VerticalAlignment="Center" />
+      </StackPanel>
+      <Button Grid.Column="3"
+              Classes="m3-text m3-icon"
+              Command="{Binding CancelInstallCommand}">
+        <PathIcon Width="12" Height="12" Foreground="{DynamicResource M3OnSurfaceVariant}" Data="{StaticResource TundraCloseGeometry}" />
+      </Button>
+    </Grid>
+
+    <!-- Centered installer card matching clean desktop setup UX -->
+    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="540" Spacing="20" Margin="24,16,24,32">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+          <Border Grid.Column="0"
+                  Width="44"
+                  Height="44"
+                  CornerRadius="12"
+                  Background="{DynamicResource M3SecondaryContainer}"
+                  VerticalAlignment="Top">
+            <PathIcon Width="20" Height="20"
+                      Foreground="{DynamicResource M3Primary}"
+                      Data="{StaticResource TundraDownloadGeometry}" />
+          </Border>
+          <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+            <TextBlock FontSize="24" FontWeight="Bold" Foreground="{DynamicResource M3OnSurface}" Text="{Binding HeaderTitle}" />
+            <TextBlock Classes="m3-subtitle" FontSize="13" Text="{Binding Loc.InstallerSubtitle}" TextWrapping="Wrap" />
+            <TextBlock FontSize="11.5" FontFamily="monospace" Foreground="{DynamicResource M3OnSurfaceMuted}" Text="{Binding SourceHostLabel}" Margin="0,2,0,0" />
+          </StackPanel>
+        </Grid>
+
+        <Border Classes="m3-card" Padding="20,18">
+          <StackPanel Spacing="14">
+            <!-- Metrics row and linear progress bar -->
+            <StackPanel Spacing="8">
+              <ProgressBar Height="6"
+                           CornerRadius="4"
+                           Minimum="0"
+                           Maximum="100"
+                           Value="{Binding ProgressPercentage}" />
+
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock Grid.Column="0"
+                           FontSize="11.5"
+                           FontFamily="monospace"
+                           Foreground="{DynamicResource M3OnSurfaceVariant}"
+                           Text="{Binding ProgressSummaryText}" />
+                <TextBlock Grid.Column="1"
+                           FontSize="11.5"
+                           FontFamily="monospace"
+                           Foreground="{DynamicResource M3OnSurfaceMuted}"
+                           Text="{Binding SpeedAndEtaText}" />
+              </Grid>
+            </StackPanel>
+
+            <!-- Step checklist -->
+            <ItemsControl ItemsSource="{Binding Steps}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:InstallerStepViewModel">
+                  <Border Margin="0,2"
+                          Padding="12,9"
+                          CornerRadius="10"
+                          Background="{Binding RowBackground}">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                      <Grid Grid.Column="0" Width="18" Height="18" VerticalAlignment="Center">
+                        <Border Width="6" Height="6"
+                                CornerRadius="3"
+                                Background="{DynamicResource M3OnSurfaceMuted}"
+                                Opacity="0.6"
+                                IsVisible="{Binding IsPending}" />
+                        <PathIcon Classes="m3-spinning"
+                                  RenderTransformOrigin="50%,50%"
+                                  Width="15" Height="15"
+                                  Foreground="{DynamicResource M3Primary}"
+                                  IsVisible="{Binding IsRunning}"
+                                  Data="{StaticResource TundraRefreshGeometry}">
+                          <PathIcon.RenderTransform>
+                            <RotateTransform />
+                          </PathIcon.RenderTransform>
+                        </PathIcon>
+                        <Border Width="18" Height="18"
+                                CornerRadius="9"
+                                Background="{DynamicResource M3SecondaryContainer}"
+                                IsVisible="{Binding IsCompleted}">
+                          <PathIcon Width="11" Height="11"
+                                    Foreground="{DynamicResource M3Success}"
+                                    Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                        </Border>
+                        <PathIcon Width="15" Height="15"
+                                  Foreground="{DynamicResource M3ErrorAccent}"
+                                  IsVisible="{Binding IsFailed}"
+                                  Data="{StaticResource TundraAlertGeometry}" />
+                      </Grid>
+
+                      <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock FontSize="13"
+                                   FontWeight="Medium"
+                                   Foreground="{Binding TitleForeground}"
+                                   Text="{Binding Title}" />
+                        <TextBlock FontSize="11.5"
+                                   FontFamily="monospace"
+                                   Foreground="{DynamicResource M3OnSurfaceMuted}"
+                                   IsVisible="{Binding HasDetail}"
+                                   Text="{Binding Detail}"
+                                   TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border Classes="m3-banner-error" IsVisible="{Binding HasError}">
+              <TextBlock FontSize="12"
+                         Foreground="{DynamicResource M3OnErrorContainer}"
+                         TextWrapping="Wrap"
+                         Text="{Binding ErrorMessage}" />
+            </Border>
+
+            <!-- Collapsible background installer details log -->
+            <Border Classes="m3-card-inset" Padding="10" IsVisible="{Binding IsDetailsOpen}">
+              <ScrollViewer MaxHeight="130" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <TextBlock FontFamily="monospace"
+                           FontSize="11"
+                           Foreground="{DynamicResource M3OnSurfaceVariant}"
+                           TextWrapping="Wrap"
+                           Text="{Binding LogOutputText}" />
+              </ScrollViewer>
+            </Border>
+
+            <!-- Card bottom actions -->
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+              <Button Grid.Column="0"
+                      Classes="m3-text m3-compact"
+                      HorizontalAlignment="Left"
+                      Content="{Binding DetailsToggleLabel}"
+                      Command="{Binding ToggleDetailsCommand}" />
+              <TextBlock Grid.Column="1"
+                         FontSize="11.5"
+                         FontFamily="monospace"
+                         Foreground="{DynamicResource M3OnSurfaceMuted}"
+                         VerticalAlignment="Center"
+                         Text="{Binding ElapsedSecondsText}" />
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <Button Classes="m3-filled m3-compact"
+                        Content="{Binding Loc.InstallerLaunchAppButton}"
+                        IsVisible="{Binding CanLaunchApp}"
+                        Command="{Binding LaunchInstalledAppCommand}" />
+                <Button Classes="m3-text m3-compact"
+                        Content="{Binding Loc.CancelButton}"
+                        IsVisible="{Binding !CanLaunchApp}"
+                        Command="{Binding CancelInstallCommand}" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Helpful footer links -->
+        <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <Button Classes="m3-text m3-compact" Margin="0,0,12,0" Content="{Binding Loc.InstallerLinkProject}" Command="{Binding OpenProjectPageCommand}" />
+          <Button Classes="m3-text m3-compact" Margin="0,0,12,0" Content="{Binding Loc.InstallerLinkDocs}" Command="{Binding OpenGuideCommand}" />
+          <Button Classes="m3-text m3-compact" Content="{Binding Loc.InstallerLinkIssue}" Command="{Binding OpenIssuesCommand}" />
+        </WrapPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</Window>

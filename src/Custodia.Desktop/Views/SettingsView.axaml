@@ -17,55 +17,42 @@
       <Grid MinHeight="48" ColumnDefinitions="*,Auto" ColumnSpacing="12">
         <TextBlock Grid.Column="0" Classes="m3-page-title" VerticalAlignment="Center" Text="{Binding Loc.SettingsTitle}" />
 
-        <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-          <Button Classes="m3-outlined"
-                  Classes.m3-success="{Binding IsReloadedFeedback}"
-                  Margin="0,0,8,4"
-                  Command="{Binding ReloadSettingsCommand}">
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <Border CornerRadius="14"
+                  Padding="10,5"
+                  Background="{DynamicResource M3SurfaceContainer}"
+                  IsVisible="{Binding IsSaving}">
             <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Width="13" Height="13"
-                        Classes.m3-spinning="{Binding IsReloading}"
-                        IsVisible="{Binding !IsReloadedFeedback}"
-                        Foreground="{DynamicResource M3OnSurface}"
-                        Data="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z">
-                <PathIcon.RenderTransform>
-                  <RotateTransform />
-                </PathIcon.RenderTransform>
-              </PathIcon>
-              <PathIcon Width="13" Height="13"
-                        IsVisible="{Binding IsReloadedFeedback}"
-                        Foreground="{DynamicResource M3Success}"
-                        Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-              <TextBlock Text="{Binding ReloadButtonText}" VerticalAlignment="Center" />
-            </StackPanel>
-          </Button>
-
-          <Button Classes="m3-filled"
-                  Classes.m3-success="{Binding IsSavedFeedback}"
-                  Margin="0,0,0,4"
-                  Command="{Binding SaveSettingsCommand}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Width="13" Height="13"
-                        IsVisible="{Binding ShowDefaultSaveIcon}"
-                        Foreground="{DynamicResource M3OnPrimary}"
-                        Data="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" />
               <PathIcon Width="13" Height="13"
                         Classes="m3-spinning"
-                        IsVisible="{Binding IsSaving}"
-                        Foreground="{DynamicResource M3OnPrimary}"
-                        Data="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z">
+                        Foreground="{DynamicResource M3Primary}"
+                        Data="{StaticResource TundraRefreshGeometry}">
                 <PathIcon.RenderTransform>
                   <RotateTransform />
                 </PathIcon.RenderTransform>
               </PathIcon>
-              <PathIcon Width="13" Height="13"
-                        IsVisible="{Binding IsSavedFeedback}"
-                        Foreground="{DynamicResource M3OnSuccess}"
-                        Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-              <TextBlock Text="{Binding SaveButtonText}" VerticalAlignment="Center" />
+              <TextBlock FontSize="12"
+                         Foreground="{DynamicResource M3OnSurfaceVariant}"
+                         Text="{Binding Loc.SavingButton}"
+                         VerticalAlignment="Center" />
             </StackPanel>
-          </Button>
-        </WrapPanel>
+          </Border>
+
+          <Border CornerRadius="14"
+                  Padding="10,5"
+                  Background="{DynamicResource M3SurfaceContainer}"
+                  IsVisible="{Binding IsSavedFeedback}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Width="13" Height="13"
+                        Foreground="{DynamicResource M3Success}"
+                        Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+              <TextBlock FontSize="12"
+                         Foreground="{DynamicResource M3Success}"
+                         Text="{Binding Loc.AutoSavedLabel}"
+                         VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
       </Grid>
 
       <!-- M3 segmented category bar -->
@@ -624,6 +611,40 @@
                                  Maximum="6"
                                  Increment="1"
                                  Value="{Binding MaxConcurrentTransfers}" />
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <Border Classes="m3-divider" />
+
+            <Border Classes="m3-grouped-row">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+                  <CheckBox IsChecked="{Binding LimitTransferBandwidth}"
+                            Content="{Binding Loc.LimitBandwidthCheckbox}" />
+                  <TextBlock Classes="m3-meta"
+                             Margin="28,0,0,0"
+                             Text="{Binding Loc.LimitBandwidthHint}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center"
+                            IsEnabled="{Binding LimitTransferBandwidth}">
+                  <TextBlock Classes="m3-meta"
+                             VerticalAlignment="Center"
+                             Text="{Binding Loc.MaxBandwidthKbpsLabel}" />
+                  <NumericUpDown Width="130"
+                                 Minimum="64"
+                                 Maximum="102400"
+                                 Increment="256"
+                                 Value="{Binding MaxTransferBandwidthKbps}" />
+                  <TextBlock Classes="m3-meta"
+                             FontSize="11.5"
+                             VerticalAlignment="Center"
+                             Text="{Binding BandwidthSummaryDisplay}" />
                 </StackPanel>
               </Grid>
             </Border>

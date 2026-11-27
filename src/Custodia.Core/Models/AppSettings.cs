@@ -30,6 +30,8 @@ public sealed class AppSettings
     public bool WatchLocalChanges { get; set; } = true;
     public bool LimitConcurrentTransfers { get; set; } = true;
     public int MaxConcurrentTransfers { get; set; } = 3;
+    public bool LimitTransferBandwidth { get; set; }
+    public int MaxTransferBandwidthKbps { get; set; } = 2048;
     public bool EmbeddedApiEnabled { get; set; } = true;
     public int EmbeddedApiPort { get; set; } = 5080;
     public bool AutoMemoryCleanupEnabled { get; set; } = true;
@@ -57,4 +59,9 @@ public sealed class AppSettings
         LimitConcurrentTransfers
             ? Math.Clamp(MaxConcurrentTransfers, MinConcurrentTransfers, MaxConcurrentTransfersCap)
             : null;
+
+    public long GetEffectiveBandwidthLimitBytesPerSecond() =>
+        LimitTransferBandwidth
+            ? Math.Clamp(MaxTransferBandwidthKbps, 64, 102400) * 1024L
+            : 0L;
 }

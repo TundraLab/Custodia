@@ -9,6 +9,8 @@ using Microsoft.Extensions.DependencyInjection;
 using TundraDrive.Api;
 using TundraDrive.Core.Configuration;
 using TundraDrive.Core.Sync;
+using TundraDrive.Core.Updates;
+using TundraDrive.Desktop.Localization;
 using TundraDrive.Desktop.Services;
 using TundraDrive.Desktop.ViewModels;
 using TundraDrive.Desktop.Views;
@@ -37,6 +39,29 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && Services is not null)
         {
+            var isInstallerMode = desktop.Args?.Any(a =>
+                string.Equals(a, "--installer", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(a, "--install", StringComparison.OrdinalIgnoreCase)) == true;
+
+            if (isInstallerMode)
+            {
+                var loc = Services.GetRequiredService<ILocalizationService>();
+                var updater = Services.GetRequiredService<IAppUpdateService>();
+                var appSettings = Services.GetRequiredService<IAppSettingsService>();
+                loc.SetLanguage(appSettings.Current.Language);
+                ThemeAccentService.ApplyTheme(appSettings.Current.UiTheme, appSettings.Current.UiAccent);
+
+                var installerVm = new InstallerViewModel(updater, loc);
+                var installerWindow = new InstallerWindow { DataContext = installerVm };
+                installerVm.OpenExternalUriCallback = uri =>
+                    installerWindow.Launcher.LaunchUriAsync(uri);
+                installerVm.RequestCloseCallback = () => Avalonia.Threading.Dispatcher.UIThread.Post(() => installerWindow.Close());
+                installerWindow.Closed += (_, _) => installerVm.Dispose();
+                desktop.MainWindow = installerWindow;
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
+
             LinuxDesktopIntegrationHelper.InstallDesktopAssets();
 
             var mainVm = Services.GetRequiredService<MainWindowViewModel>();
@@ -124,6 +149,28 @@ public partial class App : Application
                     .ToList();
             };
 
+            mainVm.FileHubVm.PickSaveFileCallback = async suggestedName =>
+            {
+                var file = await mainWindow.StorageProvider.SaveFilePickerAsync(
+                    new Avalonia.Platform.Storage.FilePickerSaveOptions
+                    {
+                        Title = mainVm.Loc.Text("SaveAsDialogTitle"),
+                        SuggestedFileName = suggestedName
+                    });
+                return file?.TryGetLocalPath() ?? file?.Path.LocalPath;
+            };
+
+            mainVm.FileHubVm.PickDownloadFolderCallback = async () =>
+            {
+                var folders = await mainWindow.StorageProvider.OpenFolderPickerAsync(
+                    new Avalonia.Platform.Storage.FolderPickerOpenOptions
+                    {
+                        Title = mainVm.Loc.Text("ChooseDownloadFolderTitle"),
+                        AllowMultiple = false
+                    });
+                return folders.FirstOrDefault()?.TryGetLocalPath() ?? folders.FirstOrDefault()?.Path.LocalPath;
+            };
+
             static bool TryLaunchWithXdgOpen(string target)
             {
                 if (!OperatingSystem.IsLinux() || string.IsNullOrWhiteSpace(target))
@@ -200,6 +247,17 @@ public partial class App : Application
             mainVm.SettingsVm.OpenExternalUriCallback = OpenExternalUriAsync;
             mainVm.AboutVm.OpenExternalUriCallback = OpenExternalUriAsync;
             mainVm.AboutVm.RequestAppShutdownCallback = RequestCleanShutdown;
+            mainVm.AboutVm.OpenInstallerWindowCallback = checkResult =>
+            {
+                var updater = Services.GetRequiredService<IAppUpdateService>();
+                var installerVm = new InstallerViewModel(updater, mainVm.Loc, checkResult);
+                var installerWindow = new InstallerWindow { DataContext = installerVm };
+                installerVm.OpenExternalUriCallback = OpenExternalUriAsync;
+                installerVm.RequestCloseCallback = () => Avalonia.Threading.Dispatcher.UIThread.Post(() => installerWindow.Close());
+                installerVm.RequestShutdownForUpdateCallback = RequestCleanShutdown;
+                installerWindow.Closed += (_, _) => installerVm.Dispose();
+                return installerWindow.ShowDialog(mainWindow);
+            };
 
             async Task CopyTextAsync(string text)
             {

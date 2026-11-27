@@ -36,12 +36,38 @@ public sealed class FileHubBreadcrumbItem
     }
 }
 
+public sealed class SharePermissionItemViewModel
+{
+    public string PermissionId { get; }
+    public string DisplayTitle { get; }
+    public string RoleDisplay { get; }
+    public string RevokeLabel { get; }
+    public bool CanRevoke { get; }
+    public IRelayCommand RevokeCommand { get; }
+
+    public SharePermissionItemViewModel(
+        string permissionId,
+        string displayTitle,
+        string roleDisplay,
+        string revokeLabel,
+        bool canRevoke,
+        Func<string, Task> onRevoke)
+    {
+        PermissionId = permissionId;
+        DisplayTitle = displayTitle;
+        RoleDisplay = roleDisplay;
+        RevokeLabel = revokeLabel;
+        CanRevoke = canRevoke;
+        RevokeCommand = new AsyncRelayCommand(() => onRevoke(PermissionId));
+    }
+}
+
 public sealed partial class FileHubItemViewModel : ObservableObject, IDisposable
 {
     internal static IBrush DefaultMutedBrush => ThemeAccentService.ResolveThemeBrush("#C4C6D0", "#44474F");
     private static IBrush StarGoldBrush => ThemeAccentService.ResolveThemeBrush("#F5C26B", "#9A5B00");
-    private const string StarFilledIconSvg = "M 12,2.4 L 14.9,8.3 L 21.4,9.2 L 16.7,13.8 L 17.8,20.3 L 12,17.2 L 6.2,20.3 L 7.3,13.8 L 2.6,9.2 L 9.1,8.3 Z";
-    private const string StarOutlineIconSvg = "M 22,9.24 L 14.81,8.62 L 12,2 L 9.19,8.63 L 2,9.24 L 7.46,13.97 L 5.82,21 L 12,17.27 L 18.18,21 L 16.55,13.97 Z M 12,15.4 L 8.24,17.67 L 9.24,13.39 L 5.92,10.51 L 10.3,10.13 L 12,6.1 L 13.71,10.14 L 18.09,10.52 L 14.77,13.4 L 15.77,17.68 Z";
+    private const string StarFilledIconSvg = "M 12.0,2.16 L 15.0,8.39 L 21.79,9.28 L 16.79,14.06 L 18.01,20.85 L 12.0,17.51 L 5.99,20.85 L 7.21,14.06 L 2.21,9.28 L 9.0,8.39 Z";
+    private const string StarOutlineIconSvg = "M 12.0,1.36 L 15.23,8.06 L 22.56,9.02 L 17.16,14.18 L 18.49,21.52 L 12.0,17.92 L 5.51,21.52 L 6.84,14.18 L 1.44,9.02 L 8.77,8.06 Z M 10.43,10.37 L 6.94,10.82 L 9.54,13.3 L 8.91,16.77 L 12.0,15.06 L 15.09,16.77 L 14.46,13.3 L 17.06,10.82 L 13.57,10.37 L 12.0,7.11 Z";
 
     private bool _isDisposed;
 
@@ -59,6 +85,7 @@ public sealed partial class FileHubItemViewModel : ObservableObject, IDisposable
     public bool IsInTrash { get; init; }
     public string? LocalFullPath { get; init; }
     public string RemoteFileId { get; init; } = string.Empty;
+    public string? ThumbnailLink { get; init; }
     public string? SyncFolderId { get; init; }
     public string? AppearanceKey { get; init; }
     public string OriginalFolderName { get; init; } = string.Empty;
@@ -158,7 +185,9 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private readonly IDriveSyncService _syncService;
     private readonly FilePreviewService _previewService;
     private readonly IAppSettingsService? _settingsService;
+    private EventHandler? _themeChangedHandler;
     private CancellationTokenSource? _previewCts;
+    private Task? _inFlightPreviewTask;
     private CancellationTokenSource? _thumbnailCts;
     private CancellationTokenSource? _refreshCts;
     private FileHubItemViewModel? _previewedItem;
@@ -166,16 +195,20 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private DriveAccount _lastAccount = new();
     private const int ItemsPerPage = 48;
     private const string LocalRootCrumbId = "__local_root__";
+    private const string SharedRootCrumbId = "__shared_root__";
     private const string LocalFolderCrumbPrefix = "local:";
     private const string DriveFavoritePrefix = "drive:";
     private const string LocalFavoritePrefix = "local:";
     private readonly List<FileHubBreadcrumbItem> _driveBreadcrumbs = [];
     private readonly List<FileHubBreadcrumbItem> _localBreadcrumbs = [];
+    private readonly List<FileHubBreadcrumbItem> _sharedBreadcrumbs = [];
     private readonly HashSet<string> _knownStarredRemoteIds = new(StringComparer.Ordinal);
     private readonly Lock _refreshApplyLock = new();
     private bool _hasLoadedRemoteStarredIds;
     private string _driveFolderId = "root";
     private string _driveFolderName = string.Empty;
+    private string _sharedFolderId = SharedRootCrumbId;
+    private string _sharedFolderName = string.Empty;
     private string? _localSyncFolderId;
     private string _localSubPath = string.Empty;
     private IReadOnlyList<Func<FileHubItemViewModel>> _allPageFactories = [];
@@ -263,6 +296,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private double _trashBarWidth;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowFloatingSelectionBar))]
     private bool _isPreviewVisible;
 
     [ObservableProperty]
@@ -329,6 +363,45 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     private bool _isCustomizeFolderOpen;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasShareLink))]
+    private bool _isShareOpen;
+
+    [ObservableProperty]
+    private bool _isShareBusy;
+
+    [ObservableProperty]
+    private string _shareTargetTitle = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasShareLink))]
+    private string _shareLinkUrl = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasShareLink))]
+    private string _shareAnyoneRole = "none";
+
+    [ObservableProperty]
+    private string _shareInviteEmail = string.Empty;
+
+    [ObservableProperty]
+    private int _selectedShareInviteRoleIndex;
+
+    [ObservableProperty]
+    private string _shareFeedbackMessage = string.Empty;
+
+    private string? _shareTargetRemoteId;
+    private string? _shareTargetName;
+    public ObservableCollection<SharePermissionItemViewModel> SharePermissions { get; } = [];
+    public ObservableCollection<string> ShareRoleOptions { get; } = [];
+    public bool HasShareLink => !string.IsNullOrWhiteSpace(ShareLinkUrl) && ShareAnyoneRole is "reader" or "writer";
+    public string ShareAnyoneStatusText => ShareAnyoneRole switch
+    {
+        "writer" => Loc.Format("ShareLinkActiveHint", Loc.Text("ShareRoleWriter")),
+        "reader" => Loc.Format("ShareLinkActiveHint", Loc.Text("ShareRoleReader")),
+        _ => Loc.Text("ShareLinkInactiveHint")
+    };
+
+    [ObservableProperty]
     private string _customizeTargetTitle = string.Empty;
 
     [ObservableProperty]
@@ -354,6 +427,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedFile))]
     [NotifyPropertyChangedFor(nameof(HasSelectedItem))]
+    [NotifyPropertyChangedFor(nameof(ShowFloatingSelectionBar))]
     [NotifyPropertyChangedFor(nameof(HasMultipleSelected))]
     [NotifyPropertyChangedFor(nameof(CanPreviewSelected))]
     [NotifyPropertyChangedFor(nameof(CanCustomizeSelectedFolder))]
@@ -361,6 +435,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(CanMoveSelected))]
     [NotifyPropertyChangedFor(nameof(CanDownloadSelected))]
     [NotifyPropertyChangedFor(nameof(CanOpenSelectedInDrive))]
+    [NotifyPropertyChangedFor(nameof(CanShareSelected))]
     [NotifyPropertyChangedFor(nameof(CanToggleFavoriteSelected))]
     [NotifyPropertyChangedFor(nameof(FavoriteSelectedLabel))]
     [NotifyPropertyChangedFor(nameof(CanTrashSelected))]
@@ -375,14 +450,20 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     public bool IsLocalFilter => SelectedSourceFilterIndex == 1;
     public bool IsTrashView => SelectedSourceFilterIndex == 2;
     public bool IsFavoritesView => SelectedSourceFilterIndex == 3;
+    public bool IsSharedWithMeView => SelectedSourceFilterIndex == 4;
     public string TrashTabDisplay => string.IsNullOrWhiteSpace(TrashQuotaBadge)
         ? Loc.TrashTabButton
         : $"{Loc.TrashTabButton} ({TrashQuotaBadge})";
-    public string RootBreadcrumbLabel => IsLocalFilter ? Loc.Text("FileHubFilterLocal") : Loc.Text("MyDriveLabel");
-    public bool CanNavigateBack => (SelectedSourceFilterIndex == 0 || SelectedSourceFilterIndex == 1) && Breadcrumbs.Count > 1;
+    public string RootBreadcrumbLabel => IsLocalFilter
+        ? Loc.Text("FileHubFilterLocal")
+        : IsSharedWithMeView
+            ? Loc.Text("SharedWithMeRootLabel")
+            : Loc.Text("MyDriveLabel");
+    public bool CanNavigateBack => (SelectedSourceFilterIndex is 0 or 1 or 4) && Breadcrumbs.Count > 1;
     public bool HasSelectedFile => GetEffectiveSelectedItems().Any(i => !i.IsFolder);
     public bool HasSelectedItem => SelectedCount > 0 || SelectedItem is not null;
     public bool ShowSelectionBar => !IsTrashView && HasSelectedItem;
+    public bool ShowFloatingSelectionBar => !IsTrashView && HasSelectedItem && (HasMultipleSelected || !IsPreviewVisible);
     public bool ShowTrashSelectionActions => IsTrashView && HasSelectedItem;
     public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
     public bool HasMultipleSelected => SelectedCount > 1;
@@ -394,6 +475,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                                      !string.IsNullOrWhiteSpace(i.RemoteFileId) || i.HasLocalFile);
     public bool CanDownloadSelected => GetEffectiveSelectedItems().Any(i => i.CanDownload);
     public bool CanOpenSelectedInDrive => GetSingleEffectiveSelectedItem() is { } single && !string.IsNullOrWhiteSpace(single.RemoteFileId);
+    public bool CanShareSelected => !IsTrashView && SelectedCount <= 1 && GetSingleEffectiveSelectedItem() is { } single &&
+                                    !string.IsNullOrWhiteSpace(single.RemoteFileId);
     public bool CanToggleFavoriteSelected => !IsTrashView && GetEffectiveSelectedItems().Any(i => i.CanToggleFavorite);
     public string FavoriteSelectedLabel
     {
@@ -414,7 +497,11 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         ? Loc.Text("TrashEmptyHint")
         : IsFavoritesView
             ? Loc.Text("FavoritesEmptyHint")
-            : Loc.Text("FileHubEmptyFolder");
+            : IsSharedWithMeView
+                ? Loc.Text("SharedEmptyHint")
+                : !IsAccountConnected && IsDriveFilter
+                    ? Loc.Text("ConnectHintSubtitle")
+                    : Loc.Text("FileHubEmptyFolder");
     public bool IsImageOrPdfPreview => CurrentPreviewKind is PreviewKind.Image or PreviewKind.Pdf;
     public bool IsVideoPreview => CurrentPreviewKind == PreviewKind.Video;
     public bool IsAudioPreview => CurrentPreviewKind == PreviewKind.Audio;
@@ -432,6 +519,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
     public ObservableCollection<string> SourceFilterOptions { get; } = [];
 
     public Func<Task<IReadOnlyList<string>>>? PickLocalFileForUploadCallback { get; set; }
+    public Func<string, Task<string?>>? PickSaveFileCallback { get; set; }
+    public Func<Task<string?>>? PickDownloadFolderCallback { get; set; }
     public Func<string, Task>? OpenLocalFileCallback { get; set; }
     public Func<Uri, Task>? OpenExternalUriCallback { get; set; }
     public Func<string, Task>? CopyTextCallback { get; set; }
@@ -470,6 +559,9 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         _driveFolderName = Loc.Text("MyDriveLabel");
         _driveBreadcrumbs.Add(new FileHubBreadcrumbItem("root", _driveFolderName, NavigateToBreadcrumbAsync));
         _localBreadcrumbs.Add(new FileHubBreadcrumbItem(LocalRootCrumbId, Loc.Text("FileHubFilterLocal"), NavigateToBreadcrumbAsync));
+        _sharedFolderId = SharedRootCrumbId;
+        _sharedFolderName = Loc.Text("SharedWithMeRootLabel");
+        _sharedBreadcrumbs.Add(new FileHubBreadcrumbItem(SharedRootCrumbId, _sharedFolderName, NavigateToBreadcrumbAsync));
         Files.CollectionChanged += (_, _) =>
         {
             if (!_isBatchUpdatingFiles)
@@ -479,6 +571,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         };
         SyncBreadcrumbsFromActiveMode();
         RebuildFilterOptions();
+        RebuildShareRoleOptions();
         ApplyAccount(_syncService.CurrentAccount);
 
         Loc.LanguageChanged += (_, _) =>
@@ -497,6 +590,18 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                 _localBreadcrumbs[0] = new FileHubBreadcrumbItem(LocalRootCrumbId, Loc.Text("FileHubFilterLocal"), NavigateToBreadcrumbAsync);
             }
 
+            if (_sharedBreadcrumbs.Count > 0 && _sharedBreadcrumbs[0].FolderId == SharedRootCrumbId)
+            {
+                _sharedBreadcrumbs[0] = new FileHubBreadcrumbItem(SharedRootCrumbId, Loc.Text("SharedWithMeRootLabel"), NavigateToBreadcrumbAsync);
+                if (_sharedFolderId == SharedRootCrumbId)
+                {
+                    _sharedFolderName = Loc.Text("SharedWithMeRootLabel");
+                }
+            }
+
+            RebuildShareRoleOptions();
+            OnPropertyChanged(nameof(ShareAnyoneStatusText));
+
             SyncBreadcrumbsFromActiveMode();
             RebuildFilterOptions();
             ApplyAccount(_lastAccount);
@@ -507,13 +612,33 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             _ = RefreshAsync();
         };
 
-        ThemeAccentService.ThemeChanged += (_, _) =>
+        _themeChangedHandler = (_, _) =>
         {
             Dispatcher.UIThread.Post(() =>
             {
                 if (_allPageFactories.Count > 0)
                 {
+                    var hadPreview = IsPreviewVisible;
+                    var selectedIds = SelectedItems
+                        .Select(x => x.RemoteFileId)
+                        .Where(id => !string.IsNullOrWhiteSpace(id))
+                        .ToHashSet(StringComparer.Ordinal);
                     ApplyPage(CurrentPage);
+                    if (selectedIds.Count > 0)
+                    {
+                        var restored = Files
+                            .Where(f => !string.IsNullOrWhiteSpace(f.RemoteFileId) && selectedIds.Contains(f.RemoteFileId))
+                            .ToList();
+                        if (restored.Count > 0)
+                        {
+                            UpdateSelectedItems(restored);
+                        }
+                    }
+
+                    if (!hadPreview && IsPreviewVisible)
+                    {
+                        IsPreviewVisible = false;
+                    }
                 }
 
                 if (IsCustomizeFolderOpen)
@@ -522,9 +647,10 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                 }
             });
         };
+        ThemeAccentService.ThemeChanged += _themeChangedHandler;
     }
 
-    public bool ShowBreadcrumbs => (SelectedSourceFilterIndex == 0 || SelectedSourceFilterIndex == 1) && string.IsNullOrWhiteSpace(SearchText);
+    public bool ShowBreadcrumbs => SelectedSourceFilterIndex is 0 or 1 or 4 && string.IsNullOrWhiteSpace(SearchText);
 
     public void ApplyAccount(DriveAccount account)
     {
@@ -668,6 +794,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasSelectedFile));
         OnPropertyChanged(nameof(HasSelectedItem));
         OnPropertyChanged(nameof(ShowSelectionBar));
+        OnPropertyChanged(nameof(ShowFloatingSelectionBar));
         OnPropertyChanged(nameof(ShowTrashSelectionActions));
         OnPropertyChanged(nameof(HasMultipleSelected));
         OnPropertyChanged(nameof(CanPreviewSelected));
@@ -676,6 +803,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(CanMoveSelected));
         OnPropertyChanged(nameof(CanDownloadSelected));
         OnPropertyChanged(nameof(CanOpenSelectedInDrive));
+        OnPropertyChanged(nameof(CanShareSelected));
         OnPropertyChanged(nameof(CanToggleFavoriteSelected));
         OnPropertyChanged(nameof(FavoriteSelectedLabel));
         OnPropertyChanged(nameof(CanTrashSelected));
@@ -697,10 +825,13 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsLocalFilter));
         OnPropertyChanged(nameof(IsTrashView));
         OnPropertyChanged(nameof(IsFavoritesView));
+        OnPropertyChanged(nameof(IsSharedWithMeView));
         OnPropertyChanged(nameof(ShowSelectionBar));
+        OnPropertyChanged(nameof(ShowFloatingSelectionBar));
         OnPropertyChanged(nameof(ShowTrashSelectionActions));
         OnPropertyChanged(nameof(TrashTabDisplay));
         OnPropertyChanged(nameof(CanEmptyTrash));
+        OnPropertyChanged(nameof(CanShareSelected));
         OnPropertyChanged(nameof(CanToggleFavoriteSelected));
         OnPropertyChanged(nameof(FavoriteSelectedLabel));
         OnPropertyChanged(nameof(CanTrashSelected));
@@ -830,6 +961,148 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                     await _syncService.DownloadRemoteFileAsync(
                         item.RemoteFileId,
                         item.Name,
+                        item.SizeBytes,
+                        item.IsGoogleWorkspaceDoc,
+                        item.MimeType);
+                    Interlocked.Increment(ref downloadedCount);
+                }
+                catch (Exception ex)
+                {
+                    var err = Loc.Format("DownloadErrorBannerFmt", item.Name, ex.Message);
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        TransferErrorBannerText = err;
+                        StatusSummary = err;
+                    });
+                }
+                finally
+                {
+                    gate?.Release();
+                }
+            });
+
+            await Task.WhenAll(tasks);
+
+            if (downloadedCount > 0)
+            {
+                StatusSummary = Loc.Format("FilesDownloadedBatchFmt", downloadedCount);
+            }
+        }
+        catch (Exception ex)
+        {
+            var err = Loc.Format("FileHubErrorFmt", ex.Message);
+            TransferErrorBannerText = err;
+            StatusSummary = err;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task DownloadSelectedAsAsync()
+    {
+        var targets = GetEffectiveSelectedItems()
+            .Where(i => i.CanDownload && !string.IsNullOrWhiteSpace(i.RemoteFileId))
+            .ToList();
+        if (targets.Count == 0)
+        {
+            return;
+        }
+
+        if (!_driveClient.IsConnected)
+        {
+            StatusSummary = Loc.Text("ConnectBeforeSync");
+            return;
+        }
+
+        if (!_syncService.IsOnline)
+        {
+            StatusSummary = Loc.Text("OfflineModeNotice");
+            return;
+        }
+
+        var singleFile = targets.Count == 1 && !targets[0].IsFolder ? targets[0] : null;
+        string? explicitFilePath = null;
+        string? explicitFolderPath = null;
+
+        if (singleFile is not null)
+        {
+            if (PickSaveFileCallback is null)
+            {
+                return;
+            }
+
+            explicitFilePath = await PickSaveFileCallback.Invoke(singleFile.Name);
+            if (string.IsNullOrWhiteSpace(explicitFilePath))
+            {
+                return;
+            }
+        }
+        else
+        {
+            if (PickDownloadFolderCallback is null)
+            {
+                return;
+            }
+
+            explicitFolderPath = await PickDownloadFolderCallback.Invoke();
+            if (string.IsNullOrWhiteSpace(explicitFolderPath))
+            {
+                return;
+            }
+        }
+
+        TransferErrorBannerText = string.Empty;
+        IsLoading = true;
+        try
+        {
+            if (singleFile is not null && !string.IsNullOrWhiteSpace(explicitFilePath))
+            {
+                StatusSummary = Loc.Format("DownloadingFileFmt", singleFile.Name);
+                var savedPath = await _syncService.DownloadRemoteFileToAsync(
+                    singleFile.RemoteFileId,
+                    singleFile.Name,
+                    explicitFilePath,
+                    treatAsFullFilePath: true,
+                    singleFile.SizeBytes,
+                    singleFile.IsGoogleWorkspaceDoc,
+                    singleFile.MimeType);
+                StatusSummary = Loc.Format("SaveAsSuccessFmt", savedPath);
+                return;
+            }
+
+            var filesToDownload = await ExpandRemoteDownloadTargetsAsync(targets);
+            if (filesToDownload.Count == 0 || string.IsNullOrWhiteSpace(explicitFolderPath))
+            {
+                return;
+            }
+
+            var total = filesToDownload.Count;
+            var completed = 0;
+            var downloadedCount = 0;
+            var concurrencyLimit = GetEffectiveTransferConcurrencyLimit();
+            using var gate = concurrencyLimit is int limit ? new SemaphoreSlim(limit, limit) : null;
+
+            var tasks = filesToDownload.Select(async item =>
+            {
+                if (gate is not null)
+                {
+                    await gate.WaitAsync();
+                }
+
+                try
+                {
+                    var current = Interlocked.Increment(ref completed);
+                    Dispatcher.UIThread.Post(() =>
+                        StatusSummary = $"({current}/{total}) {Loc.Format("DownloadingFileFmt", item.Name)}");
+
+                    await _syncService.DownloadRemoteFileToAsync(
+                        item.RemoteFileId,
+                        item.Name,
+                        explicitFolderPath,
+                        treatAsFullFilePath: false,
                         item.SizeBytes,
                         item.IsGoogleWorkspaceDoc,
                         item.MimeType);
@@ -1089,6 +1362,243 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
 
     [RelayCommand]
     private void SelectFavoritesFilter() => SelectedSourceFilterIndex = 3;
+
+    [RelayCommand]
+    private void SelectSharedWithMeFilter() => SelectedSourceFilterIndex = 4;
+
+    private void RebuildShareRoleOptions()
+    {
+        var previous = SelectedShareInviteRoleIndex;
+        ShareRoleOptions.Clear();
+        ShareRoleOptions.Add(Loc.Text("ShareRoleReader"));
+        ShareRoleOptions.Add(Loc.Text("ShareRoleWriter"));
+        SelectedShareInviteRoleIndex = Math.Clamp(previous, 0, Math.Max(0, ShareRoleOptions.Count - 1));
+    }
+
+    [RelayCommand]
+    private async Task OpenShareAsync()
+    {
+        var target = GetSingleEffectiveSelectedItem();
+        if (target is null || string.IsNullOrWhiteSpace(target.RemoteFileId) || IsTrashView)
+        {
+            return;
+        }
+
+        if (!_driveClient.IsConnected)
+        {
+            StatusSummary = Loc.Text("ConnectBeforeSync");
+            return;
+        }
+
+        if (!_syncService.IsOnline)
+        {
+            StatusSummary = Loc.Text("OfflineModeNotice");
+            return;
+        }
+
+        IsCreateFolderOpen = false;
+        IsRenameOpen = false;
+        IsMoveOpen = false;
+        IsCustomizeFolderOpen = false;
+        _shareTargetRemoteId = target.RemoteFileId;
+        _shareTargetName = target.Name;
+        ShareTargetTitle = target.Name;
+        ShareInviteEmail = string.Empty;
+        ShareFeedbackMessage = string.Empty;
+        ShareLinkUrl = string.Empty;
+        ShareAnyoneRole = "none";
+        SharePermissions.Clear();
+        IsShareOpen = true;
+        OnPropertyChanged(nameof(ShareAnyoneStatusText));
+
+        await ReloadShareStateAsync();
+    }
+
+    [RelayCommand]
+    private void CloseShare() => IsShareOpen = false;
+
+    [RelayCommand]
+    private async Task EnableShareLinkReadAsync() => await SetAnyoneShareRoleAsync(canEdit: false);
+
+    [RelayCommand]
+    private async Task EnableShareLinkEditAsync() => await SetAnyoneShareRoleAsync(canEdit: true);
+
+    [RelayCommand]
+    private async Task RevokeShareLinkAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_shareTargetRemoteId))
+        {
+            return;
+        }
+
+        IsShareBusy = true;
+        ShareFeedbackMessage = string.Empty;
+        try
+        {
+            await _syncService.DisableAnyoneLinkAsync(_shareTargetRemoteId, _shareTargetName ?? string.Empty);
+            await ReloadShareStateAsync();
+        }
+        catch (Exception ex)
+        {
+            ShareFeedbackMessage = Loc.Format("FileHubErrorFmt", ex.Message);
+        }
+        finally
+        {
+            IsShareBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CopyShareLinkAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ShareLinkUrl))
+        {
+            return;
+        }
+
+        await CopyToClipboardAsync(ShareLinkUrl);
+        ShareFeedbackMessage = Loc.Text("ShareLinkCopiedMessage");
+    }
+
+    [RelayCommand]
+    private async Task InviteShareEmailAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_shareTargetRemoteId))
+        {
+            return;
+        }
+
+        var email = ShareInviteEmail.Trim();
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@') || !email.Contains('.'))
+        {
+            ShareFeedbackMessage = Loc.Text("ShareInvalidEmailError");
+            return;
+        }
+
+        IsShareBusy = true;
+        ShareFeedbackMessage = string.Empty;
+        try
+        {
+            var canEdit = SelectedShareInviteRoleIndex == 1;
+            await _syncService.ShareWithEmailAsync(_shareTargetRemoteId, _shareTargetName ?? string.Empty, email, canEdit);
+            ShareInviteEmail = string.Empty;
+            await ReloadShareStateAsync();
+        }
+        catch (Exception ex)
+        {
+            ShareFeedbackMessage = Loc.Format("FileHubErrorFmt", ex.Message);
+        }
+        finally
+        {
+            IsShareBusy = false;
+        }
+    }
+
+    private async Task SetAnyoneShareRoleAsync(bool canEdit)
+    {
+        if (string.IsNullOrWhiteSpace(_shareTargetRemoteId))
+        {
+            return;
+        }
+
+        IsShareBusy = true;
+        ShareFeedbackMessage = string.Empty;
+        try
+        {
+            var link = await _syncService.EnableAnyoneLinkAsync(_shareTargetRemoteId, _shareTargetName ?? string.Empty, canEdit);
+            ShareLinkUrl = link;
+            await CopyToClipboardAsync(link);
+            await ReloadShareStateAsync();
+            ShareFeedbackMessage = Loc.Text("ShareLinkCopiedMessage");
+        }
+        catch (Exception ex)
+        {
+            ShareFeedbackMessage = Loc.Format("FileHubErrorFmt", ex.Message);
+        }
+        finally
+        {
+            IsShareBusy = false;
+        }
+    }
+
+    private async Task RevokePermissionByIdAsync(string permissionId)
+    {
+        if (string.IsNullOrWhiteSpace(_shareTargetRemoteId) || string.IsNullOrWhiteSpace(permissionId))
+        {
+            return;
+        }
+
+        IsShareBusy = true;
+        ShareFeedbackMessage = string.Empty;
+        try
+        {
+            await _syncService.RevokeRemotePermissionAsync(_shareTargetRemoteId, _shareTargetName ?? string.Empty, permissionId);
+            await ReloadShareStateAsync();
+        }
+        catch (Exception ex)
+        {
+            ShareFeedbackMessage = Loc.Format("FileHubErrorFmt", ex.Message);
+        }
+        finally
+        {
+            IsShareBusy = false;
+        }
+    }
+
+    private async Task ReloadShareStateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_shareTargetRemoteId))
+        {
+            return;
+        }
+
+        IsShareBusy = true;
+        try
+        {
+            var link = await _driveClient.GetShareLinkAsync(_shareTargetRemoteId);
+            var perms = await _syncService.GetRemotePermissionsAsync(_shareTargetRemoteId);
+
+            ShareLinkUrl = link ?? $"https://drive.google.com/file/d/{Uri.EscapeDataString(_shareTargetRemoteId)}/view";
+            var anyone = perms.FirstOrDefault(p => string.Equals(p.Type, "anyone", StringComparison.OrdinalIgnoreCase));
+            ShareAnyoneRole = anyone is not null
+                ? (string.Equals(anyone.Role, "writer", StringComparison.OrdinalIgnoreCase) ? "writer" : "reader")
+                : "none";
+            OnPropertyChanged(nameof(ShareAnyoneStatusText));
+
+            SharePermissions.Clear();
+            foreach (var perm in perms)
+            {
+                var isOwner = string.Equals(perm.Role, "owner", StringComparison.OrdinalIgnoreCase);
+                var title = string.Equals(perm.Type, "anyone", StringComparison.OrdinalIgnoreCase)
+                    ? Loc.Text("ShareAnyoneSectionTitle")
+                    : !string.IsNullOrWhiteSpace(perm.EmailAddress)
+                        ? (string.IsNullOrWhiteSpace(perm.DisplayName) ? perm.EmailAddress : $"{perm.DisplayName} ({perm.EmailAddress})")
+                        : (perm.DisplayName ?? perm.Type);
+                var roleDisplay = perm.Role switch
+                {
+                    "owner" => Loc.Text("ShareRoleOwner"),
+                    "writer" => Loc.Text("ShareRoleWriter"),
+                    _ => Loc.Text("ShareRoleReader")
+                };
+
+                SharePermissions.Add(new SharePermissionItemViewModel(
+                    perm.Id,
+                    title,
+                    roleDisplay,
+                    Loc.Text("ShareRevokePermissionButton"),
+                    !isOwner,
+                    RevokePermissionByIdAsync));
+            }
+        }
+        catch (Exception ex)
+        {
+            ShareFeedbackMessage = Loc.Format("FileHubErrorFmt", ex.Message);
+        }
+        finally
+        {
+            IsShareBusy = false;
+        }
+    }
 
     [RelayCommand]
     private void ToggleTrashView()
@@ -1445,6 +1955,12 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             }
         }
 
+        if (_themeChangedHandler is not null)
+        {
+            ThemeAccentService.ThemeChanged -= _themeChangedHandler;
+            _themeChangedHandler = null;
+        }
+
         _previewCts?.Cancel();
         _previewCts?.Dispose();
         _previewCts = null;
@@ -1546,6 +2062,18 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             _localBreadcrumbs.RemoveAt(_localBreadcrumbs.Count - 1);
             ApplyLocalBreadcrumbState(_localBreadcrumbs[^1]);
         }
+        else if (SelectedSourceFilterIndex == 4)
+        {
+            if (_sharedBreadcrumbs.Count <= 1)
+            {
+                return;
+            }
+
+            _sharedBreadcrumbs.RemoveAt(_sharedBreadcrumbs.Count - 1);
+            var previous = _sharedBreadcrumbs[^1];
+            _sharedFolderId = previous.FolderId;
+            _sharedFolderName = previous.Name;
+        }
         else
         {
             if (_driveBreadcrumbs.Count <= 1)
@@ -1579,6 +2107,22 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             }
 
             ApplyLocalBreadcrumbState(item);
+        }
+        else if (SelectedSourceFilterIndex == 4)
+        {
+            var index = _sharedBreadcrumbs.IndexOf(item);
+            if (index < 0)
+            {
+                return;
+            }
+
+            while (_sharedBreadcrumbs.Count - 1 > index)
+            {
+                _sharedBreadcrumbs.RemoveAt(_sharedBreadcrumbs.Count - 1);
+            }
+
+            _sharedFolderId = item.FolderId;
+            _sharedFolderName = item.Name;
         }
         else
         {
@@ -1643,7 +2187,11 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
 
     private void SyncBreadcrumbsFromActiveMode()
     {
-        var active = SelectedSourceFilterIndex == 1 ? _localBreadcrumbs : _driveBreadcrumbs;
+        var active = SelectedSourceFilterIndex == 1
+            ? _localBreadcrumbs
+            : SelectedSourceFilterIndex == 4
+                ? _sharedBreadcrumbs
+                : _driveBreadcrumbs;
         Breadcrumbs.Clear();
         for (var i = 0; i < active.Count; i++)
         {
@@ -1656,6 +2204,11 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         {
             CurrentFolderId = _localSyncFolderId ?? LocalRootCrumbId;
             CurrentFolderName = _localBreadcrumbs.LastOrDefault()?.Name ?? Loc.Text("FileHubFilterLocal");
+        }
+        else if (SelectedSourceFilterIndex == 4)
+        {
+            CurrentFolderId = _sharedFolderId;
+            CurrentFolderName = _sharedFolderName;
         }
         else
         {
@@ -1750,14 +2303,17 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         StatusSummary = Loc.Text("ConnectBeforeSync");
     }
 
+    internal int MinimumRefreshVisualMs { get; set; } = 450;
+
     [RelayCommand]
     public async Task RefreshAsync()
     {
-        await RefreshInternalAsync();
+        await RefreshInternalAsync(MinimumRefreshVisualMs);
     }
 
-    private async Task<bool> RefreshInternalAsync()
+    private async Task<bool> RefreshInternalAsync(int minVisualDurationMs = 0)
     {
+        var visualStartMs = minVisualDurationMs > 0 ? Environment.TickCount64 : 0L;
         var filter = SelectedSourceFilterIndex;
         var hasNetwork = _driveClient.IsConnected && _syncService.IsOnline;
         var hasSavedFavorites = (_settingsService?.Current.FavoriteKeys.Count ?? 0) > 0;
@@ -1817,6 +2373,51 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
 
                         var captured = node;
                         factories.Add(() => CreateTrashItem(captured, culture));
+                    }
+                }
+            }
+            else if (filter == 4)
+            {
+                var allTracked = activeFolderIds.Count > 0
+                    ? (await _repository.SearchTrackedFilesAsync(string.Empty, null, 2000, ct))
+                        .Where(t => activeFolderIds.Contains(t.SyncFolderId))
+                        .ToList()
+                    : [];
+                var trackedByRemoteId = allTracked
+                    .Where(t => !string.IsNullOrWhiteSpace(t.RemoteFileId))
+                    .GroupBy(t => t.RemoteFileId, StringComparer.Ordinal)
+                    .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+                var mappedByRemoteId = syncFolders.Values
+                    .Where(f => !string.IsNullOrWhiteSpace(f.RemoteFolderId))
+                    .GroupBy(f => f.RemoteFolderId, StringComparer.Ordinal)
+                    .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
+                IReadOnlyList<RemoteDriveNode> sharedNodes = string.Equals(_sharedFolderId, SharedRootCrumbId, StringComparison.Ordinal)
+                    ? await _driveClient.ListSharedWithMeAsync(200, ct)
+                    : await _driveClient.ListChildrenAsync(_sharedFolderId, foldersOnly: false, ct);
+
+                foreach (var node in sharedNodes)
+                {
+                    if (node.Trashed)
+                    {
+                        continue;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(query) &&
+                        !node.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var captured = node;
+                    if (node.IsFolder)
+                    {
+                        mappedByRemoteId.TryGetValue(captured.Id, out var mappedFolder);
+                        factories.Add(() => CreateRemoteFolderItem(captured, culture, mappedFolder));
+                    }
+                    else
+                    {
+                        factories.Add(() => CreateRemoteFileItem(captured, trackedByRemoteId, syncFolders, culture));
                     }
                 }
             }
@@ -2075,6 +2676,10 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                         : Loc.Format("FileHubCountFmt", factories.Count, CurrentFolderName))
                 : filter == 2
                     ? Loc.Format("FileHubCountFmt", factories.Count, Loc.Text("FileHubFilterTrash"))
+                : filter == 4
+                    ? (string.IsNullOrWhiteSpace(query)
+                        ? Loc.Format("FileHubCountFmt", factories.Count, CurrentFolderName)
+                        : Loc.Format("FileHubSearchCountFmt", factories.Count))
                 : filter == 3
                     ? (!hasNetwork
                         ? $"{Loc.Format("FileHubCountFmt", factories.Count, Loc.Text("FileHubFilterFavorites"))} • {Loc.Text("OfflineModeNotice")}"
@@ -2084,6 +2689,15 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                     : string.IsNullOrWhiteSpace(query) && filter == 0
                         ? Loc.Format("FileHubCountFmt", factories.Count, CurrentFolderName)
                         : Loc.Format("FileHubSearchCountFmt", factories.Count);
+            if (minVisualDurationMs > 0)
+            {
+                var elapsedMs = (int)(Environment.TickCount64 - visualStartMs);
+                var remainingMs = minVisualDurationMs - elapsedMs;
+                if (remainingMs > 0)
+                {
+                    await Task.Delay(remainingMs, ct);
+                }
+            }
             return true;
         }
         catch (OperationCanceledException)
@@ -2303,6 +2917,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             HasLocalFile = false,
             IsInTrash = true,
             RemoteFileId = nodeId,
+            ThumbnailLink = node.ThumbnailLink,
             ActionLabel = actionLabel,
             DownloadLabel = Loc.Text("DownloadButton"),
             PreviewLabel = Loc.Text("PreviewButton"),
@@ -2446,6 +3061,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             HasLocalFile = isSynced,
             LocalFullPath = resolvedLocalPath,
             RemoteFileId = nodeId,
+            ThumbnailLink = node.ThumbnailLink,
             FileIconData = iconData,
             FileIconBrush = iconBrush,
             ActionLabel = isSynced ? Loc.Text("FileHubOpenLocal") : Loc.Text("FileHubOpenDrive"),
@@ -3134,15 +3750,24 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         await UploadDroppedFilesAsync(localPaths);
     }
 
-    private async Task LoadPreviewAsync(FileHubItemViewModel item, int pdfPage)
+    private Task LoadPreviewAsync(FileHubItemViewModel item, int pdfPage)
     {
         if (IsPreviewLoading &&
             IsPreviewVisible &&
             ReferenceEquals(_previewedItem, item) &&
-            CurrentPdfPage == pdfPage)
+            CurrentPdfPage == pdfPage &&
+            _inFlightPreviewTask is { IsCompleted: false } existingTask)
         {
-            return;
+            return existingTask;
         }
+
+        var task = LoadPreviewCoreAsync(item, pdfPage);
+        _inFlightPreviewTask = task;
+        return task;
+    }
+
+    private async Task LoadPreviewCoreAsync(FileHubItemViewModel item, int pdfPage)
+    {
 
         _previewCts?.Cancel();
         _previewCts?.Dispose();
@@ -3165,6 +3790,18 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
 
         try
         {
+            var instantThumb = await _previewService.TryGetCachedThumbnailBitmapAsync(
+                item.RemoteFileId,
+                item.LocalFullPath,
+                item.Name,
+                ct);
+            if (instantThumb is not null && !ct.IsCancellationRequested)
+            {
+                CurrentPreviewKind = PreviewKind.Image;
+                ReplacePreviewBitmap(instantThumb);
+                PreviewMessage = string.Empty;
+            }
+
             var result = await _previewService.BuildPreviewAsync(
                 item.Name,
                 item.LocalFullPath,
@@ -3223,14 +3860,13 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
 
         var candidates = Files
             .Where(f => !f.IsFolder && !f.IsDisposed && f.ThumbnailBitmap is null)
-            .Take(24)
             .ToList();
         if (candidates.Count == 0)
         {
             return;
         }
 
-        using var gate = new SemaphoreSlim(2, 2);
+        using var gate = new SemaphoreSlim(6, 6);
         var tasks = candidates.Select(async item =>
         {
             await gate.WaitAsync(ct);
@@ -3246,7 +3882,8 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
                     item.LocalFullPath,
                     item.RemoteFileId,
                     item.SizeBytes,
-                    ct);
+                    ct,
+                    item.ThumbnailLink);
 
                 if (thumb is not null)
                 {
@@ -3884,6 +4521,43 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        if (SelectedSourceFilterIndex == 4)
+        {
+            if (string.Equals(_sharedFolderId, folderId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var prevSharedId = _sharedFolderId;
+            var prevSharedName = _sharedFolderName;
+            var prevSharedCount = _sharedBreadcrumbs.Count;
+
+            SearchText = string.Empty;
+            if (!string.Equals(_sharedBreadcrumbs.LastOrDefault()?.FolderId, folderId, StringComparison.Ordinal))
+            {
+                _sharedBreadcrumbs.Add(new FileHubBreadcrumbItem(folderId, folderName, NavigateToBreadcrumbAsync));
+            }
+
+            _sharedFolderId = folderId;
+            _sharedFolderName = folderName;
+            SyncBreadcrumbsFromActiveMode();
+
+            var sharedOk = await RefreshInternalAsync();
+            if (!sharedOk)
+            {
+                while (_sharedBreadcrumbs.Count > prevSharedCount)
+                {
+                    _sharedBreadcrumbs.RemoveAt(_sharedBreadcrumbs.Count - 1);
+                }
+
+                _sharedFolderId = prevSharedId;
+                _sharedFolderName = prevSharedName;
+                SyncBreadcrumbsFromActiveMode();
+            }
+
+            return;
+        }
+
         var switchingToDrive = SelectedSourceFilterIndex != 0;
         if (!switchingToDrive && string.Equals(_driveFolderId, folderId, StringComparison.Ordinal))
         {
@@ -3961,6 +4635,7 @@ public sealed partial class FileHubViewModel : ViewModelBase, IDisposable
         SourceFilterOptions.Add(Loc.Text("FileHubFilterLocal"));
         SourceFilterOptions.Add(Loc.Text("FileHubFilterTrash"));
         SourceFilterOptions.Add(Loc.Text("FileHubFilterFavorites"));
+        SourceFilterOptions.Add(Loc.Text("FileHubFilterShared"));
         SelectedSourceFilterIndex = Math.Clamp(savedIndex, 0, SourceFilterOptions.Count - 1);
     }
 }

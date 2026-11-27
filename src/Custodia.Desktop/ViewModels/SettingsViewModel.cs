@@ -145,6 +145,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
     private readonly NotificationSoundService? _soundService;
     private CancellationTokenSource? _saveFeedbackCts;
     private CancellationTokenSource? _reloadFeedbackCts;
+    private CancellationTokenSource? _autoSaveCts;
+    private bool _suppressAutoSave;
 
     public ILocalizationService Loc { get; }
 
@@ -230,6 +232,15 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private decimal? _maxConcurrentTransfers = 3;
+
+    [ObservableProperty]
+    private bool _limitTransferBandwidth;
+
+    [ObservableProperty]
+    private decimal? _maxTransferBandwidthKbps = 2048;
+
+    public string BandwidthSummaryDisplay =>
+        $"≈ {Math.Clamp((double)(MaxTransferBandwidthKbps ?? 2048) / 1024.0, 0.06, 100.0):0.0} MB/s";
 
     [ObservableProperty]
     private bool _embeddedApiEnabled = true;
@@ -464,6 +475,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     {
         var code = value == 1 ? "en-US" : "pt-BR";
         Loc.SetLanguage(code);
+        ScheduleAutoSave(180);
     }
 
     partial void OnSelectedThemeIndexChanged(int value)
@@ -471,6 +483,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         ThemeAccentService.ApplyTheme(
             ThemeAccentService.GetThemeIdByIndex(value),
             ThemeAccentService.GetAccentIdByIndex(SelectedAccentIndex));
+        ScheduleAutoSave(180);
     }
 
     partial void OnSelectedAccentIndexChanged(int value)
@@ -478,6 +491,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         ThemeAccentService.ApplyTheme(
             ThemeAccentService.GetThemeIdByIndex(SelectedThemeIndex),
             ThemeAccentService.GetAccentIdByIndex(value));
+        ScheduleAutoSave(180);
     }
 
     partial void OnUiScalePercentChanged(int value)
@@ -490,6 +504,62 @@ public sealed partial class SettingsViewModel : ViewModelBase
         }
 
         UiScaleChanged?.Invoke(this, clamped);
+        ScheduleAutoSave(300);
+    }
+
+    partial void OnStartOnBootChanged(bool value) => ScheduleAutoSave(180);
+    partial void OnNotificationsEnabledChanged(bool value) => ScheduleAutoSave(180);
+    partial void OnNotificationSoundEnabledChanged(bool value) => ScheduleAutoSave(180);
+    partial void OnSelectedNotificationSoundIndexChanged(int value) => ScheduleAutoSave(180);
+    partial void OnGmailAccountAlertsEnabledChanged(bool value) => ScheduleAutoSave(180);
+    partial void OnMinimizeToTrayOnCloseChanged(bool value) => ScheduleAutoSave(180);
+    partial void OnAutoCheckUpdatesChanged(bool value) => ScheduleAutoSave(180);
+    partial void OnSelectedUpdateFrequencyIndexChanged(int value) => ScheduleAutoSave(180);
+    partial void OnDownloadDirectoryChanged(string value) => ScheduleAutoSave(450);
+    partial void OnSyncIntervalSecondsChanged(decimal? value) => ScheduleAutoSave(450);
+    partial void OnWatchLocalChangesChanged(bool value) => ScheduleAutoSave(180);
+    partial void OnLimitConcurrentTransfersChanged(bool value) => ScheduleAutoSave(180);
+    partial void OnMaxConcurrentTransfersChanged(decimal? value) => ScheduleAutoSave(350);
+    partial void OnLimitTransferBandwidthChanged(bool value) => ScheduleAutoSave(180);
+    partial void OnMaxTransferBandwidthKbpsChanged(decimal? value)
+    {
+        OnPropertyChanged(nameof(BandwidthSummaryDisplay));
+        ScheduleAutoSave(350);
+    }
+    partial void OnEmbeddedApiEnabledChanged(bool value) => ScheduleAutoSave(180);
+    partial void OnEmbeddedApiPortChanged(decimal? value) => ScheduleAutoSave(450);
+    partial void OnAutoMemoryCleanupEnabledChanged(bool value) => ScheduleAutoSave(180);
+    partial void OnMemoryCleanupIntervalMinutesChanged(decimal? value) => ScheduleAutoSave(350);
+    partial void OnSelectedConflictPolicyIndexChanged(int value) => ScheduleAutoSave(180);
+    partial void OnIgnorePatternsTextChanged(string value) => ScheduleAutoSave(550);
+
+    private void ScheduleAutoSave(int delayMs)
+    {
+        if (_suppressAutoSave)
+        {
+            return;
+        }
+
+        _autoSaveCts?.Cancel();
+        _autoSaveCts?.Dispose();
+        _autoSaveCts = new CancellationTokenSource();
+        var token = _autoSaveCts.Token;
+        _ = RunDebouncedAutoSaveAsync(delayMs, token);
+    }
+
+    private async Task RunDebouncedAutoSaveAsync(int delayMs, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(delayMs, token);
+            if (!token.IsCancellationRequested)
+            {
+                await Dispatcher.UIThread.InvokeAsync(SaveSettingsAsync);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     private async Task PersistUiScaleAsync(int scalePercent)
@@ -524,46 +594,56 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     public void LoadFromCurrent()
     {
-        var current = _settingsService.Current;
-        SelectedLanguageIndex = string.Equals(current.Language, "en-US", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-        SelectedThemeIndex = ThemeAccentService.GetThemeIndex(current.UiTheme);
-        SelectedAccentIndex = ThemeAccentService.GetAccentIndex(current.UiAccent);
-        ThemeAccentService.ApplyTheme(current.UiTheme, current.UiAccent);
-        UiScalePercent = Math.Clamp(current.UiScalePercent, 100, 300);
-        StartOnBoot = current.StartOnBoot || _autostartManager.IsEnabled();
-        NotificationsEnabled = current.NotificationsEnabled;
-        NotificationSoundEnabled = current.NotificationSoundEnabled;
-        SelectedNotificationSoundIndex = NotificationSoundService.GetPresetIndex(current.NotificationSoundTone);
-        GmailAccountAlertsEnabled = current.GmailAccountAlertsEnabled;
-        MinimizeToTrayOnClose = current.MinimizeToTrayOnClose;
-        AutoCheckUpdates = current.AutoCheckUpdates;
-        SelectedUpdateFrequencyIndex = current.UpdateCheckIntervalDays switch
+        _suppressAutoSave = true;
+        try
         {
-            0 => 3,
-            7 => 2,
-            15 => 1,
-            _ => 0
-        };
-        DownloadDirectory = string.IsNullOrWhiteSpace(current.DownloadDirectory)
-            ? AppPaths.DefaultDownloadDirectory
-            : current.DownloadDirectory;
-        SyncIntervalSeconds = current.SyncIntervalSeconds;
-        WatchLocalChanges = current.WatchLocalChanges;
-        LimitConcurrentTransfers = current.LimitConcurrentTransfers;
-        MaxConcurrentTransfers = Math.Clamp(
-            current.MaxConcurrentTransfers,
-            AppSettings.MinConcurrentTransfers,
-            AppSettings.MaxConcurrentTransfersCap);
-        EmbeddedApiEnabled = current.EmbeddedApiEnabled;
-        EmbeddedApiPort = current.EmbeddedApiPort;
-        AutoMemoryCleanupEnabled = current.AutoMemoryCleanupEnabled;
-        MemoryCleanupIntervalMinutes = Math.Clamp(current.MemoryCleanupIntervalMinutes, 1, 60);
-        SelectedConflictPolicyIndex = (int)current.ConflictPolicy;
-        IgnorePatternsText = string.Join(Environment.NewLine, current.IgnorePatterns);
+            var current = _settingsService.Current;
+            SelectedLanguageIndex = string.Equals(current.Language, "en-US", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+            SelectedThemeIndex = ThemeAccentService.GetThemeIndex(current.UiTheme);
+            SelectedAccentIndex = ThemeAccentService.GetAccentIndex(current.UiAccent);
+            ThemeAccentService.ApplyTheme(current.UiTheme, current.UiAccent);
+            UiScalePercent = Math.Clamp(current.UiScalePercent, 100, 300);
+            StartOnBoot = current.StartOnBoot || _autostartManager.IsEnabled();
+            NotificationsEnabled = current.NotificationsEnabled;
+            NotificationSoundEnabled = current.NotificationSoundEnabled;
+            SelectedNotificationSoundIndex = NotificationSoundService.GetPresetIndex(current.NotificationSoundTone);
+            GmailAccountAlertsEnabled = current.GmailAccountAlertsEnabled;
+            MinimizeToTrayOnClose = current.MinimizeToTrayOnClose;
+            AutoCheckUpdates = current.AutoCheckUpdates;
+            SelectedUpdateFrequencyIndex = current.UpdateCheckIntervalDays switch
+            {
+                0 => 3,
+                7 => 2,
+                15 => 1,
+                _ => 0
+            };
+            DownloadDirectory = string.IsNullOrWhiteSpace(current.DownloadDirectory)
+                ? AppPaths.DefaultDownloadDirectory
+                : current.DownloadDirectory;
+            SyncIntervalSeconds = current.SyncIntervalSeconds;
+            WatchLocalChanges = current.WatchLocalChanges;
+            LimitConcurrentTransfers = current.LimitConcurrentTransfers;
+            MaxConcurrentTransfers = Math.Clamp(
+                current.MaxConcurrentTransfers,
+                AppSettings.MinConcurrentTransfers,
+                AppSettings.MaxConcurrentTransfersCap);
+            LimitTransferBandwidth = current.LimitTransferBandwidth;
+            MaxTransferBandwidthKbps = Math.Clamp(current.MaxTransferBandwidthKbps, 64, 102400);
+            EmbeddedApiEnabled = current.EmbeddedApiEnabled;
+            EmbeddedApiPort = current.EmbeddedApiPort;
+            AutoMemoryCleanupEnabled = current.AutoMemoryCleanupEnabled;
+            MemoryCleanupIntervalMinutes = Math.Clamp(current.MemoryCleanupIntervalMinutes, 1, 60);
+            SelectedConflictPolicyIndex = (int)current.ConflictPolicy;
+            IgnorePatternsText = string.Join(Environment.NewLine, current.IgnorePatterns);
 
-        RefreshPathAndApiTexts();
-        RefreshCredentialsAndAccounts();
-        RefreshMemoryCleanerStatus();
+            RefreshPathAndApiTexts();
+            RefreshCredentialsAndAccounts();
+            RefreshMemoryCleanerStatus();
+        }
+        finally
+        {
+            _suppressAutoSave = false;
+        }
     }
 
     private void RefreshMemoryCleanerStatus()
@@ -1051,6 +1131,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private async Task SaveSettingsAsync()
     {
+        _autoSaveCts?.Cancel();
         _saveFeedbackCts?.Cancel();
         _saveFeedbackCts?.Dispose();
         _saveFeedbackCts = new CancellationTokenSource();
@@ -1107,6 +1188,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
                     (int)(MaxConcurrentTransfers ?? 3),
                     AppSettings.MinConcurrentTransfers,
                     AppSettings.MaxConcurrentTransfersCap),
+                LimitTransferBandwidth = LimitTransferBandwidth,
+                MaxTransferBandwidthKbps = Math.Clamp((int)(MaxTransferBandwidthKbps ?? 2048), 64, 102400),
                 EmbeddedApiEnabled = EmbeddedApiEnabled,
                 EmbeddedApiPort = portValue is >= 1024 and <= 65535 ? portValue : 5080,
                 AutoMemoryCleanupEnabled = AutoMemoryCleanupEnabled,

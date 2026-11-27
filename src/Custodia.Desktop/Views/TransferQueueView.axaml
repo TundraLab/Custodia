@@ -14,6 +14,22 @@
       </StackPanel>
 
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <Button Classes="m3-tonal"
+                IsVisible="{Binding HasFailedTransfers}"
+                IsEnabled="{Binding !IsRetrying}"
+                Command="{Binding RetryAllFailedCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Width="13" Height="13"
+                      Classes.m3-spinning="{Binding IsRetrying}"
+                      RenderTransformOrigin="50%,50%"
+                      Data="{StaticResource TundraRetryGeometry}">
+              <PathIcon.RenderTransform>
+                <RotateTransform />
+              </PathIcon.RenderTransform>
+            </PathIcon>
+            <TextBlock Text="{Binding Loc.RetryAllFailedButton}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
         <Button Classes="m3-danger-outlined"
                 Content="{Binding Loc.CancelButton}"
                 IsVisible="{Binding CanCancelSelected}"
@@ -25,12 +41,46 @@
       </StackPanel>
     </Grid>
 
-    <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="12">
+    <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*" RowSpacing="12">
+      <!-- Segmented direction and failure filter pills -->
+      <Border Grid.Row="0" Classes="m3-segmented-track" HorizontalAlignment="Left">
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <Button Classes="m3-segmented"
+                  Classes.m3-seg-active="{Binding IsAllFilter}"
+                  Content="{Binding Loc.TransferFilterAll}"
+                  Command="{Binding SelectAllFilterCommand}" />
+          <Button Classes="m3-segmented"
+                  Classes.m3-seg-active="{Binding IsUploadsFilter}"
+                  Command="{Binding SelectUploadsFilterCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Width="12" Height="12" Data="{StaticResource TundraUploadGeometry}" />
+              <TextBlock Text="{Binding Loc.TransferFilterUploads}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button Classes="m3-segmented"
+                  Classes.m3-seg-active="{Binding IsDownloadsFilter}"
+                  Command="{Binding SelectDownloadsFilterCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Width="12" Height="12" Data="{StaticResource TundraDownloadGeometry}" />
+              <TextBlock Text="{Binding Loc.TransferFilterDownloads}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button Classes="m3-segmented"
+                  Classes.m3-seg-trash-active="{Binding IsFailedFilter}"
+                  Command="{Binding SelectFailedFilterCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Width="12" Height="12" Foreground="{DynamicResource M3Error}" Data="{StaticResource TundraAlertGeometry}" />
+              <TextBlock Text="{Binding Loc.TransferFilterFailed}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Border>
+
       <!-- Latest transfer error banner -->
-      <Border Grid.Row="0"
+      <Border Grid.Row="1"
               Classes="m3-banner-error"
               IsVisible="{Binding HasLastErrorBanner}">
-        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
           <PathIcon Grid.Column="0"
                     Classes="m3-error-pulse"
                     Width="16" Height="16"
@@ -49,15 +99,33 @@
                      TextWrapping="Wrap"
                      Text="{Binding LastErrorMessage}" />
           <Button Grid.Column="2"
+                  Classes="m3-tonal m3-compact"
+                  IsVisible="{Binding HasFailedTransfers}"
+                  IsEnabled="{Binding !IsRetrying}"
+                  Command="{Binding RetryAllFailedCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <PathIcon Width="12" Height="12"
+                        Classes.m3-spinning="{Binding IsRetrying}"
+                        RenderTransformOrigin="50%,50%"
+                        Data="{StaticResource TundraRetryGeometry}">
+                <PathIcon.RenderTransform>
+                  <RotateTransform />
+                </PathIcon.RenderTransform>
+              </PathIcon>
+              <TextBlock Text="{Binding Loc.RetryAllFailedButton}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button Grid.Column="3"
                   Classes="m3-text m3-icon"
-                  FontSize="12"
-                  Content="✕"
-                  Command="{Binding DismissLastErrorBannerCommand}" />
+                  ToolTip.Tip="{Binding Loc.CancelButton}"
+                  Command="{Binding DismissLastErrorBannerCommand}">
+            <PathIcon Width="11" Height="11" Data="{StaticResource TundraCloseGeometry}" />
+          </Button>
         </Grid>
       </Border>
 
       <ScrollViewer x:Name="QueueScrollViewer"
-                    Grid.Row="1"
+                    Grid.Row="2"
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto">
         <StackPanel Spacing="12">
@@ -77,15 +145,27 @@
             </StackPanel>
           </Border>
 
+          <Border Classes="m3-card"
+                  Padding="20,22"
+                  IsVisible="{Binding HasFilteredEmptyHint}">
+            <TextBlock Classes="m3-subtitle"
+                       TextAlignment="Center"
+                       Text="{Binding Loc.TransferFilterEmptyHint}"
+                       TextWrapping="Wrap" />
+          </Border>
+
           <ListBox Classes="m3-cards"
                    ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                   ItemsSource="{Binding Items}"
+                   ItemsSource="{Binding FilteredItems}"
                    SelectedItem="{Binding SelectedItem}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:TransferItemViewModel">
                 <Border Padding="16,14" Background="Transparent">
                   <Border.ContextMenu>
                     <ContextMenu>
+                      <MenuItem Header="{Binding Loc.RetryButton}"
+                                IsVisible="{Binding CanRetry}"
+                                Command="{Binding RetryCommand}" />
                       <MenuItem Header="{Binding Loc.CancelButton}"
                                 IsVisible="{Binding CanCancel}"
                                 Command="{Binding CancelCommand}" />
@@ -220,7 +300,7 @@
                       <TextBlock Grid.Column="1" Classes="m3-meta" FontWeight="Medium" Text="{Binding ProgressDisplay}" />
                     </Grid>
 
-                    <!-- Inline error notice for failed transfers -->
+                    <!-- Inline error notice with retry for failed transfers -->
                     <Border Grid.Row="3" Grid.ColumnSpan="2"
                             Margin="0,2,0,0"
                             Padding="12,8"
@@ -228,10 +308,31 @@
                             Background="{DynamicResource M3ErrorContainer}"
                             BorderThickness="0"
                             IsVisible="{Binding IsFailed}">
-                      <TextBlock FontSize="12"
-                                 Foreground="{DynamicResource M3OnErrorContainer}"
-                                 TextWrapping="Wrap"
-                                 Text="{Binding ErrorHeadlineText}" />
+                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <TextBlock Grid.Column="0"
+                                   FontSize="12"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource M3OnErrorContainer}"
+                                   TextWrapping="Wrap"
+                                   Text="{Binding ErrorHeadlineText}" />
+                        <Button Grid.Column="1"
+                                Classes="m3-tonal m3-compact"
+                                IsVisible="{Binding CanRetry}"
+                                IsEnabled="{Binding !IsRetrying}"
+                                Command="{Binding RetryCommand}">
+                          <StackPanel Orientation="Horizontal" Spacing="5">
+                            <PathIcon Width="12" Height="12"
+                                      Classes.m3-spinning="{Binding IsRetrying}"
+                                      RenderTransformOrigin="50%,50%"
+                                      Data="{StaticResource TundraRetryGeometry}">
+                              <PathIcon.RenderTransform>
+                                <RotateTransform />
+                              </PathIcon.RenderTransform>
+                            </PathIcon>
+                            <TextBlock Text="{Binding Loc.RetryButton}" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </Button>
+                      </Grid>
                     </Border>
 
                     <!-- Expandable details panel on card selection -->
@@ -269,6 +370,23 @@
                         </Grid>
 
                         <WrapPanel Orientation="Horizontal">
+                          <Button Classes="m3-tonal m3-compact"
+                                  Margin="0,0,8,4"
+                                  IsVisible="{Binding CanRetry}"
+                                  IsEnabled="{Binding !IsRetrying}"
+                                  Command="{Binding RetryCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                              <PathIcon Width="12" Height="12"
+                                        Classes.m3-spinning="{Binding IsRetrying}"
+                                        RenderTransformOrigin="50%,50%"
+                                        Data="{StaticResource TundraRetryGeometry}">
+                                <PathIcon.RenderTransform>
+                                  <RotateTransform />
+                                </PathIcon.RenderTransform>
+                              </PathIcon>
+                              <TextBlock Text="{Binding Loc.RetryButton}" VerticalAlignment="Center" />
+                            </StackPanel>
+                          </Button>
                           <Button Classes="m3-tonal m3-compact"
                                   Margin="0,0,8,4"
                                   Content="{Binding Loc.OpenLocalFolderMenu}"

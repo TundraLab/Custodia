@@ -39,13 +39,30 @@ public interface IDriveSyncService
     Task TriggerFolderSyncAsync(string folderId, CancellationToken cancellationToken = default);
     Task<RemoteDriveNode> UploadSingleFileAsync(string localFilePath, string remoteFolderId = "root", CancellationToken cancellationToken = default);
     Task<string> DownloadRemoteFileAsync(string remoteFileId, string fileName, long sizeBytes = 0, bool isGoogleWorkspaceDoc = false, string? mimeType = null, CancellationToken cancellationToken = default);
+    Task<string> DownloadRemoteFileToAsync(string remoteFileId, string fileName, string destinationPathOrDirectory, bool treatAsFullFilePath = false, long sizeBytes = 0, bool isGoogleWorkspaceDoc = false, string? mimeType = null, CancellationToken cancellationToken = default) =>
+        DownloadRemoteFileAsync(remoteFileId, fileName, sizeBytes, isGoogleWorkspaceDoc, mimeType, cancellationToken);
     Task TrashRemoteItemAsync(string remoteFileId, string itemName, CancellationToken cancellationToken = default);
     Task RestoreRemoteItemAsync(string remoteFileId, string itemName, CancellationToken cancellationToken = default);
     Task DeleteRemoteItemPermanentlyAsync(string remoteFileId, string itemName, CancellationToken cancellationToken = default);
     Task EmptyRemoteTrashAsync(CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<DrivePermissionEntry>> GetRemotePermissionsAsync(string remoteFileId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<DrivePermissionEntry>>(Array.Empty<DrivePermissionEntry>());
+    Task<string> EnableAnyoneLinkAsync(string remoteFileId, string itemName, bool canEdit, CancellationToken cancellationToken = default) =>
+        Task.FromResult(string.Empty);
+    Task DisableAnyoneLinkAsync(string remoteFileId, string itemName, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
+    Task<DrivePermissionEntry> ShareWithEmailAsync(string remoteFileId, string itemName, string emailAddress, bool canEdit, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new DrivePermissionEntry());
+    Task RevokeRemotePermissionAsync(string remoteFileId, string itemName, string permissionId, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
+
     IReadOnlyList<TransferQueueItem> GetTransferQueueSnapshot();
     TransferQueueStats GetTransferQueueStats();
     void CancelTransfer(string transferId);
     void ClearCompletedTransfers();
+    Task<bool> RetryTransferAsync(string transferId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
+    Task<int> RetryAllFailedTransfersAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(0);
 }

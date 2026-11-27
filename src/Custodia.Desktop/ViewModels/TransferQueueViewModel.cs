@@ -50,6 +50,9 @@ public sealed partial class TransferItemViewModel : ViewModelBase
     [ObservableProperty]
     private string? _errorMessage;
 
+    [ObservableProperty]
+    private bool _isRetrying;
+
     public TransferItemViewModel(
         TransferQueueItem item,
         TransferQueueViewModel parent,
@@ -145,6 +148,8 @@ public sealed partial class TransferItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsDownloadingStatic));
         OnPropertyChanged(nameof(IsDeletingStatic));
         OnPropertyChanged(nameof(ErrorHeadlineText));
+        OnPropertyChanged(nameof(CanCancel));
+        OnPropertyChanged(nameof(CanRetry));
     }
 
     public void RefreshLocalizedProperties()
@@ -320,6 +325,9 @@ public sealed partial class TransferItemViewModel : ViewModelBase
     };
 
     public bool CanCancel => Status is TransferStatus.Queued or TransferStatus.InProgress;
+    public bool CanRetry =>
+        Status is TransferStatus.Failed or TransferStatus.Cancelled &&
+        Direction is TransferDirection.Upload or TransferDirection.Download;
 
     public IBrush TransferProgressBrush => Status switch
     {
@@ -397,6 +405,9 @@ public sealed partial class TransferItemViewModel : ViewModelBase
     private void Cancel() => _parent.CancelTransfer(Id);
 
     [RelayCommand]
+    private Task RetryAsync() => _parent.RetryTransferAsync(Id);
+
+    [RelayCommand]
     private Task CopyNameAsync() => _parent.CopyTextAsync(FileName);
 
     [RelayCommand]
@@ -448,9 +459,29 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanCancelSelected))]
+    [NotifyPropertyChangedFor(nameof(CanRetrySelected))]
     private TransferItemViewModel? _selectedItem;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAllFilter))]
+    [NotifyPropertyChangedFor(nameof(IsUploadsFilter))]
+    [NotifyPropertyChangedFor(nameof(IsDownloadsFilter))]
+    [NotifyPropertyChangedFor(nameof(IsFailedFilter))]
+    private int _selectedFilterIndex;
+
+    [ObservableProperty]
+    private bool _hasNoFilteredItems = true;
+
+    [ObservableProperty]
+    private bool _isRetrying;
+
     public bool CanCancelSelected => SelectedItem is { CanCancel: true };
+    public bool CanRetrySelected => SelectedItem is { CanRetry: true };
+    public bool IsAllFilter => SelectedFilterIndex == 0;
+    public bool IsUploadsFilter => SelectedFilterIndex == 1;
+    public bool IsDownloadsFilter => SelectedFilterIndex == 2;
+    public bool IsFailedFilter => SelectedFilterIndex == 3;
+    public bool HasFilteredEmptyHint => !HasNoItems && HasNoFilteredItems;
 
     public TransferDirection? ActiveDirection =>
         Items.FirstOrDefault(i => i.Status == TransferStatus.InProgress)?.Direction
@@ -473,6 +504,7 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
     }
 
     public ObservableCollection<TransferItemViewModel> Items { get; } = [];
+    public ObservableCollection<TransferItemViewModel> FilteredItems { get; } = [];
 
     public TransferQueueViewModel(
         IDriveSyncService syncService,
@@ -516,6 +548,7 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
         var firstError = Items.FirstOrDefault(i => i.IsFailed);
         LastErrorMessage = firstError is not null ? firstError.ErrorHeadlineText : string.Empty;
 
+        ApplyFilter();
         UpdateCounters();
     }
 
@@ -574,7 +607,118 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
             LastErrorMessage = existing.ErrorHeadlineText;
         }
 
+        ApplyFilter();
         UpdateCounters();
+    }
+
+    partial void OnSelectedFilterIndexChanged(int value) => ApplyFilter();
+
+    [RelayCommand]
+    private void SelectAllFilter() => SelectedFilterIndex = 0;
+
+    [RelayCommand]
+    private void SelectUploadsFilter() => SelectedFilterIndex = 1;
+
+    [RelayCommand]
+    private void SelectDownloadsFilter() => SelectedFilterIndex = 2;
+
+    [RelayCommand]
+    private void SelectFailedFilter() => SelectedFilterIndex = 3;
+
+    public async Task RetryTransferAsync(string transferId)
+    {
+        if (string.IsNullOrWhiteSpace(transferId))
+        {
+            return;
+        }
+
+        var item = Items.FirstOrDefault(x => x.Id == transferId);
+        if (item is not null)
+        {
+            item.IsRetrying = true;
+        }
+
+        IsRetrying = true;
+        LastErrorMessage = string.Empty;
+        var startedAtMs = Environment.TickCount64;
+        try
+        {
+            var retried = await _syncService.RetryTransferAsync(transferId);
+            var elapsedMs = (int)(Environment.TickCount64 - startedAtMs);
+            if (elapsedMs < 350)
+            {
+                await Task.Delay(350 - elapsedMs);
+            }
+
+            if (!retried && item is not null && item.IsFailed && !string.IsNullOrWhiteSpace(item.ErrorHeadlineText))
+            {
+                LastErrorMessage = item.ErrorHeadlineText;
+            }
+        }
+        catch (Exception ex)
+        {
+            LastErrorMessage = Loc.Format("TransferFailedFmt", ex.Message);
+        }
+        finally
+        {
+            if (item is not null)
+            {
+                item.IsRetrying = false;
+            }
+            IsRetrying = false;
+            UpdateCounters();
+        }
+    }
+
+    [RelayCommand]
+    private async Task RetryAllFailedAsync()
+    {
+        if (IsRetrying)
+        {
+            return;
+        }
+
+        IsRetrying = true;
+        LastErrorMessage = string.Empty;
+        var startedAtMs = Environment.TickCount64;
+        try
+        {
+            await _syncService.RetryAllFailedTransfersAsync();
+            var elapsedMs = (int)(Environment.TickCount64 - startedAtMs);
+            if (elapsedMs < 350)
+            {
+                await Task.Delay(350 - elapsedMs);
+            }
+        }
+        catch (Exception ex)
+        {
+            LastErrorMessage = Loc.Format("TransferFailedFmt", ex.Message);
+        }
+        finally
+        {
+            IsRetrying = false;
+            UpdateCounters();
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        var matching = Items.Where(item => SelectedFilterIndex switch
+        {
+            1 => item.Direction == TransferDirection.Upload,
+            2 => item.Direction == TransferDirection.Download,
+            3 => item.Status == TransferStatus.Failed,
+            _ => true
+        }).ToList();
+
+        FilteredItems.Clear();
+        foreach (var item in matching)
+        {
+            FilteredItems.Add(item);
+        }
+
+        HasNoFilteredItems = FilteredItems.Count == 0;
+        OnPropertyChanged(nameof(HasFilteredEmptyHint));
     }
 
     [RelayCommand]
@@ -649,6 +793,10 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
         }
 
         HasFailedTransfers = FailedCount > 0;
+        if (!HasFailedTransfers)
+        {
+            LastErrorMessage = string.Empty;
+        }
         HasNoItems = TotalCount == 0 && Items.Count == 0;
         SummaryText = TotalCount == 0
             ? Loc.Text("TransferEmpty")
@@ -656,5 +804,7 @@ public sealed partial class TransferQueueViewModel : ViewModelBase
                 ? Loc.Format("TransferSummaryWithErrorsFmt", ActiveCount, CompletedCount, FailedCount, TotalCount)
                 : Loc.Format("TransferSummaryFmt", ActiveCount, CompletedCount, TotalCount);
         OnPropertyChanged(nameof(CanCancelSelected));
+        OnPropertyChanged(nameof(CanRetrySelected));
+        OnPropertyChanged(nameof(HasFilteredEmptyHint));
     }
 }

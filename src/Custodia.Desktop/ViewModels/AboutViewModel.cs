@@ -34,6 +34,7 @@ public sealed partial class AboutViewModel : ViewModelBase
     public string RepositoryUrl => MainWindowViewModel.RepositoryUrl;
     public Func<Uri, Task>? OpenExternalUriCallback { get; set; }
     public Func<string, Task>? CopyTextCallback { get; set; }
+    public Func<AppUpdateCheckResult, Task>? OpenInstallerWindowCallback { get; set; }
     public Action? RequestAppShutdownCallback { get; set; }
     public Action? ReviewLegalTermsCallback { get; set; }
 
@@ -435,6 +436,12 @@ public sealed partial class AboutViewModel : ViewModelBase
     {
         if (_updateService is null || _latestCheckResult is null || IsDownloadingUpdate)
         {
+            return;
+        }
+
+        if (OpenInstallerWindowCallback is not null)
+        {
+            await OpenInstallerWindowCallback.Invoke(_latestCheckResult);
             return;
         }
 

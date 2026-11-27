@@ -46,73 +46,27 @@
       </StackPanel>
     </Grid>
 
-    <!-- Storage quota summary card -->
+    <!-- Storage alert banner (shown only when storage needs attention) -->
     <Border Grid.Row="1"
-            Classes="m3-card"
-            Padding="16,14">
-      <StackPanel Spacing="10">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
-          <StackPanel Grid.Column="0" Spacing="5">
-            <TextBlock Classes="m3-meta" FontSize="12" Text="{Binding QuotaSummaryText}" />
-            <Border Height="6"
-                    CornerRadius="4"
-                    Background="{DynamicResource M3SurfaceContainerHighest}"
-                    ClipToBounds="True"
-                    HorizontalAlignment="Stretch"
-                    SizeChanged="OnStorageBarSizeChanged">
-              <StackPanel Orientation="Horizontal" Spacing="1">
-                <Border Background="{DynamicResource M3Primary}" Width="{Binding DriveBarWidth}" Height="6" />
-                <Border Background="{DynamicResource M3Tertiary}" Width="{Binding OtherBarWidth}" Height="6" />
-                <Border Background="{DynamicResource M3StorageTrash}" Width="{Binding TrashBarWidth}" Height="6" />
-              </StackPanel>
-            </Border>
-            <WrapPanel Orientation="Horizontal">
-              <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,14,0">
-                <Border Width="7" Height="7" CornerRadius="4" Background="{DynamicResource M3Primary}" VerticalAlignment="Center" />
-                <TextBlock Classes="m3-meta" FontSize="11" Text="{Binding DriveLegendText}" />
-              </StackPanel>
-              <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,14,0">
-                <Border Width="7" Height="7" CornerRadius="4" Background="{DynamicResource M3Tertiary}" VerticalAlignment="Center" />
-                <TextBlock Classes="m3-meta" FontSize="11" Text="{Binding OtherLegendText}" />
-              </StackPanel>
-              <StackPanel Orientation="Horizontal" Spacing="5">
-                <Border Width="7" Height="7" CornerRadius="4" Background="{DynamicResource M3StorageTrash}" VerticalAlignment="Center" />
-                <TextBlock Classes="m3-meta" FontSize="11" Text="{Binding TrashLegendText}" />
-              </StackPanel>
-            </WrapPanel>
-          </StackPanel>
-
-          <Button Grid.Column="1"
-                  Classes="m3-text m3-compact"
-                  Foreground="{DynamicResource M3Primary}"
-                  FontWeight="SemiBold"
-                  VerticalAlignment="Center"
-                  IsVisible="{Binding IsAccountConnected}"
-                  Content="{Binding Loc.BuyMoreShortButton}"
-                  Command="{Binding BuyMoreStorageCommand}" />
-        </Grid>
-
-        <Border CornerRadius="12"
-                Padding="12,10"
-                Background="{DynamicResource M3WarningContainer}"
-                BorderBrush="{Binding StorageAlertBorderBrush}"
-                BorderThickness="1"
-                IsVisible="{Binding HasStorageAlert}">
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-            <TextBlock Grid.Column="0"
-                       FontSize="12"
-                       FontWeight="Medium"
-                       Foreground="{Binding StorageAlertTextBrush}"
-                       VerticalAlignment="Center"
-                       TextWrapping="Wrap"
-                       Text="{Binding StorageAlertMessage}" />
-            <Button Grid.Column="1"
-                    Classes="m3-filled m3-compact"
-                    Content="{Binding Loc.BuyMoreStorageButton}"
-                    Command="{Binding BuyMoreStorageCommand}" />
-          </Grid>
-        </Border>
-      </StackPanel>
+            CornerRadius="12"
+            Padding="12,10"
+            Background="{DynamicResource M3WarningContainer}"
+            BorderBrush="{Binding StorageAlertBorderBrush}"
+            BorderThickness="1"
+            IsVisible="{Binding HasStorageAlert}">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <TextBlock Grid.Column="0"
+                   FontSize="12"
+                   FontWeight="Medium"
+                   Foreground="{Binding StorageAlertTextBrush}"
+                   VerticalAlignment="Center"
+                   TextWrapping="Wrap"
+                   Text="{Binding StorageAlertMessage}" />
+        <Button Grid.Column="1"
+                Classes="m3-filled m3-compact"
+                Content="{Binding Loc.BuyMoreStorageButton}"
+                Command="{Binding BuyMoreStorageCommand}" />
+      </Grid>
     </Border>
 
     <!-- Status message banner -->
@@ -186,19 +140,37 @@
 
         <Grid Grid.Row="1">
           <Border Classes="m3-card"
-                  Padding="24,28"
+                  Padding="28,32"
                   VerticalAlignment="Top"
                   IsVisible="{Binding HasNoFolders}">
-            <StackPanel Spacing="10" HorizontalAlignment="Center">
-              <PathIcon Width="28" Height="28"
-                        Foreground="{DynamicResource M3OnSurfaceMuted}"
-                        Opacity="0.65"
+            <StackPanel Spacing="14" HorizontalAlignment="Center" MaxWidth="520">
+              <PathIcon Width="32" Height="32"
+                        Foreground="{DynamicResource M3Primary}"
+                        Opacity="0.85"
                         HorizontalAlignment="Center"
                         Data="{StaticResource TundraFolderGeometry}" />
               <TextBlock Classes="m3-subtitle"
                          TextAlignment="Center"
                          TextWrapping="Wrap"
                          Text="{Binding Loc.EmptyFoldersHint}" />
+              <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Classes="m3-filled"
+                        Margin="0,4,8,4"
+                        Command="{Binding AddLocalFolderToRootCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <PathIcon Width="14" Height="14" Data="{StaticResource TundraFolderGeometry}" />
+                    <TextBlock Text="{Binding Loc.MapLocalFolderButton}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="m3-tonal"
+                        Margin="0,4,0,4"
+                        Command="{Binding OpenRemoteBrowserCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <PathIcon Width="14" Height="14" Data="{StaticResource TundraCloudSyncGeometry}" />
+                    <TextBlock Text="{Binding Loc.RemoteBrowserButton}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
+              </WrapPanel>
             </StackPanel>
           </Border>
 

@@ -161,6 +161,8 @@ public interface ILocalizationService : INotifyPropertyChanged
     string SaveChangesButton { get; }
     string SavingButton { get; }
     string SavedButton { get; }
+    string AutoSavedLabel { get; }
+    string MoreActionsTooltip { get; }
     string GeneralSectionTitle { get; }
     string LanguageLabel { get; }
     string LanguageHint { get; }
@@ -318,4 +320,66 @@ public interface ILocalizationService : INotifyPropertyChanged
     string MoveConfirmButton { get; }
 
     string ClearLogsConfirmTitle { get; }
+
+    string FileHubFilterShared { get; }
+    string OpenSharedWithMeTooltip { get; }
+    string SharedEmptyHint { get; }
+    string SharedWithMeRootLabel { get; }
+
+    string ShareButton { get; }
+    string SharePanelTitle { get; }
+    string ShareAnyoneSectionTitle { get; }
+    string ShareLinkActiveHint { get; }
+    string ShareLinkInactiveHint { get; }
+    string ShareEnableReadButton { get; }
+    string ShareEnableEditButton { get; }
+    string ShareCopyLinkButton { get; }
+    string ShareLinkCopiedMessage { get; }
+    string ShareRevokeLinkButton { get; }
+    string ShareInviteSectionTitle { get; }
+    string ShareInviteEmailPlaceholder { get; }
+    string ShareRoleReader { get; }
+    string ShareRoleWriter { get; }
+    string ShareRoleOwner { get; }
+    string ShareInviteButton { get; }
+    string SharePermissionsListTitle { get; }
+    string ShareNoPermissionsHint { get; }
+    string ShareRevokePermissionButton { get; }
+    string ShareInvalidEmailError { get; }
+
+    string SaveAsButton { get; }
+    string DownloadToFolderButton { get; }
+    string SaveAsDialogTitle { get; }
+    string ChooseDownloadFolderTitle { get; }
+    string SaveAsSuccessFmt { get; }
+
+    string TransferFilterAll { get; }
+    string TransferFilterUploads { get; }
+    string TransferFilterDownloads { get; }
+    string TransferFilterFailed { get; }
+    string RetryButton { get; }
+    string RetryAllFailedButton { get; }
+    string TransferFilterEmptyHint { get; }
+
+    string LimitBandwidthCheckbox { get; }
+    string LimitBandwidthHint { get; }
+    string MaxBandwidthKbpsLabel { get; }
+
+    string InstallerTitleInstalling { get; }
+    string InstallerTitleCompleted { get; }
+    string InstallerTitleFailed { get; }
+    string InstallerSubtitle { get; }
+    string InstallerStepCheckEnv { get; }
+    string InstallerStepDownload { get; }
+    string InstallerStepVerify { get; }
+    string InstallerStepInstall { get; }
+    string InstallerStepFinish { get; }
+    string InstallerDetailsShow { get; }
+    string InstallerDetailsHide { get; }
+    string InstallerElapsedFmt { get; }
+    string InstallerRemainingFmt { get; }
+    string InstallerLaunchAppButton { get; }
+    string InstallerLinkProject { get; }
+    string InstallerLinkDocs { get; }
+    string InstallerLinkIssue { get; }
 }

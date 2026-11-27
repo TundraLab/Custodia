@@ -12,7 +12,7 @@ On newer distributions (such as Ubuntu 24.04+, Pop!_OS, or Fedora without `fuse2
 
 **Solution 1 — Run by extracting temporarily (without FUSE):**
 ```bash
-./Custodia-3.0.5-x86_64.AppImage --appimage-extract-and-run
+./Custodia-4.0.0-x86_64.AppImage --appimage-extract-and-run
 ```
 
 **Solution 2 — Install FUSE2 support:**
@@ -94,7 +94,7 @@ The core app runs without external dependencies, but full thumbnail generation a
   ```
 - **Manual installation with `dnf`:**
   ```bash
-  sudo dnf install -y ./Custodia-3.0.5-1.x86_64.rpm
+  sudo dnf install -y ./Custodia-4.0.0-1.x86_64.rpm
   ```
 
 ---

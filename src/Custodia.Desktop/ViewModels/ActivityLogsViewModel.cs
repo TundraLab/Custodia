@@ -302,6 +302,9 @@ public sealed partial class ActivityLogsViewModel : ViewModelBase
     private bool _isClearConfirmVisible;
 
     [ObservableProperty]
+    private bool _isRefreshing;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedLog))]
     [NotifyPropertyChangedFor(nameof(CanOpenSelectedTarget))]
     private ActivityLogItemViewModel? _selectedLog;
@@ -379,16 +382,31 @@ public sealed partial class ActivityLogsViewModel : ViewModelBase
     [RelayCommand]
     public async Task RefreshLogsAsync()
     {
-        var minSeverity = GetMinSeverityFilter();
-        var items = await _repository.GetActivityLogsAsync(minSeverity, SearchText, 250);
-        Logs.Clear();
-        foreach (var item in items)
+        IsRefreshing = true;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
         {
-            Logs.Add(ActivityLogItemViewModel.FromModel(item, Loc, this));
-        }
+            var minSeverity = GetMinSeverityFilter();
+            var items = await _repository.GetActivityLogsAsync(minSeverity, SearchText, 250);
+            Logs.Clear();
+            foreach (var item in items)
+            {
+                Logs.Add(ActivityLogItemViewModel.FromModel(item, Loc, this));
+            }
 
-        HasNoLogs = Logs.Count == 0;
-        StatusSummary = Loc.Format("LogsCountFmt", Logs.Count);
+            HasNoLogs = Logs.Count == 0;
+            StatusSummary = Loc.Format("LogsCountFmt", Logs.Count);
+
+            var remainingMs = 450 - (int)sw.ElapsedMilliseconds;
+            if (remainingMs > 0)
+            {
+                await Task.Delay(remainingMs);
+            }
+        }
+        finally
+        {
+            IsRefreshing = false;
+        }
     }
 
     public Task CopyTextAsync(string text)

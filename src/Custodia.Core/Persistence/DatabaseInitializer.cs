@@ -141,6 +141,20 @@ public static class DatabaseInitializer
 
             CREATE INDEX IF NOT EXISTS idx_activity_logs_created
                 ON sync_activity_logs (created_at_utc DESC);
+
+            CREATE TABLE IF NOT EXISTS transfer_resume_sessions (
+                transfer_key TEXT PRIMARY KEY,
+                direction INTEGER NOT NULL,
+                local_path TEXT NOT NULL,
+                remote_file_id TEXT NULL,
+                remote_parent_id TEXT NULL,
+                upload_session_uri TEXT NULL,
+                temp_file_path TEXT NULL,
+                total_bytes INTEGER NOT NULL DEFAULT 0,
+                transferred_bytes INTEGER NOT NULL DEFAULT 0,
+                local_mtime_ticks INTEGER NOT NULL DEFAULT 0,
+                updated_at_utc TEXT NOT NULL
+            );
             """;
 
         await connection.ExecuteAsync(new CommandDefinition(schemaSql, cancellationToken: cancellationToken));

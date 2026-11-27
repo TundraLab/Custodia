@@ -588,9 +588,15 @@ public sealed partial class AccountsViewModel : ViewModelBase
         IsQuotaRefreshed = false;
         IsRefreshingQuota = true;
         IsBusy = true;
+        var startedAtMs = Environment.TickCount64;
         try
         {
             var updated = await _syncService.RefreshAccountInfoAsync(cts.Token);
+            var remainingMs = 450 - (int)(Environment.TickCount64 - startedAtMs);
+            if (remainingMs > 0 && !cts.IsCancellationRequested)
+            {
+                await Task.Delay(remainingMs, cts.Token);
+            }
             if (updated is not null)
             {
                 ApplyAccount(updated);

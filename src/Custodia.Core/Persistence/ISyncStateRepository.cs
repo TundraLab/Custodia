@@ -28,3 +28,10 @@ public interface ISyncStateRepository
     Task<IReadOnlyList<SyncActivityLog>> GetActivityLogsAsync(ActivitySeverity? minSeverity = null, string? searchText = null, int limit = 250, CancellationToken cancellationToken = default);
     Task ClearActivityLogsAsync(CancellationToken cancellationToken = default);
 }
+
+public interface ITransferResumeRepository
+{
+    Task<TransferResumeSession?> GetResumeSessionAsync(string transferKey, CancellationToken cancellationToken = default);
+    Task UpsertResumeSessionAsync(TransferResumeSession session, CancellationToken cancellationToken = default);
+    Task DeleteResumeSessionAsync(string transferKey, CancellationToken cancellationToken = default);
+}

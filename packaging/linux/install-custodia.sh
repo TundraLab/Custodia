@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ==============================================================================
-# Custódia v3.0.5 - Instalador Oficial de Terminal by TundraLab
+# Custódia v4.0.0 - Instalador Oficial de Terminal by TundraLab
 # Autor e Desenvolvedor: Gustavo Henrique Novaes Gomes (@GustaHerin)
 # Licença: Proprietária / Todos os Direitos Reservados
 # ==============================================================================
@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." 2>/dev/null && pwd || pwd)"
 DIST_DIR="${REPO_ROOT}/dist"
 
-VERSION="${CUSTODIA_VERSION:-${TUNDRA_VERSION:-3.0.5}}"
+VERSION="${CUSTODIA_VERSION:-${TUNDRA_VERSION:-4.0.0}}"
 REPO_SLUG="TundraLab/Custodia"
 RELEASE_BASE_URL="https://github.com/${REPO_SLUG}/releases/latest/download"
 RAW_BASE_URL="https://raw.githubusercontent.com/${REPO_SLUG}/main"
@@ -21,6 +21,20 @@ resolve_latest_release_version() {
   if [[ -n "${CUSTODIA_VERSION:-}" ]] || [[ -n "${TUNDRA_VERSION:-}" ]] || [[ "${TUNDRA_OFFLINE:-0}" == "1" ]]; then
     return 0
   fi
+
+  local arg csproj_path csproj_ver
+  for arg in "$@"; do
+    if [[ "${arg}" == "--build-all" ]]; then
+      csproj_path="${REPO_ROOT}/src/Custodia.Desktop/Custodia.Desktop.csproj"
+      if [[ -f "${csproj_path}" ]]; then
+        csproj_ver="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "${csproj_path}" | head -n 1)"
+        if [[ -n "${csproj_ver}" ]]; then
+          VERSION="${csproj_ver}"
+        fi
+      fi
+      return 0
+    fi
+  done
 
   if [[ -d "${DIST_DIR}" ]] && compgen -G "${DIST_DIR}/Custodia-*.rpm" >/dev/null 2>&1; then
     return 0
@@ -36,7 +50,7 @@ resolve_latest_release_version() {
   fi
 }
 
-resolve_latest_release_version
+resolve_latest_release_version "$@"
 RELEASE_TAG="v${VERSION}"
 APPIMAGE_ASSET="Custodia-${VERSION}-x86_64.AppImage"
 RPM_ASSET="Custodia-${VERSION}-1.x86_64.rpm"
@@ -933,6 +947,8 @@ show_help() {
   echo "Opções:"
   echo "  (sem argumentos)    Abre o menu interativo do instalador"
   echo "  --update            Atualiza a instalação existente para a versão mais recente (v${VERSION})"
+  echo "  --gui               Abre o instalador gráfico do Custódia (quando disponível)"
+  echo "  --background        Executa a instalação/atualização silenciosamente em segundo plano"
   echo "  --rpm               Baixa, valida SHA-256 e instala/atualiza o pacote .rpm"
   echo "  --appimage          Baixa, valida SHA-256 e instala/atualiza o .AppImage integrado"
   echo "  --download-rpm      Baixa apenas o arquivo .rpm no diretório atual"
@@ -1013,9 +1029,46 @@ case "${MODE}" in
     print_header 0
     "${SCRIPT_DIR}/build-appimage.sh"
     FORCE_PUBLISH=0 "${SCRIPT_DIR}/build-rpm.sh"
+    FORCE_PUBLISH=0 "${SCRIPT_DIR}/build-installer-appimage.sh"
+    cp -f "${SCRIPT_DIR}/install-custodia.sh" "${DIST_DIR}/Custodia-Installer-x86_64.sh"
+    chmod +x "${DIST_DIR}/Custodia-Installer-x86_64.sh"
+    (cd "${DIST_DIR}" && sha256sum "Custodia-${VERSION}-x86_64.AppImage" "Custodia-${VERSION}-1.x86_64.rpm" "Custodia-Installer-x86_64.AppImage" "Custodia-Installer-x86_64.sh" > SHA256SUMS.txt)
     exit 0
     ;;
-  --menu|--cli|--gui)
+  --menu|--cli)
+    ;;
+  --gui)
+    if [[ -x /usr/bin/custodia ]]; then
+      nohup /usr/bin/custodia --installer >/dev/null 2>&1 &
+      exit 0
+    elif [[ -x "${HOME}/.local/opt/custodia/Custodia.AppImage" ]]; then
+      nohup "${HOME}/.local/opt/custodia/Custodia.AppImage" --installer >/dev/null 2>&1 &
+      exit 0
+    fi
+    gui_cache="${HOME}/.cache/custodia-installer"
+    gui_bin="${gui_cache}/Custodia-Installer-x86_64.AppImage"
+    mkdir -p "${gui_cache}"
+    if [[ -x "${DIST_DIR}/Custodia-Installer-x86_64.AppImage" ]]; then
+      cp -f "${DIST_DIR}/Custodia-Installer-x86_64.AppImage" "${gui_bin}"
+    else
+      curl -fsSL -L -o "${gui_bin}" "${RELEASE_BASE_URL}/Custodia-Installer-x86_64.AppImage" || true
+    fi
+    if [[ -s "${gui_bin}" ]]; then
+      chmod +x "${gui_bin}"
+      if nohup "${gui_bin}" >/dev/null 2>&1 & then
+        exit 0
+      fi
+      nohup "${gui_bin}" --appimage-extract-and-run >/dev/null 2>&1 &
+      exit 0
+    fi
+    print_header 0
+    update_flow 0 || exit 1
+    exit 0
+    ;;
+  --background|--silent)
+    AUTO_ACCEPT_TERMS=1
+    update_flow 0 >/dev/null 2>&1 || exit 1
+    exit 0
     ;;
   *)
     step_err "Opção desconhecida: ${MODE}"

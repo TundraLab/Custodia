@@ -2,7 +2,7 @@
 
 > 🌐 **Language / Idioma:** [🇧🇷 Português](../API.md) | **🇺🇸 English (current)**
 
-- API Version: `v1` (`3.0.5`)
+- API Version: `v1` (`4.0.0`)
 - Default address: `http://127.0.0.1:5080` (local loopback only)
 - OpenAPI specification: `GET http://127.0.0.1:5080/api/v1/openapi.json`
 - PDF copy: `Custodia-API.en.pdf` (in the project root and linked in Settings)

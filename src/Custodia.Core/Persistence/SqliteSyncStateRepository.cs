@@ -3,7 +3,7 @@ using TundraDrive.Core.Models;
 
 namespace TundraDrive.Core.Persistence;
 
-public sealed class SqliteSyncStateRepository : ISyncStateRepository
+public sealed class SqliteSyncStateRepository : ISyncStateRepository, ITransferResumeRepository
 {
     private readonly SqliteConnectionFactory _connectionFactory;
 
@@ -582,6 +582,101 @@ public sealed class SqliteSyncStateRepository : ISyncStateRepository
         using var writeLock = await _connectionFactory.AcquireWriteLockAsync(cancellationToken);
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         await connection.ExecuteAsync(new CommandDefinition("DELETE FROM sync_activity_logs;", cancellationToken: cancellationToken));
+    }
+
+    public async Task<TransferResumeSession?> GetResumeSessionAsync(
+        string transferKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(transferKey))
+        {
+            return null;
+        }
+
+        await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        const string sql = """
+            SELECT
+                transfer_key AS TransferKey,
+                direction AS Direction,
+                local_path AS LocalPath,
+                remote_file_id AS RemoteFileId,
+                remote_parent_id AS RemoteParentId,
+                upload_session_uri AS UploadSessionUri,
+                temp_file_path AS TempFilePath,
+                total_bytes AS TotalBytes,
+                transferred_bytes AS TransferredBytes,
+                local_mtime_ticks AS LocalMtimeTicks,
+                updated_at_utc AS UpdatedAtUtc
+            FROM transfer_resume_sessions
+            WHERE transfer_key = @TransferKey;
+            """;
+
+        return await connection.QuerySingleOrDefaultAsync<TransferResumeSession>(
+            new CommandDefinition(sql, new { TransferKey = transferKey }, cancellationToken: cancellationToken));
+    }
+
+    public async Task UpsertResumeSessionAsync(
+        TransferResumeSession session,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        using var writeLock = await _connectionFactory.AcquireWriteLockAsync(cancellationToken);
+        await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+
+        const string sql = """
+            INSERT INTO transfer_resume_sessions (
+                transfer_key, direction, local_path, remote_file_id, remote_parent_id,
+                upload_session_uri, temp_file_path, total_bytes, transferred_bytes,
+                local_mtime_ticks, updated_at_utc
+            ) VALUES (
+                @TransferKey, @Direction, @LocalPath, @RemoteFileId, @RemoteParentId,
+                @UploadSessionUri, @TempFilePath, @TotalBytes, @TransferredBytes,
+                @LocalMtimeTicks, @UpdatedAtUtc
+            )
+            ON CONFLICT(transfer_key) DO UPDATE SET
+                direction = excluded.direction,
+                local_path = excluded.local_path,
+                remote_file_id = excluded.remote_file_id,
+                remote_parent_id = excluded.remote_parent_id,
+                upload_session_uri = excluded.upload_session_uri,
+                temp_file_path = excluded.temp_file_path,
+                total_bytes = excluded.total_bytes,
+                transferred_bytes = excluded.transferred_bytes,
+                local_mtime_ticks = excluded.local_mtime_ticks,
+                updated_at_utc = excluded.updated_at_utc;
+            """;
+
+        await connection.ExecuteAsync(new CommandDefinition(sql, new
+        {
+            session.TransferKey,
+            Direction = (int)session.Direction,
+            session.LocalPath,
+            session.RemoteFileId,
+            session.RemoteParentId,
+            session.UploadSessionUri,
+            session.TempFilePath,
+            session.TotalBytes,
+            session.TransferredBytes,
+            session.LocalMtimeTicks,
+            session.UpdatedAtUtc
+        }, cancellationToken: cancellationToken));
+    }
+
+    public async Task DeleteResumeSessionAsync(
+        string transferKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(transferKey))
+        {
+            return;
+        }
+
+        using var writeLock = await _connectionFactory.AcquireWriteLockAsync(cancellationToken);
+        await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM transfer_resume_sessions WHERE transfer_key = @TransferKey;",
+            new { TransferKey = transferKey },
+            cancellationToken: cancellationToken));
     }
 
     private sealed class AccountRow

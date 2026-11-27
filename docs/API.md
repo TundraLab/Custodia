@@ -2,7 +2,7 @@
 
 > 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](en/API.md)
 
-- Versão da API: `v1` (`3.0.5`)
+- Versão da API: `v1` (`4.0.0`)
 - Endereço padrão: `http://127.0.0.1:5080` (somente loopback local)
 - Especificação OpenAPI: `GET http://127.0.0.1:5080/api/v1/openapi.json`
 - Cópia em PDF: `Custodia-API.pdf` (na raiz do projeto e acoplada em Configurações)
