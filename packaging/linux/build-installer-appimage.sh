@@ -40,7 +40,7 @@ Comment=Instale o Custódia no seu Linux
 Exec=AppRun
 Icon=custodia-installer
 Terminal=false
-Categories=Utility;System;
+Categories=Utility;
 StartupWMClass=com.tundralab.CustodiaInstaller
 EOF
 cp -f "${APPDIR}/custodia-installer.desktop" "${APPDIR}/usr/share/applications/custodia-installer.desktop"
@@ -48,6 +48,11 @@ cp -f "${APPDIR}/custodia-installer.desktop" "${APPDIR}/usr/share/applications/c
 cat > "${APPDIR}/AppRun" <<'EOF'
 #!/usr/bin/env bash
 HERE="$(dirname "$(readlink -f "$0")")"
+if [[ -f "${HERE}/custodia-installer.png" ]]; then
+  export CUSTODIA_INSTALLER_ICON="${HERE}/custodia-installer.png"
+elif [[ -f "${HERE}/usr/share/icons/hicolor/scalable/apps/custodia-installer.svg" ]]; then
+  export CUSTODIA_INSTALLER_ICON="${HERE}/usr/share/icons/hicolor/scalable/apps/custodia-installer.svg"
+fi
 exec /usr/bin/env python3 "${HERE}/usr/bin/custodia-installer.py" "$@"
 EOF
 chmod -R a+rX "${APPDIR}"
