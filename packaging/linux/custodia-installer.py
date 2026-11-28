@@ -190,7 +190,7 @@ for raw in sys.stdin:
         req = json.loads(raw)
         action = req.get("action")
         path = req.get("path", "")
-        if not os.path.isfile(path):
+        if action in ("install_deb", "install_rpm") and not os.path.isfile(path):
             emit("ERR:Arquivo do pacote não encontrado.")
             emit("DONE:1")
             continue
@@ -205,8 +205,8 @@ for raw in sys.stdin:
             emit(f"DONE:{rc}")
         elif action == "install_rpm":
             if shutil.which("dnf"):
-                inst = ver_rpm(["-q", "--qf", "%{VERSION}-%{RELEASE}\n", "custodia"])
-                tgt = ver_rpm(["-qp", "--qf", "%{VERSION}-%{RELEASE}\n", path])
+                inst = ver_rpm(["-q", "--qf", "%{VERSION}-%{RELEASE}\\n", "custodia"])
+                tgt = ver_rpm(["-qp", "--qf", "%{VERSION}-%{RELEASE}\\n", path])
                 if inst and tgt and parse_evr(tgt) == parse_evr(inst):
                     rc = run_cmd(["dnf", "reinstall", "-y", "--nogpgcheck", path])
                 elif inst and tgt and parse_evr(tgt) < parse_evr(inst):
@@ -219,6 +219,26 @@ for raw in sys.stdin:
                 rc = run_cmd(["zypper", "--non-interactive", "--no-gpg-checks", "install", "--force", path])
             elif shutil.which("rpm"):
                 rc = run_cmd(["rpm", "-Uvh", "--replacepkgs", "--oldpackage", "--nosignature", path])
+            else:
+                emit("ERR:Gerenciador de pacotes não encontrado.")
+                rc = 1
+            emit(f"DONE:{rc}")
+        elif action == "uninstall_deb":
+            if shutil.which("apt-get"):
+                rc = run_cmd(["apt-get", "remove", "-y", "custodia"])
+            elif shutil.which("dpkg"):
+                rc = run_cmd(["dpkg", "-r", "custodia"])
+            else:
+                emit("ERR:Gerenciador de pacotes não encontrado.")
+                rc = 1
+            emit(f"DONE:{rc}")
+        elif action == "uninstall_rpm":
+            if shutil.which("dnf"):
+                rc = run_cmd(["dnf", "remove", "-y", "custodia"])
+            elif shutil.which("zypper"):
+                rc = run_cmd(["zypper", "--non-interactive", "remove", "custodia"])
+            elif shutil.which("rpm"):
+                rc = run_cmd(["rpm", "-e", "custodia"])
             else:
                 emit("ERR:Gerenciador de pacotes não encontrado.")
                 rc = 1
@@ -540,7 +560,7 @@ class PrivilegedSession:
     def run_package_install(
         self,
         action: str,
-        pkg_path: Path,
+        pkg_path: Path | None,
         log: Callable[[str], None],
         on_human_status: Callable[[str], None] | None = None,
     ) -> None:
@@ -550,7 +570,7 @@ class PrivilegedSession:
                 raise RuntimeError("Permissão administrativa não concedida.")
 
         assert self._proc is not None and self._proc.stdin is not None and self._proc.stdout is not None
-        payload = json.dumps({"action": action, "path": str(pkg_path)}) + "\n"
+        payload = json.dumps({"action": action, "path": str(pkg_path) if pkg_path else ""}) + "\n"
         self._proc.stdin.write(payload)
         self._proc.stdin.flush()
 
@@ -649,6 +669,72 @@ def install_appimage(
     if shutil.which("update-desktop-database"):
         subprocess.run(["update-desktop-database", str(apps_dir)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     log(f"Aplicativo instalado em {target_app}")
+
+
+def parse_semver_tuple(raw: str | None) -> tuple[int, ...]:
+    if not raw:
+        return ()
+    cleaned = raw.strip().lstrip("vV").split("-", 1)[0]
+    parts: list[int] = []
+    for seg in cleaned.split("."):
+        digits = "".join(ch for ch in seg if ch.isdigit())
+        if digits:
+            parts.append(int(digits))
+    return tuple(parts)
+
+
+def detect_installed_custodia() -> dict | None:
+    if shutil.which("rpm"):
+        res = subprocess.run(
+            ["rpm", "-q", "--qf", "%{VERSION}\n", "custodia"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            return {"format": "rpm", "version": res.stdout.strip().splitlines()[0].strip()}
+
+    if shutil.which("dpkg-query"):
+        res = subprocess.run(
+            ["dpkg-query", "-W", "-f=${Status}\t${Version}\n", "custodia"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if res.returncode == 0 and "\t" in res.stdout:
+            status_part, ver_part = res.stdout.strip().split("\t", 1)
+            if "install ok installed" in status_part:
+                return {"format": "deb", "version": ver_part.strip()}
+
+    home = Path.home()
+    local_app = home / ".local" / "opt" / "custodia" / "Custodia.AppImage"
+    if local_app.is_file():
+        return {"format": "appimage", "version": None}
+
+    return None
+
+
+def uninstall_appimage(
+    log: Callable[[str], None],
+    on_human_status: Callable[[str], None] | None = None,
+) -> None:
+    home = Path.home()
+    if on_human_status is not None:
+        on_human_status("Removendo arquivos e atalhos locais...")
+    for target in (
+        home / ".local" / "opt" / "custodia" / "Custodia.AppImage",
+        home / ".local" / "bin" / "custodia",
+        home / ".local" / "share" / "applications" / "custodia.desktop",
+        home / ".config" / "autostart" / "custodia.desktop",
+    ):
+        target.unlink(missing_ok=True)
+    app_dir = home / ".local" / "opt" / "custodia"
+    if app_dir.is_dir():
+        shutil.rmtree(app_dir, ignore_errors=True)
+    apps_dir = home / ".local" / "share" / "applications"
+    if shutil.which("update-desktop-database") and apps_dir.is_dir():
+        subprocess.run(["update-desktop-database", str(apps_dir)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    log("Aplicativo portátil e atalhos removidos do usuário.")
 
 
 def self_delete_installer(log: Callable[[str], None]) -> bool:
@@ -1022,6 +1108,33 @@ button.btn-danger:hover {
     background-color: #5B2328;
 }
 
+button.btn-danger-outlined {
+    background-color: transparent;
+    background-image: none;
+    color: #FFB4AB;
+    border: 1px solid rgba(255, 180, 171, 0.35);
+    border-radius: 20px;
+    padding: 9px 18px;
+    font-weight: 600;
+    font-size: 13px;
+    box-shadow: none;
+}
+
+button.btn-danger-outlined:hover {
+    background-color: #4A1C20;
+    border-color: transparent;
+}
+
+.installed-banner {
+    background-color: #16394B;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 14px;
+    color: #C2E7FF;
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
 button.btn-ghost {
     background-color: #282A2F;
     background-image: none;
@@ -1360,7 +1473,12 @@ def run_gtk4() -> bool:
             )
             self.releases: list[dict] = [build_fallback_release()]
             self.recommended_fmt = detect_default_format()
-            self.selected_fmt = self.recommended_fmt
+            self.installed_info = detect_installed_custodia()
+            self.selected_fmt = (
+                self.installed_info["format"]
+                if self.installed_info is not None
+                else self.recommended_fmt
+            )
             self.distro_label = detect_distro_label()
             self.cancel_event = threading.Event()
             self.install_started_at = 0.0
@@ -1501,7 +1619,7 @@ def run_gtk4() -> bool:
 
         def _show_whats_new_dialog(self, *_args) -> None:
             rel = self._selected_release()
-            dlg = Gtk.Window(transient_for=self.win, modal=True, title=f"Novidades — {rel['tag']}")
+            dlg = Gtk.Window(transient_for=self.win, modal=True, title=f"Novidades: {rel['tag']}")
             dlg.set_default_size(580, 470)
             dlg.add_css_class("installer-root")
 
@@ -1699,6 +1817,19 @@ def run_gtk4() -> bool:
             ver_row.append(self.ver_dropdown)
             top_block.append(ver_row)
 
+            self.installed_banner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            self.installed_banner.add_css_class("installed-banner")
+            if self.installed_info is not None:
+                inst_ver = f"v{self.installed_info['version']} " if self.installed_info.get("version") else ""
+                inst_fmt = ".AppImage" if self.installed_info["format"] == "appimage" else f".{self.installed_info['format']}"
+                banner_txt = f"Custódia {inst_ver}({inst_fmt}) instalado neste computador. Escolha Atualizar ou Desinstalar."
+                self.installed_banner.set_visible(True)
+            else:
+                banner_txt = ""
+                self.installed_banner.set_visible(False)
+            self.installed_banner.append(_left_label_gtk4(banner_txt, "installed-banner", wrap=True))
+            top_block.append(self.installed_banner)
+
             # Warning shown when user picks an older version instead of the latest.
             self.old_ver_banner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
             self.old_ver_banner.add_css_class("warning-banner")
@@ -1763,17 +1894,24 @@ def run_gtk4() -> bool:
             distro_lbl.set_hexpand(True)
             distro_lbl.set_ellipsize(Pango.EllipsizeMode.END)
 
+            self.uninstall_btn = Gtk.Button(label="Desinstalar")
+            self.uninstall_btn.add_css_class("btn-danger-outlined")
+            self.uninstall_btn.connect("clicked", self._on_uninstall_clicked)
+            self.uninstall_btn.set_visible(self.installed_info is not None)
+
             self.install_btn = Gtk.Button(label="Instalar agora")
             self.install_btn.add_css_class("btn-primary")
             self.install_btn.connect("clicked", self._on_start_install)
 
             action_row.append(distro_lbl)
+            action_row.append(self.uninstall_btn)
             action_row.append(self.install_btn)
             card.append(action_row)
 
             col.append(card)
             col.append(self._build_support_links())
             self._select_format(self.selected_fmt)
+            self._refresh_action_buttons(f"v{FALLBACK_VERSION}")
             return shell
 
         def _build_install_page(self) -> Gtk.Widget:
@@ -1994,7 +2132,8 @@ def run_gtk4() -> bool:
             self.done_pill.add_css_class("badge-success-pill")
             top_badge_row.append(self.done_pill)
             hero_text.append(top_badge_row)
-            hero_text.append(_left_label_gtk4("Tudo pronto! O Custódia foi instalado", "hero-title"))
+            self.done_title = _left_label_gtk4("Tudo pronto! O Custódia foi instalado", "hero-title")
+            hero_text.append(self.done_title)
             self.done_sub = _left_label_gtk4(
                 "Você já pode começar a sincronizar seus arquivos no Google Drive.",
                 "hero-subtitle",
@@ -2041,13 +2180,13 @@ def run_gtk4() -> bool:
             close_btn = Gtk.Button(label="Fechar")
             close_btn.add_css_class("btn-secondary")
             close_btn.connect("clicked", lambda *_: self._request_quit())
-            open_btn = Gtk.Button(label="Abrir Custódia agora")
-            open_btn.add_css_class("btn-primary")
-            open_btn.connect("clicked", self._on_open_and_close)
+            self.done_open_btn = Gtk.Button(label="Abrir Custódia agora")
+            self.done_open_btn.add_css_class("btn-primary")
+            self.done_open_btn.connect("clicked", self._on_open_and_close)
 
             btn_row.append(brand_end)
             btn_row.append(close_btn)
-            btn_row.append(open_btn)
+            btn_row.append(self.done_open_btn)
             card.append(btn_row)
 
             col.append(card)
@@ -2137,6 +2276,20 @@ def run_gtk4() -> bool:
                     if k in assets:
                         self._select_format(k)
                         break
+            self._refresh_action_buttons(rel["tag"])
+
+        def _refresh_action_buttons(self, target_tag: str) -> None:
+            if self.installed_info is None:
+                self.install_btn.set_label("Instalar agora")
+                return
+            inst_t = parse_semver_tuple(self.installed_info.get("version"))
+            tgt_t = parse_semver_tuple(target_tag)
+            if inst_t and tgt_t and tgt_t > inst_t:
+                self.install_btn.set_label("Atualizar agora")
+            elif inst_t and tgt_t and tgt_t < inst_t:
+                self.install_btn.set_label("Instalar versão selecionada")
+            else:
+                self.install_btn.set_label("Reinstalar / Atualizar")
 
         def _append_log(self, msg: str) -> None:
             self.all_log_lines.append(msg)
@@ -2271,8 +2424,15 @@ def run_gtk4() -> bool:
             self.progress_bar.set_fraction(0.0)
             self.elapsed_lbl.set_label("0 s decorridos")
             fmt_label = ".AppImage" if fmt == "appimage" else f".{fmt}"
+            is_update = self.installed_info is not None
+            self.inst_title.set_label("Atualizando o Custódia..." if is_update else "Instalando o Custódia...")
+            self.inst_subtitle.set_label(
+                "Estamos baixando e preparando o aplicativo no seu computador."
+            )
             self.inst_target_pill.set_label(f"{rel['tag']}  •  {fmt_label}")
             self.step_widgets[1]["title"].set_label(f"Baixando o Custódia {rel['tag']}")
+            self.step_widgets[2]["title"].set_label(STEPS[2])
+            self.step_widgets[3]["title"].set_label(STEPS[3])
 
             self.stack.set_visible_child_name("install")
             self.timer_source_id = GLib.timeout_add(1000, self._tick_elapsed)
@@ -2340,13 +2500,143 @@ def run_gtk4() -> bool:
 
         def _show_done(self, tag: str, fmt: str, deleted: bool) -> bool:
             self.done_pill.set_label(f"Custódia {tag} pronto para usar")
+            self.done_title.set_label("Tudo pronto! O Custódia foi configurado")
+            self.done_sub.set_label("Você já pode começar a sincronizar seus arquivos no Google Drive.")
+            self.done_item_ver["title"].set_label("Aplicativo pronto")
             self.done_item_ver["sub"].set_label(f"Versão {tag} configurada no {self.distro_label}")
+            self.done_item_shortcut["box"].set_visible(True)
+            self.done_open_btn.set_visible(True)
             if deleted:
                 self.done_item_cleanup["title"].set_label("Instalador removido automaticamente")
                 self.done_item_cleanup["sub"].set_label("O arquivo usado na instalação já foi apagado da sua pasta")
             else:
-                self.done_item_cleanup["title"].set_label("Instalação finalizada")
+                self.done_item_cleanup["title"].set_label("Processo finalizado")
                 self.done_item_cleanup["sub"].set_label("Tudo configurado e pronto para abrir")
+            self.stack.set_visible_child_name("done")
+            return False
+
+        def _on_uninstall_clicked(self, *_args) -> None:
+            if self.installed_info is None:
+                return
+            dlg = Gtk.Window(transient_for=self.win, modal=True, title="Desinstalar Custódia")
+            dlg.set_resizable(False)
+            dlg.set_default_size(430, -1)
+            dlg.add_css_class("installer-root")
+
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+            box.add_css_class("dialog-card")
+            box.append(_left_label_gtk4("Desinstalar o Custódia agora?", "dialog-title"))
+            box.append(
+                _left_label_gtk4(
+                    "O aplicativo será removido do sistema. Seus arquivos locais e no Google Drive permanecem intactos.",
+                    "dialog-body",
+                    wrap=True,
+                )
+            )
+
+            btn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            btn_row.set_halign(Gtk.Align.END)
+            btn_row.set_margin_top(8)
+
+            cancel_btn = Gtk.Button(label="Cancelar")
+            cancel_btn.add_css_class("btn-secondary")
+            cancel_btn.connect("clicked", lambda *_: dlg.close())
+
+            confirm_btn = Gtk.Button(label="Desinstalar")
+            confirm_btn.add_css_class("btn-danger")
+
+            def _start_uninstall(*_a) -> None:
+                dlg.close()
+                self._start_uninstall_flow()
+
+            confirm_btn.connect("clicked", _start_uninstall)
+            btn_row.append(cancel_btn)
+            btn_row.append(confirm_btn)
+            box.append(btn_row)
+            dlg.set_child(box)
+            dlg.present()
+
+        def _start_uninstall_flow(self) -> None:
+            if self.installed_info is None:
+                return
+            self._stop_timers()
+            self.cancel_event.clear()
+            self.installing = True
+            self.install_started_at = time.monotonic()
+            self.target_fraction = 0.0
+            self.display_fraction = 0.0
+            self.all_log_lines.clear()
+            self.error_box.set_visible(False)
+            self.cancel_btn.set_sensitive(False)
+            self.log_buffer.set_text("")
+            self.stats_pct.set_label("0%")
+            self.stats_bytes.set_label("")
+            self.stats_speed.set_label("")
+            self.progress_bar.set_fraction(0.0)
+            self.elapsed_lbl.set_label("0 s decorridos")
+            inst_fmt = self.installed_info["format"]
+            fmt_label = ".AppImage" if inst_fmt == "appimage" else f".{inst_fmt}"
+            self.inst_title.set_label("Desinstalando o Custódia...")
+            self.inst_subtitle.set_label("Removendo o aplicativo instalado com segurança.")
+            self.inst_target_pill.set_label(f"Remoção  •  {fmt_label}")
+            self.step_widgets[1]["title"].set_label("Encerrando aplicativo em execução")
+            self.step_widgets[2]["title"].set_label("Preparando desinstalação")
+            self.step_widgets[3]["title"].set_label("Removendo aplicativo do sistema")
+
+            self.stack.set_visible_child_name("install")
+            self.timer_source_id = GLib.timeout_add(1000, self._tick_elapsed)
+            self.anim_source_id = GLib.timeout_add(33, self._tick_anim)
+
+            threading.Thread(
+                target=self._uninstall_worker,
+                args=(inst_fmt,),
+                daemon=True,
+            ).start()
+
+        def _uninstall_worker(self, inst_fmt: str) -> None:
+            try:
+                self._set_step(0, f"Verificando instalação em {self.distro_label}")
+                self._set_progress(0.12, speed_text="Verificando...")
+                self._set_step(1, "Fechando janelas abertas do Custódia")
+                stop_running_custodia()
+                self._set_progress(0.32, speed_text="Preparando...")
+                self._set_step(2, "Iniciando remoção segura")
+                self._set_progress(0.45, speed_text="Removendo...")
+                self._set_step(3, "Desinstalando pacotes e atalhos...")
+                on_sub = lambda text: self._set_step_sub(3, text)
+                if inst_fmt == "deb":
+                    self.priv_session.run_package_install("uninstall_deb", None, self._append_log, on_sub)
+                elif inst_fmt == "rpm":
+                    self.priv_session.run_package_install("uninstall_rpm", None, self._append_log, on_sub)
+                else:
+                    uninstall_appimage(self._append_log, on_sub)
+                self._set_step(4, "Removendo arquivo do instalador")
+                self._set_progress(0.95, speed_text="Finalizando...")
+                deleted = self_delete_installer(self._append_log)
+                self._set_step(5)
+                self._set_progress(1.0, speed_text="Concluído")
+                self.installing = False
+                GLib.idle_add(self._show_uninstall_done, inst_fmt, deleted)
+            except Exception as exc:
+                self.installing = False
+                self._append_log(f"ERRO: {exc}")
+                GLib.idle_add(self._show_error, str(exc))
+
+        def _show_uninstall_done(self, inst_fmt: str, deleted: bool) -> bool:
+            fmt_label = ".AppImage" if inst_fmt == "appimage" else f".{inst_fmt}"
+            self.done_pill.set_label("Desinstalação concluída")
+            self.done_title.set_label("Custódia removido do computador")
+            self.done_sub.set_label("Seus arquivos pessoais e backups no Google Drive foram mantidos intactos.")
+            self.done_item_ver["title"].set_label("Aplicativo removido")
+            self.done_item_ver["sub"].set_label(f"Pacote {fmt_label} desinstalado do {self.distro_label}")
+            self.done_item_shortcut["box"].set_visible(False)
+            self.done_open_btn.set_visible(False)
+            if deleted:
+                self.done_item_cleanup["title"].set_label("Instalador removido automaticamente")
+                self.done_item_cleanup["sub"].set_label("O arquivo temporário usado já foi apagado")
+            else:
+                self.done_item_cleanup["title"].set_label("Limpeza concluída")
+                self.done_item_cleanup["sub"].set_label("Você pode fechar esta janela com segurança")
             self.stack.set_visible_child_name("done")
             return False
 
@@ -2429,7 +2719,12 @@ def run_gtk3() -> bool:
 
             self.releases: list[dict] = [build_fallback_release()]
             self.recommended_fmt = detect_default_format()
-            self.selected_fmt = self.recommended_fmt
+            self.installed_info = detect_installed_custodia()
+            self.selected_fmt = (
+                self.installed_info["format"]
+                if self.installed_info is not None
+                else self.recommended_fmt
+            )
             self.distro_label = detect_distro_label()
             self.cancel_event = threading.Event()
             self.install_started_at = 0.0
@@ -2524,6 +2819,8 @@ def run_gtk3() -> bool:
             self.win.add(overlay)
             self.win.show_all()
             self.old_ver_banner.set_visible(False)
+            self.installed_banner.set_visible(self.installed_info is not None)
+            self.uninstall_btn.set_visible(self.installed_info is not None)
             for k, chk in self.fmt_checks.items():
                 chk.set_visible(k == self.selected_fmt)
             self.error_box.set_visible(False)
@@ -2555,7 +2852,7 @@ def run_gtk3() -> bool:
 
         def _show_whats_new_dialog(self, *_args) -> None:
             rel = self._selected_release()
-            dlg = Gtk.Window(transient_for=self.win, modal=True, title=f"Novidades — {rel['tag']}")
+            dlg = Gtk.Window(transient_for=self.win, modal=True, title=f"Novidades: {rel['tag']}")
             dlg.set_default_size(580, 470)
             dlg.get_style_context().add_class("installer-root")
 
@@ -2707,6 +3004,17 @@ def run_gtk3() -> bool:
             ver_row.pack_start(self.ver_combo, False, False, 0)
             top_block.pack_start(ver_row, False, False, 0)
 
+            self.installed_banner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            self.installed_banner.get_style_context().add_class("installed-banner")
+            if self.installed_info is not None:
+                inst_ver = f"v{self.installed_info['version']} " if self.installed_info.get("version") else ""
+                inst_fmt = ".AppImage" if self.installed_info["format"] == "appimage" else f".{self.installed_info['format']}"
+                banner_txt = f"Custódia {inst_ver}({inst_fmt}) instalado neste computador. Escolha Atualizar ou Desinstalar."
+            else:
+                banner_txt = ""
+            self.installed_banner.pack_start(_left_label_gtk3(banner_txt, "installed-banner", wrap=True), True, True, 0)
+            top_block.pack_start(self.installed_banner, False, False, 0)
+
             self.old_ver_banner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
             self.old_ver_banner.get_style_context().add_class("warning-banner")
             self.old_ver_lbl = _left_label_gtk3("", "warning-text", wrap=True)
@@ -2753,16 +3061,21 @@ def run_gtk3() -> bool:
             action_row.get_style_context().add_class("card-footer-row")
             distro_lbl = _left_label_gtk3(f"Seu sistema: {self.distro_label}", "distro-hint")
             distro_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+            self.uninstall_btn = Gtk.Button(label="Desinstalar")
+            self.uninstall_btn.get_style_context().add_class("btn-danger-outlined")
+            self.uninstall_btn.connect("clicked", self._on_uninstall_clicked)
             self.install_btn = Gtk.Button(label="Instalar agora")
             self.install_btn.get_style_context().add_class("btn-primary")
             self.install_btn.connect("clicked", self._on_start_install)
             action_row.pack_start(distro_lbl, True, True, 0)
+            action_row.pack_start(self.uninstall_btn, False, False, 0)
             action_row.pack_start(self.install_btn, False, False, 0)
             card.pack_start(action_row, False, False, 0)
 
             col.pack_start(card, False, False, 0)
             col.pack_start(self._build_support_links(), False, False, 0)
             self._select_format(self.selected_fmt)
+            self._refresh_action_buttons(f"v{FALLBACK_VERSION}")
             return shell
 
         def _build_install_page(self):
@@ -2774,13 +3087,10 @@ def run_gtk3() -> bool:
             icon_tile.set_valign(Gtk.Align.CENTER)
             icon_tile.pack_start(_svg_gtk3_image(SVG_DOWNLOAD, 22), True, True, 0)
             hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-            hero_text.pack_start(_left_label_gtk3("Instalando o Custódia...", "hero-title"), False, False, 0)
-            hero_text.pack_start(
-                _left_label_gtk3("Estamos baixando e preparando o aplicativo no seu computador.", "hero-subtitle", wrap=True),
-                False,
-                False,
-                0,
-            )
+            self.inst_title = _left_label_gtk3("Instalando o Custódia...", "hero-title")
+            self.inst_subtitle = _left_label_gtk3("Estamos baixando e preparando o aplicativo no seu computador.", "hero-subtitle", wrap=True)
+            hero_text.pack_start(self.inst_title, False, False, 0)
+            hero_text.pack_start(self.inst_subtitle, False, False, 0)
             hero.pack_start(icon_tile, False, False, 0)
             hero.pack_start(hero_text, True, True, 0)
             col.pack_start(hero, False, False, 0)
@@ -2950,7 +3260,8 @@ def run_gtk3() -> bool:
             self.done_pill.set_halign(Gtk.Align.START)
             self.done_pill.get_style_context().add_class("badge-success-pill")
             hero_text.pack_start(self.done_pill, False, False, 0)
-            hero_text.pack_start(_left_label_gtk3("Tudo pronto! O Custódia foi instalado", "hero-title"), False, False, 0)
+            self.done_title = _left_label_gtk3("Tudo pronto! O Custódia foi instalado", "hero-title")
+            hero_text.pack_start(self.done_title, False, False, 0)
             self.done_sub = _left_label_gtk3(
                 "Você já pode começar a sincronizar seus arquivos no Google Drive.",
                 "hero-subtitle",
@@ -2978,13 +3289,13 @@ def run_gtk3() -> bool:
             btn_row.get_style_context().add_class("card-footer-row")
             btn_row.pack_start(_app_icon_gtk3_image(24), False, False, 0)
             btn_row.pack_start(_left_label_gtk3("Custódia by TundraLab", "distro-hint"), True, True, 0)
-            open_btn = Gtk.Button(label="Abrir Custódia agora")
-            open_btn.get_style_context().add_class("btn-primary")
-            open_btn.connect("clicked", self._on_open_and_close)
+            self.done_open_btn = Gtk.Button(label="Abrir Custódia agora")
+            self.done_open_btn.get_style_context().add_class("btn-primary")
+            self.done_open_btn.connect("clicked", self._on_open_and_close)
             close_btn = Gtk.Button(label="Fechar")
             close_btn.get_style_context().add_class("btn-secondary")
             close_btn.connect("clicked", lambda *_: self._request_quit())
-            btn_row.pack_end(open_btn, False, False, 0)
+            btn_row.pack_end(self.done_open_btn, False, False, 0)
             btn_row.pack_end(close_btn, False, False, 0)
             card.pack_start(btn_row, False, False, 0)
 
@@ -3056,6 +3367,20 @@ def run_gtk3() -> bool:
                     if k in assets:
                         self._select_format(k)
                         break
+            self._refresh_action_buttons(rel["tag"])
+
+        def _refresh_action_buttons(self, target_tag: str) -> None:
+            if self.installed_info is None:
+                self.install_btn.set_label("Instalar agora")
+                return
+            inst_t = parse_semver_tuple(self.installed_info.get("version"))
+            tgt_t = parse_semver_tuple(target_tag)
+            if inst_t and tgt_t and tgt_t > inst_t:
+                self.install_btn.set_label("Atualizar agora")
+            elif inst_t and tgt_t and tgt_t < inst_t:
+                self.install_btn.set_label("Instalar versão selecionada")
+            else:
+                self.install_btn.set_label("Reinstalar / Atualizar")
 
         def _append_log(self, msg: str) -> None:
             self.all_log_lines.append(msg)
@@ -3188,7 +3513,11 @@ def run_gtk3() -> bool:
             self.stats_speed.set_text("")
             self.progress_bar.set_fraction(0.0)
             self.elapsed_lbl.set_text("0 s decorridos")
+            self.inst_title.set_text("Atualizando o Custódia..." if self.installed_info is not None else "Instalando o Custódia...")
+            self.inst_subtitle.set_text("Estamos baixando e preparando o aplicativo no seu computador.")
             self.step_widgets[1]["title"].set_text(f"Baixando o Custódia {rel['tag']}")
+            self.step_widgets[2]["title"].set_text(STEPS[2])
+            self.step_widgets[3]["title"].set_text(STEPS[3])
             self.stack.set_visible_child_name("install")
             self.timer_source_id = GLib.timeout_add(1000, self._tick_elapsed)
             self.anim_source_id = GLib.timeout_add(33, self._tick_anim)
@@ -3255,13 +3584,119 @@ def run_gtk3() -> bool:
 
         def _show_done(self, tag: str, fmt: str, deleted: bool) -> bool:
             self.done_pill.set_text(f"Custódia {tag} pronto para usar")
+            self.done_title.set_text("Tudo pronto! O Custódia foi configurado")
+            self.done_sub.set_text("Você já pode começar a sincronizar seus arquivos no Google Drive.")
+            self.done_item_ver["title"].set_text("Aplicativo pronto")
             self.done_item_ver["sub"].set_text(f"Versão {tag} configurada no {self.distro_label}")
+            self.done_item_shortcut["box"].set_visible(True)
+            self.done_open_btn.set_visible(True)
             if deleted:
                 self.done_item_cleanup["title"].set_text("Instalador removido automaticamente")
                 self.done_item_cleanup["sub"].set_text("O arquivo usado na instalação já foi apagado da sua pasta")
             else:
-                self.done_item_cleanup["title"].set_text("Instalação finalizada")
+                self.done_item_cleanup["title"].set_text("Processo finalizado")
                 self.done_item_cleanup["sub"].set_text("Tudo configurado e pronto para abrir")
+            self.stack.set_visible_child_name("done")
+            return False
+
+        def _on_uninstall_clicked(self, *_args) -> None:
+            if self.installed_info is None:
+                return
+            dlg = Gtk.MessageDialog(
+                transient_for=self.win,
+                modal=True,
+                message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.NONE,
+                text="Desinstalar o Custódia agora?",
+            )
+            dlg.format_secondary_text(
+                "O aplicativo será removido do sistema. Seus arquivos locais e no Google Drive permanecem intactos."
+            )
+            dlg.add_button("Cancelar", Gtk.ResponseType.CANCEL)
+            dlg.add_button("Desinstalar", Gtk.ResponseType.OK)
+            resp = dlg.run()
+            dlg.destroy()
+            if resp == Gtk.ResponseType.OK:
+                self._start_uninstall_flow()
+
+        def _start_uninstall_flow(self) -> None:
+            if self.installed_info is None:
+                return
+            self._stop_timers()
+            self.cancel_event.clear()
+            self.installing = True
+            self.install_started_at = time.monotonic()
+            self.target_fraction = 0.0
+            self.display_fraction = 0.0
+            self.all_log_lines.clear()
+            self.error_box.set_visible(False)
+            self.cancel_btn.set_sensitive(False)
+            self.log_buffer.set_text("")
+            self.stats_pct.set_text("0%")
+            self.stats_bytes.set_text("")
+            self.stats_speed.set_text("")
+            self.progress_bar.set_fraction(0.0)
+            self.elapsed_lbl.set_text("0 s decorridos")
+            inst_fmt = self.installed_info["format"]
+            self.inst_title.set_text("Desinstalando o Custódia...")
+            self.inst_subtitle.set_text("Removendo o aplicativo instalado com segurança.")
+            self.step_widgets[1]["title"].set_text("Encerrando aplicativo em execução")
+            self.step_widgets[2]["title"].set_text("Preparando desinstalação")
+            self.step_widgets[3]["title"].set_text("Removendo aplicativo do sistema")
+            self.stack.set_visible_child_name("install")
+            self.timer_source_id = GLib.timeout_add(1000, self._tick_elapsed)
+            self.anim_source_id = GLib.timeout_add(33, self._tick_anim)
+
+            threading.Thread(
+                target=self._uninstall_worker,
+                args=(inst_fmt,),
+                daemon=True,
+            ).start()
+
+        def _uninstall_worker(self, inst_fmt: str) -> None:
+            try:
+                self._set_step(0, f"Verificando instalação em {self.distro_label}")
+                self._set_progress(0.12, speed_text="Verificando...")
+                self._set_step(1, "Fechando janelas abertas do Custódia")
+                stop_running_custodia()
+                self._set_progress(0.32, speed_text="Preparando...")
+                self._set_step(2, "Iniciando remoção segura")
+                self._set_progress(0.45, speed_text="Removendo...")
+                self._set_step(3, "Desinstalando pacotes e atalhos...")
+                on_sub = lambda text: self._set_step_sub(3, text)
+                if inst_fmt == "deb":
+                    self.priv_session.run_package_install("uninstall_deb", None, self._append_log, on_sub)
+                elif inst_fmt == "rpm":
+                    self.priv_session.run_package_install("uninstall_rpm", None, self._append_log, on_sub)
+                else:
+                    uninstall_appimage(self._append_log, on_sub)
+                self._set_step(4, "Removendo arquivo do instalador")
+                self._set_progress(0.95, speed_text="Finalizando...")
+                deleted = self_delete_installer(self._append_log)
+                self._set_step(5)
+                self._set_progress(1.0, speed_text="Concluído")
+                self.installing = False
+                GLib.idle_add(self._show_uninstall_done, inst_fmt, deleted)
+            except Exception as exc:
+                self.installing = False
+                self._append_log(f"ERRO: {exc}")
+                GLib.idle_add(self._show_error, str(exc))
+
+        def _show_uninstall_done(self, inst_fmt: str, deleted: bool) -> bool:
+            fmt_label = ".AppImage" if inst_fmt == "appimage" else f".{inst_fmt}"
+            self.done_pill.set_text("Desinstalação concluída")
+            self.done_title.set_text("Custódia removido do computador")
+            self.done_sub.set_text("Seus arquivos pessoais e backups no Google Drive foram mantidos intactos.")
+            self.done_item_ver["title"].set_text("Aplicativo removido")
+            self.done_item_ver["sub"].set_text(f"Pacote {fmt_label} desinstalado do {self.distro_label}")
+            self.done_item_shortcut["box"].set_visible(False)
+            self.done_open_btn.set_visible(False)
+            if deleted:
+                self.done_item_cleanup["title"].set_text("Instalador removido automaticamente")
+                self.done_item_cleanup["sub"].set_text("O arquivo temporário usado já foi apagado")
+            else:
+                self.done_item_cleanup["title"].set_text("Limpeza concluída")
+                self.done_item_cleanup["sub"].set_text("Você pode fechar esta janela com segurança")
             self.stack.set_visible_child_name("done")
             return False
 
@@ -3298,9 +3733,32 @@ def _show_no_gtk_dialog() -> None:
 
 def run_cli_fallback() -> None:
     print("== Instalador do Custódia ==")
-    rels = fetch_releases()
+    installed = detect_installed_custodia()
     rec_fmt = detect_default_format()
-    print(f"Sistema detectado: {detect_distro_label()} (recomendado: .{rec_fmt})\n")
+    print(f"Sistema detectado: {detect_distro_label()} (recomendado: .{rec_fmt})")
+    if installed is not None:
+        inst_ver = f" v{installed['version']}" if installed.get("version") else ""
+        print(f"Instalação encontrada:{inst_ver} (.{installed['format']})\n")
+        op = input("Escolha uma ação: [1] Atualizar/Reinstalar  [2] Desinstalar [1]: ").strip()
+        if op == "2":
+            priv = PrivilegedSession()
+            try:
+                stop_running_custodia()
+                if installed["format"] == "deb":
+                    priv.run_package_install("uninstall_deb", None, print)
+                elif installed["format"] == "rpm":
+                    priv.run_package_install("uninstall_rpm", None, print)
+                else:
+                    uninstall_appimage(print)
+                self_delete_installer(print)
+                print("Custódia desinstalado com sucesso!")
+            finally:
+                priv.close()
+            return
+    else:
+        print()
+
+    rels = fetch_releases()
 
     for i, r in enumerate(rels[:5], 1):
         print(f"  {i}) {r['tag']}")
