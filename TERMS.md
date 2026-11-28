@@ -1,9 +1,9 @@
-# Termos de Uso — Custódia
+# Termos de Uso: Custódia
 
 > 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](docs/en/TERMS.md)
 
-**Última atualização:** 24 de novembro de 2026  
-**Titular / Desenvolvedora:** TundraLab (`contato.tundralab@gmail.com`)  
+**Última atualização:** 28 de novembro de 2026  
+**Projeto / Desenvolvedor:** TundraLab, por Gustavo Henrique (`contato.tundralab@gmail.com`)  
 **Repositório oficial:** https://github.com/TundraLab/Custodia
 
 Ao baixar, instalar, compilar ou utilizar o **Custódia**, você declara que leu e concorda com estes Termos de Uso, com a [Política de Privacidade](PRIVACY.md) e com o [Contrato de Licença Proprietária](LICENSE).
