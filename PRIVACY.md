@@ -1,9 +1,9 @@
-# Política de Privacidade — Custódia
+# Política de Privacidade - Custódia
 
 > 🌐 **Idioma / Language:** **🇧🇷 Português (atual)** | [🇺🇸 English](docs/en/PRIVACY.md)
 
-**Última atualização:** 24 de novembro de 2026  
-**Responsável:** TundraLab (`contato.tundralab@gmail.com`)  
+**Última atualização:** 28 de novembro de 2026  
+**Controlador / Titular:** Gustavo Henrique Novaes Gomes (`@GustaHerin`), sob o nome comercial e projeto **TundraLab** (`contato.tundralab@gmail.com`)  
 **Repositório oficial:** https://github.com/TundraLab/Custodia
 
 Esta Política de Privacidade descreve como o aplicativo desktop **Custódia** trata dados locais, credenciais OAuth 2.0, integrações com APIs do Google e e-mails opcionais de ciclo de vida da conta.

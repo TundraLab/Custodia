@@ -1,11 +1,12 @@
 Proprietary License / Todos os Direitos Reservados (All Rights Reserved)
 
-Copyright (c) 2026 TundraLab - Gustavo Henrique Novaes Gomes (@GustaHerin)
+Copyright (c) 2026 Gustavo Henrique Novaes Gomes (@GustaHerin) - TundraLab
 Todos os direitos reservados.
 
 Este software, incluindo seu código-fonte, documentação, arquitetura, interface
 gráfica, scripts de empacotamento e ativos visuais ("Software"), é propriedade
-intelectual exclusiva de TundraLab e Gustavo Henrique Novaes Gomes (@GustaHerin).
+intelectual exclusiva de Gustavo Henrique Novaes Gomes (@GustaHerin), sob o
+nome comercial e projeto TundraLab ("Titular").
 
 1. Acesso ao Código-Fonte (Source-Available):
    O código-fonte é disponibilizado publicamente exclusivamente para fins de
@@ -14,13 +15,13 @@ intelectual exclusiva de TundraLab e Gustavo Henrique Novaes Gomes (@GustaHerin)
    é concedida para copiar, reproduzir, modificar, adaptar, criar obras
    derivadas, sublicenciar, distribuir, publicar ou utilizar trechos do código
    em outros projetos (comerciais ou não) sem autorização prévia e expressa
-   por escrito do titular.
+   por escrito do Titular.
 
 2. Uso dos Binários Oficiais (.deb, .rpm e .AppImage):
    Usuários finais recebem uma licença gratuita, por prazo indeterminado enquanto
-   forem integralmente respeitados estes termos, não exclusiva, intransferível
-   e revogável para baixar, instalar e executar os pacotes oficiais compilados
-   distribuídos nos canais oficiais de TundraLab/Custódia.
+   forem integralmente respeitados estes termos, não exclusiva, intransferível,
+   não sublicenciável e revogável para baixar, instalar e executar os pacotes
+   oficiais compilados distribuídos nos canais oficiais da TundraLab/Custódia.
    - Uso pessoal: permitido em estações de trabalho Linux próprias do usuário.
    - Uso corporativo interno: permitido exclusivamente em estações de trabalho
      gerenciadas pela organização para operação por seus colaboradores internos,
@@ -32,22 +33,25 @@ intelectual exclusiva de TundraLab e Gustavo Henrique Novaes Gomes (@GustaHerin)
      (como hipóteses de interoperabilidade expressamente previstas em lei).
 
 3. Contribuições Externas (Acordo de Contribuição - CLA):
-   O envio de Pull Requests, correções de código, sugestões ou relatórios ao
-   repositório oficial ou canais do projeto equivale à aceitação expressa das
-   seguintes condições:
+   A submissão e a aceitação de Pull Requests, correções de código, traduções
+   ou sugestões substanciais ao repositório oficial regem-se pelo Acordo de
+   Licença de Contribuição dedicado (docs/CLA.md) e exigem confirmação
+   expressa de aceite pelo colaborador antes da incorporação (merge):
    - Originalidade e autorização: o colaborador declara ser o autor original do
      material enviado ou possuir autorização expressa e licença compatível de
      terceiros para submetê-lo, comprometendo-se a não enviar código proprietário
      ou de terceiros sem permissão.
-   - Direitos de incorporação: o colaborador concede à TundraLab e a Gustavo
-     Henrique Novaes Gomes licença mundial, perpétua, irrevogável, não
-     exclusiva e isenta de royalties para usar, reproduzir, modificar,
-     distribuir e incorporar a contribuição ao Software, inclusive em versões
+   - Direitos de incorporação e sublicenciamento: o colaborador concede ao
+     Titular (Gustavo Henrique Novaes Gomes / TundraLab) licença mundial,
+     perpétua, irrevogável, não exclusiva, transferível, sublicenciável e
+     isenta de royalties para usar, reproduzir, modificar, distribuir,
+     relicenciar e incorporar a contribuição ao Software, inclusive em versões
      comerciais futuras, sem obrigação de aceitação do envio.
-   - Créditos e autoria: contribuições aceitas mantêm crédito público no
-     histórico Git de commits e podem ser mencionadas opcionalmente nas notas
-     de lançamento, sem criação de vínculo trabalhista, societário ou obrigação
-     de remuneração.
+   - Titularidade retida e créditos: o colaborador mantém a titularidade autoral
+     sobre sua submissão isolada (sujeita à licença acima) e preserva crédito
+     público no histórico Git de commits e menções opcionais em notas de versão,
+     sem criação de vínculo trabalhista, societário, direito de veto ou
+     obrigação de remuneração.
 
 4. Marcas e Identidade Visual:
    Esta licença não concede qualquer direito de uso sobre os nomes "TundraLab",
@@ -58,8 +62,9 @@ intelectual exclusiva de TundraLab e Gustavo Henrique Novaes Gomes (@GustaHerin)
    terceiros (como .NET 10, Avalonia UI, Dapper, Microsoft.Data.Sqlite,
    Google.Apis.Drive.v3 e Tmds.DBus.Protocol), os quais permanecem sujeitos às
    suas respectivas licenças originais (MIT, Apache-2.0, BSD-2-Clause, LGPL e
-   Domínio Público). A relação completa de versões, licenças e atribuições está
-   documentada em docs/THIRD_PARTY_NOTICES.md.
+   Domínio Público). A relação completa para a versão 4.0.0, com versões,
+   repositórios oficiais e textos integrais das licenças, está documentada em
+   docs/THIRD_PARTY_NOTICES.md.
 
 6. Isenção de Garantias e Limitação de Responsabilidade:
    O SOFTWARE É FORNECIDO "COMO ESTÁ" ("AS IS"), SEM GARANTIAS DE QUALQUER
@@ -73,17 +78,30 @@ intelectual exclusiva de TundraLab e Gustavo Henrique Novaes Gomes (@GustaHerin)
    legislação imperativa aplicável (incluindo normas de proteção ao consumidor,
    quando aplicáveis).
 
-7. Rescisão e Encerramento da Licença:
-   Esta licença encerra-se automaticamente e de pleno direito caso o usuário
-   descumpra qualquer disposição aqui prevista, hipótese em que deverá cessar
-   imediatamente o uso e remover todas as cópias do Software. O usuário também
-   pode encerrá-la voluntariamente a qualquer tempo mediante desinstalação do
-   aplicativo, permanecendo intactos seus arquivos locais e no Google Drive.
+7. Rescisão, Correção de Infrações e Efeitos Pós-Término:
+   - Infrações sanáveis não dolosas: caso ocorra descumprimento acidental ou
+     passível de correção (como erro de configuração organizacional), o Titular
+     enviará notificação pelo contato disponível ou canal oficial concedendo
+     prazo de 15 (quinze) dias corridos para regularização integral antes da
+     extinção definitiva desta licença.
+   - Infrações graves ou dolosas: violações deliberadas, redistribuição não
+     autorizada, engenharia reversa fora de exceções legais ou uso indevido de
+     marca acarretam rescisão imediata e automática, sem prejuízo das medidas
+     legais cabíveis.
+   - Rescisão voluntária e remoção: o usuário pode encerrar a licença a qualquer
+     momento desinstalando o aplicativo. Confirmada a rescisão sem saneamento
+     no prazo, cessam as permissões de execução e todas as cópias do Software
+     devem ser removidas, permanecendo intactos os arquivos pessoais do usuário
+     em disco e no Google Drive.
+   - Sobrevivência de cláusulas: permanecem em pleno vigor após qualquer
+     rescisão as disposições das Seções 1 (Titularidade e restrições de fonte),
+     3 (Licenças irrevogáveis sobre contribuições já incorporadas), 4 (Marcas),
+     5 (Avisos de terceiros), 6 (Limitação de responsabilidade) e 8 (Lei e foro).
 
 8. Legislação Aplicável e Foro:
    Esta licença é regida pelas leis da República Federativa do Brasil (em
    especial pela Lei nº 9.609/1998 e pela Lei nº 9.610/1998), elegendo-se o
-   foro de domicílio do titular no Brasil para dirimir eventuais litígios,
+   foro de domicílio do Titular no Brasil para dirimir eventuais litígios,
    ressalvadas as normas legais imperativas de competência aplicáveis.
 
 9. Contato e Solicitações de Autorização:

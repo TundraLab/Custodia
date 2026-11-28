@@ -3,7 +3,7 @@
 > 🌐 **Language / Idioma:** [🇧🇷 Português](../../TERMS.md) | **🇺🇸 English (current)**
 
 **Last updated:** November 28, 2026  
-**Project / Developer:** TundraLab, by Gustavo Henrique (`contato.tundralab@gmail.com`)  
+**Rights Holder / Developer:** Gustavo Henrique Novaes Gomes (`@GustaHerin`), operating under the project and trade name **TundraLab** (`contato.tundralab@gmail.com`)  
 **Official repository:** https://github.com/TundraLab/Custodia
 
 By downloading, installing, compiling, or using **Custódia**, you state that you have read and agree to these Terms of Use, the [Privacy Policy](PRIVACY.md), and the [Proprietary License Agreement](../../LICENSE).
@@ -12,10 +12,10 @@ By downloading, installing, compiling, or using **Custódia**, you state that yo
 
 ## 1. Subject Matter and Licensing
 
-**Custódia** is a desktop client software for local Google Drive synchronization and management on Linux systems, exclusively owned by **TundraLab** (`Copyright (c) 2026 TundraLab. All Rights Reserved.`).
+**Custódia** is a desktop client software for local Google Drive synchronization and management on Linux systems, exclusively owned by **Gustavo Henrique Novaes Gomes**, operating under the project and trade name **TundraLab** (`Copyright (c) 2026 Gustavo Henrique Novaes Gomes (TundraLab). All Rights Reserved.`).
 
 - Specific terms regarding source code access, prohibition of unauthorized commercial redistribution, trademark usage, and intellectual property are governed by the [LICENSE](../../LICENSE) file.
-- Nothing in these Terms grants any rights to trademarks, logos, or intellectual property of TundraLab or Google LLC.
+- Nothing in these Terms grants any rights to trademarks, logos, or intellectual property of the Rights Holder (Gustavo Henrique Novaes Gomes / TundraLab) or Google LLC.
 
 ---
 

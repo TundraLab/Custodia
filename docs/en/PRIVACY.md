@@ -1,9 +1,9 @@
-# Privacy Policy — Custódia
+# Privacy Policy - Custódia
 
 > 🌐 **Language / Idioma:** [🇧🇷 Português](../../PRIVACY.md) | **🇺🇸 English (current)**
 
-**Last updated:** November 24, 2026  
-**Controller:** TundraLab (`contato.tundralab@gmail.com`)  
+**Last updated:** November 28, 2026  
+**Controller / Rights Holder:** Gustavo Henrique Novaes Gomes (`@GustaHerin`), operating under the project and trade name **TundraLab** (`contato.tundralab@gmail.com`)  
 **Official repository:** https://github.com/TundraLab/Custodia
 
 This Privacy Policy describes how the **Custódia** desktop application handles local data, OAuth 2.0 credentials, Google API integrations, and optional account lifecycle emails.
