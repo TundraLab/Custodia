@@ -21,7 +21,7 @@
 
 ## Qualidade
 
-- **Build e distribuição:** compilação limpa em `.NET 10.0` para Linux `x86_64` com pacotes nativos **`.deb`**, **`.rpm`**, **`.AppImage`** e instalador gráfico leve **`.run`** (~30 KB), todos verificados por SHA-256
+- **Build e distribuição:** compilação limpa em `.NET 10.0` para Linux `x86_64` com pacotes nativos **`.deb`**, **`.rpm`**, **`.AppImage`** e instalador gráfico leve **`.run`**, todos verificados por SHA-256
 - **Suíte de testes:** **94 testes unitários e de interface xUnit aprovados (`0` falhas)** cobrindo motor de sincronização, fila e retomada de transferências, persistência SQLite, isolamento de contas OAuth2, atualizador, sanitização de suporte, aceite de termos/privacidade e e-mails de ciclo de vida
 - **Plataforma principal:** Linux `x86_64` (Fedora Workstation/KDE, Pop!_OS GNOME/COSMIC e KDE Plasma 5/6)
 - **Documentação técnica:** OpenAPI `3.0.3` em tempo real (`GET /api/v1/openapi.json`), guia [docs/API.md](docs/API.md), [Custodia-API.pdf](Custodia-API.pdf) e histórico completo em [CHANGELOG.md](CHANGELOG.md)
