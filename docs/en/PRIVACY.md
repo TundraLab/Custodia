@@ -15,7 +15,7 @@ This Privacy Policy describes how the **Custódia** desktop application handles 
 **Custódia** runs directly on the user's machine:
 
 - All files, synced directories, metadata indexes, hashes, transfer queues, and activity logs remain exclusively on the user's computer.
-- User-provided OAuth credentials (`credentials.json`) are stored in `~/.config/custodia/contas/<email>/` and access/refresh tokens in `~/.local/share/custodia/tokens/` with restricted permissions (`0600`).
+- User-provided OAuth credentials (`credentials.json`) are stored in `~/.config/custodia/contas/<email>/` and access/refresh tokens in `~/.local/share/custodia/tokens/`, with restricted POSIX permissions (`0700` on directories and `0600` on files inside).
 - The local background service listens only on `127.0.0.1:5080` (local loopback interface), exposing no network ports for external access.
 - TundraLab **does not** collect, **does not** store, **does not** transmit, and **has no** access to your Google Drive files, folder names, document contents, sync history, or OAuth tokens.
 

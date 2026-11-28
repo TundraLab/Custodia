@@ -15,7 +15,7 @@ Esta Política de Privacidade descreve como o aplicativo desktop **Custódia** t
 O **Custódia** funciona diretamente na máquina do usuário:
 
 - Todos os arquivos, diretórios sincronizados, índices de metadados, hashes, filas de transferência e logs de atividade permanecem exclusivamente no computador do usuário.
-- As credenciais OAuth fornecidas pelo usuário (`credentials.json`) ficam armazenadas em `~/.config/custodia/contas/<email>/` e os tokens de acesso/atualização em `~/.local/share/custodia/tokens/` com permissão restrita (`0600`).
+- As credenciais OAuth fornecidas pelo usuário (`credentials.json`) ficam armazenadas em `~/.config/custodia/contas/<email>/` e os tokens de acesso/atualização em `~/.local/share/custodia/tokens/`, com permissão restrita POSIX (`0700` nos diretórios e `0600` nos arquivos internos).
 - O serviço local em segundo plano escuta apenas em `127.0.0.1:5080` (interface loopback local), não expondo portas de rede para acesso externo.
 - A TundraLab **não** coleta, **não** armazena, **não** transmite e **não** tem acesso aos seus arquivos do Google Drive, nomes de pastas, conteúdo de documentos, histórico de sincronização ou tokens OAuth.
 

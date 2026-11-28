@@ -204,10 +204,10 @@ To connect your account directly to Google without intermediary servers, create 
 See the full architecture in **[SECURITY.md](SECURITY.md)**.
 
 - **Local isolation and restricted permissions (`0700` / `0600`):**
-  - `~/.config/custodia/settings.json`: general preferences and visual folder customizations.
-  - `~/.config/custodia/contas/<email>/`: per-account directory containing `credentials.json`, `conta.json`, and `pastas-sincronizadas.json` with user-restricted access (`0600`).
-  - `~/.local/share/custodia/tokens/`: OAuth2 tokens stored locally with `0600` permissions.
-  - `~/.local/share/custodia/custodia.db`: local SQLite database with mappings, metadata, and activity logs.
+  - `~/.config/custodia/settings.json`: general preferences and visual folder customizations (`0600`).
+  - `~/.config/custodia/contas/<email>/`: per-account directory (`0700`) containing `credentials.json`, `conta.json`, and `pastas-sincronizadas.json` (`0600`).
+  - `~/.local/share/custodia/tokens/`: private directory (`0700`) with internal OAuth2 token files protected at `0600`.
+  - `~/.local/share/custodia/custodia.db`: local SQLite database (`0600`) with mappings, metadata, and activity logs.
 - **How tokens are renewed:** the official Google SDK uses the locally stored `refresh_token` (`0600`) to obtain new temporary `access_token` values directly from Google's OAuth2 endpoint, without manual intervention or password storage.
 - **The OAuth JSON does not contain your password:** `client_secret_*.json` only identifies the application ID you created in Google Cloud Console; your password is entered strictly on Google's official sign-in page in your browser.
 - **What happens when revoking/disconnecting an account:** the local token is invalidated/removed, the `~/.config/custodia/contas/<email>/` session is closed, and you explicitly choose in the confirmation dialog whether to keep or also delete the configured folders linked to that email.

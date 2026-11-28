@@ -203,10 +203,10 @@ Para conectar sua conta diretamente ao Google sem servidores intermediários, cr
 Consulte a arquitetura completa em **[docs/SECURITY.md](docs/SECURITY.md)**.
 
 - **Isolamento local e permissões restritas (`0700` / `0600`):**
-  - `~/.config/custodia/settings.json`: preferências gerais e personalizações visuais de pastas.
-  - `~/.config/custodia/contas/<email>/`: diretório organizado por conta contendo `credentials.json`, `conta.json` e `pastas-sincronizadas.json` com acesso restrito ao usuário (`0600`).
-  - `~/.local/share/custodia/tokens/`: tokens OAuth2 armazenados localmente com permissão `0600`.
-  - `~/.local/share/custodia/custodia.db`: banco SQLite local com mapeamentos, metadados e logs de atividade.
+  - `~/.config/custodia/settings.json`: preferências gerais e personalizações visuais de pastas (`0600`).
+  - `~/.config/custodia/contas/<email>/`: diretório por conta (`0700`) contendo `credentials.json`, `conta.json` e `pastas-sincronizadas.json` (`0600`).
+  - `~/.local/share/custodia/tokens/`: diretório privado (`0700`) com os tokens OAuth2 internos protegidos em `0600`.
+  - `~/.local/share/custodia/custodia.db`: banco SQLite local (`0600`) com mapeamentos, metadados e logs de atividade.
 - **Como os tokens são renovados:** o SDK oficial do Google utiliza o `refresh_token` salvo localmente (`0600`) para obter novos `access_token` temporários diretamente com o endpoint OAuth2 do Google, sem intervenção manual nem armazenamento de senha.
 - **O JSON OAuth não contém sua senha:** o `client_secret_*.json` identifica apenas o ID de aplicativo criado por você no Google Cloud Console; sua senha é digitada apenas na página oficial de login do Google no navegador.
 - **O que acontece ao revogar/desconectar uma conta:** o token local é invalidado/removido, o diretório `~/.config/custodia/contas/<email>/` tem a sessão encerrada e você escolhe explicitamente na janela de confirmação se deseja manter ou excluir também as pastas configuradas vinculadas àquele e-mail.

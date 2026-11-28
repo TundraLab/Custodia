@@ -21,13 +21,14 @@ All sensitive directories and files created by Custódia receive permissions res
 
 | Path | Contents | Permission |
 | :--- | :--- | :--- |
-| `~/.config/custodia/settings.json` | General preferences and visual folder customizations | User-restricted |
+| `~/.config/custodia/settings.json` | General preferences and visual folder customizations | `0600` |
 | `~/.config/custodia/contas/<email>/` | Isolated per-Google-account directory | `0700` |
 | `~/.config/custodia/contas/<email>/credentials.json` | Desktop OAuth2 client credentials | `0600` |
 | `~/.config/custodia/contas/<email>/conta.json` | Connected account metadata | `0600` |
 | `~/.config/custodia/contas/<email>/pastas-sincronizadas.json` | Account synced folder mappings | `0600` |
-| `~/.local/share/custodia/tokens/` | OAuth2 tokens (`refresh_token` / `access_token`) | `0600` |
-| `~/.local/share/custodia/custodia.db` | Local SQLite database (sync state, MD5/SHA256 hashes, and logs) | User-restricted |
+| `~/.local/share/custodia/tokens/` | Local OAuth2 token store directory | `0700` |
+| `~/.local/share/custodia/tokens/*` | Stored OAuth2 token files (`refresh_token` / `access_token`) | `0600` |
+| `~/.local/share/custodia/custodia.db` | Local SQLite database (sync state, MD5/SHA256 hashes, and logs) | `0600` |
 
 ---
 

@@ -21,13 +21,14 @@ Todos os diretórios e arquivos sensíveis criados pelo Custódia recebem permis
 
 | Caminho | Conteúdo | Permissão |
 | :--- | :--- | :--- |
-| `~/.config/custodia/settings.json` | Preferências gerais e personalizações visuais de pastas | Restrita ao usuário |
+| `~/.config/custodia/settings.json` | Preferências gerais e personalizações visuais de pastas | `0600` |
 | `~/.config/custodia/contas/<email>/` | Diretório isolado por conta Google | `0700` |
 | `~/.config/custodia/contas/<email>/credentials.json` | Credenciais do cliente OAuth2 Desktop | `0600` |
 | `~/.config/custodia/contas/<email>/conta.json` | Metadados da conta conectada | `0600` |
 | `~/.config/custodia/contas/<email>/pastas-sincronizadas.json` | Mapeamentos de pastas sincronizadas da conta | `0600` |
-| `~/.local/share/custodia/tokens/` | Tokens OAuth2 (`refresh_token` / `access_token`) | `0600` |
-| `~/.local/share/custodia/custodia.db` | Banco SQLite local (estado de sync, hashes MD5/SHA256 e logs) | Restrita ao usuário |
+| `~/.local/share/custodia/tokens/` | Diretório do cofre local de tokens OAuth2 | `0700` |
+| `~/.local/share/custodia/tokens/*` | Tokens OAuth2 salvos (`refresh_token` / `access_token`) | `0600` |
+| `~/.local/share/custodia/custodia.db` | Banco SQLite local (estado de sync, hashes MD5/SHA256 e logs) | `0600` |
 
 ---
 
