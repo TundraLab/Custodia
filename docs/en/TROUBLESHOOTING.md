@@ -6,8 +6,30 @@ Practical guide to diagnose and resolve common issues with installation, desktop
 
 ---
 
-## 1. AppImage won't open (FUSE error / `libfuse.so.2`)
+## 1. AppImage won't open or doesn't launch on double-click
 
+### Most common cause — Execution permission disabled
+For Linux security reasons, `.AppImage` files downloaded from a web browser do not have permission to run as a program by default.
+
+**How to fix using your file manager (no terminal needed):**
+1. Open your **Downloads** folder (GNOME Files, Dolphin, etc.).
+2. Right-click the `.AppImage` file (`Custodia-Installer-x86_64.AppImage` or `Custodia-4.0.0-x86_64.AppImage`).
+3. Click **Properties**.
+4. Enable **Executable as Program** *(on some desktops: **Permissions** tab → check **Allow executing file as program** / **Is executable**)*.
+5. Close Properties and double-click the file to launch it.
+
+**Terminal alternative:**
+```bash
+chmod +x Custodia-Installer-x86_64.AppImage
+./Custodia-Installer-x86_64.AppImage
+```
+
+> **GNOME Files tip:** if double-clicking still opens a "Run Software" prompt without launching after enabling **Executable as Program**, clear the conflicting MIME association:
+> ```bash
+> sed -i '/application\/vnd\.appimage=/d' ~/.config/mimeapps.list
+> ```
+
+### Case 2 — FUSE error (`libfuse.so.2`)
 On newer distributions (such as Ubuntu 24.04+, Pop!_OS, or Fedora without `fuse2`), the AppImage may fail when trying to mount the image.
 
 **Solution 1 — Run by extracting temporarily (without FUSE):**

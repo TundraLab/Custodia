@@ -6,8 +6,30 @@ Guia prático para diagnosticar e resolver problemas comuns de instalação, int
 
 ---
 
-## 1. AppImage não abre (erro de FUSE / `libfuse.so.2`)
+## 1. AppImage não abre ou não executa com dois cliques
 
+### Causa mais comum — Permissão de execução desativada
+Por padrão de segurança do Linux, arquivos `.AppImage` baixados pelo navegador vêm sem permissão para serem executados como programa.
+
+**Como resolver pelo gerenciador de arquivos (sem terminal):**
+1. Abra a pasta **Downloads** (no GNOME Arquivos, Dolphin, etc.).
+2. Clique com o botão direito no arquivo `.AppImage` (`Custodia-Installer-x86_64.AppImage` ou `Custodia-4.0.0-x86_64.AppImage`).
+3. Acesse **Propriedades**.
+4. Ative a opção **Executar como programa** *(em alguns sistemas: aba **Permissões** → marcar **Permitir executar arquivo como programa** / **É executável**)*.
+5. Feche a janela de propriedades e dê dois cliques no arquivo para abrir.
+
+**Alternativa pelo terminal:**
+```bash
+chmod +x Custodia-Installer-x86_64.AppImage
+./Custodia-Installer-x86_64.AppImage
+```
+
+> **Dica no GNOME Arquivos:** se, mesmo após ativar **Executar como programa**, o clique duplo tentar abrir uma tela de "Executar software" sem iniciar o aplicativo, remova a associação antiga rodando:
+> ```bash
+> sed -i '/application\/vnd\.appimage=/d' ~/.config/mimeapps.list
+> ```
+
+### Caso 2 — Erro de FUSE / `libfuse.so.2`
 Em distribuições mais novas (como Ubuntu 24.04+, Pop!_OS ou Fedora sem `fuse2`), o AppImage pode falhar ao tentar montar a imagem.
 
 **Solução 1 — Executar extraindo temporariamente (sem FUSE):**
