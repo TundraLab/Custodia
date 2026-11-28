@@ -21,9 +21,10 @@ O Custódia é construído em **.NET 10.0** + **Avalonia UI 11.3.8** para Linux 
 | Distribuição | Status | Formato Recomendado | Dependências do Sistema |
 | :--- | :--- | :--- | :--- |
 | **Fedora Workstation / KDE** | **Testado** | `.rpm` nativo (ou `.AppImage`) | Nenhum runtime externo exigido; opcionais apenas para pré-visualização multimídia. |
-| **Pop!_OS** (GNOME / COSMIC) | **Testado** | `.AppImage` (`x86_64`) | Runtime `.NET 10` embutido no AppImage; use `--appimage-extract-and-run` se FUSE2 não estiver instalado. |
-| **Ubuntu / Debian / Mint** | **Suportado** | `.AppImage` (`x86_64`) | Compatível com `libfuse2` ou execução direta com `--appimage-extract-and-run`. |
-| **RHEL / Rocky / Alma / openSUSE** | **Suportado** | `.rpm` ou `.AppImage` | Pacote `.rpm` padrão `x86_64` com verificação `SHA-256`. |
+| **Pop!_OS** (GNOME / COSMIC) | **Testado** | `.deb` nativo (ou `.AppImage`) | Pacote `.deb` com atalhos nativos no sistema; ou `.AppImage` portátil (`--appimage-extract-and-run` sem FUSE2). |
+| **Ubuntu / Debian / Mint** | **Suportado** | `.deb` nativo (ou `.AppImage`) | Pacote `.deb` instalado pelo Instalador Oficial ou `sudo apt install`; alternativa portátil em `.AppImage`. |
+| **RHEL / Rocky / Alma / openSUSE** | **Suportado** | `.rpm` nativo (ou `.AppImage`) | Pacote `.rpm` padrão `x86_64` com verificação `SHA-256`. |
+| **Arch / Manjaro / Outras distros** | **Suportado** | `.AppImage` (`x86_64`) | Compatível com `libfuse2` (`fuse2`) ou execução direta com `--appimage-extract-and-run`. |
 
 ---
 

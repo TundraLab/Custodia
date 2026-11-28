@@ -40,10 +40,10 @@ O Custódia adota exclusão segura por padrão:
 
 ## 4. Qual a diferença entre sincronização Bidirecional e Backup Unidirecional?
 
-- **Bidirecional (`PC <-> Drive`):** mantém PC e Google Drive espelhados nos dois sentidos. Alterações e exclusões em um lado refletem no outro.
-- **Backup Unidirecional (`PC -> Drive`):** envia novidades e edições do PC para o Drive, mas **nunca** baixa arquivos novos do Drive nem apaga arquivos do PC caso sejam removidos no Drive.
+- **Bidirecional (`PC <-> Drive`):** mantém PC e Google Drive espelhados nos dois sentidos. Alterações e exclusões em um lado refletem no outro (sempre via Lixeira).
+- **Backup Unidirecional (`PC -> Drive`):** trata o PC como fonte principal. Arquivos novos ou editados no PC sobem para o Drive, e exclusões feitas no **PC** enviam o item remoto para a **Lixeira do Google Drive** (recuperável por até 30 dias). Por outro lado, o modo **nunca** baixa arquivos novos do Drive nem apaga arquivos do PC caso sejam removidos no Drive.
 
-Veja a tabela comparativa completa no [README](../README.md#modos-de-sincronização).
+Veja a tabela comparativa completa no [README](../README.md#modos-de-sincronizacao).
 
 ---
 

@@ -40,8 +40,8 @@ Custódia uses safe deletion by default:
 
 ## 4. What is the difference between Two-Way sync and One-Way Backup?
 
-- **Two-Way (`PC <-> Drive`):** keeps PC and Google Drive mirrored in both directions. Changes and deletions on one side reflect on the other.
-- **One-Way Backup (`PC -> Drive`):** uploads new files and edits from PC to Drive, but **never** downloads new files from Drive or deletes files from PC if they are removed in Drive.
+- **Two-Way (`PC <-> Drive`):** keeps PC and Google Drive mirrored in both directions. Changes and deletions on one side reflect on the other (always via Trash).
+- **One-Way Backup (`PC -> Drive`):** treats the PC as the source of truth. New or edited files on PC upload to Drive, and deleting a file on **PC** moves the remote item to **Google Drive Trash** (recoverable for up to 30 days). Conversely, it **never** downloads new files from Drive nor deletes local files on PC if they are removed on Drive.
 
 See the full comparison table in the [README](README.md#sync-modes).
 
