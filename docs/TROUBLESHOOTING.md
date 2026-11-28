@@ -56,9 +56,9 @@ O GNOME Workstation não exibe ícones `StatusNotifierItem` / AppIndicator nativ
 **Solução (Fedora Workstation / GNOME):**
 ```bash
 sudo dnf install gnome-shell-extension-appindicator
-gsettings set org.gnome.shell enabled-extensions "['appindicatorsupport@rgcjonas.gmail.com']"
+gnome-extensions enable appindicatorsupport@rgcjonas.gmail.com
 ```
-Após habilitar pela primeira vez, faça **logout e login** na sessão GNOME para que a barra superior carregue a extensão.
+Após habilitar pela primeira vez, faça **logout e login** na sessão GNOME para que a barra superior carregue a extensão. *(Usar `gnome-extensions enable` preserva todas as demais extensões que você já utiliza.)*
 
 ---
 

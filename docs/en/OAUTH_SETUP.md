@@ -63,6 +63,8 @@ While the app is in **Testing** mode, Google blocks sign-ins (`Error 403: access
 
 ![Add test users modal](../images/06-adicionar-usuarios-modal.png)
 
+> **Important note on 7-day Testing token expiry:** while your project stays in **Testing** mode, Google expires the `refresh_token` every **7 days**, requiring weekly re-authentication. To avoid weekly sign-ins for personal/individual use, click **Publish app** (*In production*) on that same **Audience** page after finishing setup (you do not need paid external Google verification for personal single-account use; simply click **Advanced -> Go to Custódia** on your own warning prompt).
+
 ---
 
 ## Step 5: Select "Desktop app" and download the JSON

@@ -22,6 +22,9 @@ public static class AppPaths
     public static string SettingsFilePath =>
         Path.Combine(ConfigDirectory, "settings.json");
 
+    public static string ApiTokenFilePath =>
+        Path.Combine(ConfigDirectory, "api-token");
+
     public static string DataDirectory =>
         Path.Combine(UserHome, ".local", "share", "custodia");
 

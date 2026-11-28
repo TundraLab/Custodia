@@ -1,4 +1,6 @@
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +10,7 @@ using TundraDrive.Core.Configuration;
 using TundraDrive.Core.Drive;
 using TundraDrive.Core.Models;
 using TundraDrive.Core.Persistence;
+using TundraDrive.Core.Security;
 using TundraDrive.Core.Sync;
 
 namespace TundraDrive.Api;
@@ -19,9 +22,11 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
     private readonly ISyncStateRepository _repository;
     private readonly IAppSettingsService _settingsService;
     private readonly ILogger<EmbeddedApiServer> _logger;
+    private readonly Lock _tokenLock = new();
 
     private WebApplication? _app;
     private int _boundPort = 5080;
+    private string? _cachedToken;
 
     public EmbeddedApiServer(
         IDriveSyncService syncService,
@@ -40,6 +45,25 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
     public bool IsRunning { get; private set; }
     public string BoundAddress => $"http://127.0.0.1:{_boundPort}";
     public string? LastError { get; private set; }
+    public string ApiTokenFilePath => AppPaths.ApiTokenFilePath;
+
+    public string GetOrCreateApiToken()
+    {
+        lock (_tokenLock)
+        {
+            _cachedToken = EnsureOrLoadApiToken(ApiTokenFilePath);
+            return _cachedToken;
+        }
+    }
+
+    public string RegenerateApiToken()
+    {
+        lock (_tokenLock)
+        {
+            _cachedToken = GenerateAndPersistApiToken(ApiTokenFilePath);
+            return _cachedToken;
+        }
+    }
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -60,6 +84,8 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
 
         try
         {
+            var expectedToken = GetOrCreateApiToken();
+
             var builder = WebApplication.CreateBuilder();
             builder.Logging.ClearProviders();
 
@@ -86,6 +112,26 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
                         error = "Forbidden: only local loopback requests are permitted."
                     });
                     return;
+                }
+
+                // Allow unauthenticated OpenAPI schema discovery on loopback; require Bearer/API-key token for all other routes
+                var isOpenApiDiscovery = HttpMethods.IsGet(context.Request.Method) &&
+                    string.Equals(context.Request.Path.Value, "/api/v1/openapi.json", StringComparison.OrdinalIgnoreCase);
+                if (!isOpenApiDiscovery)
+                {
+                    var activeToken = _cachedToken ?? expectedToken;
+                    var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
+                    var apiKeyHeader = context.Request.Headers["X-Api-Key"].FirstOrDefault();
+                    if (!IsAuthorizedApiRequest(activeToken, authHeader, apiKeyHeader))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        context.Response.Headers.WWWAuthenticate = "Bearer";
+                        await context.Response.WriteAsJsonAsync(new
+                        {
+                            error = $"Unauthorized: provide a valid Bearer token (stored with 0600 permissions at {ApiTokenFilePath})."
+                        });
+                        return;
+                    }
                 }
 
                 await next();
@@ -553,9 +599,33 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
             {
                 title = "Custódia Local REST API",
                 version = TundraDrive.Core.Configuration.AppVersionInfo.CurrentVersion,
-                description = "API REST local (loopback 127.0.0.1) do Custódia para automacao, scripts e agentes de IA."
+                description = "API REST local (loopback 127.0.0.1) do Custódia com autenticação Bearer (~/.config/custodia/api-token) para automacao, scripts e agentes de IA."
             },
             servers = new[] { new { url = serverUrl } },
+            components = new
+            {
+                securitySchemes = new Dictionary<string, object>
+                {
+                    ["BearerAuth"] = new
+                    {
+                        type = "http",
+                        scheme = "bearer",
+                        description = "Token local salvo em ~/.config/custodia/api-token (permissão 0600)"
+                    },
+                    ["ApiKeyHeader"] = new
+                    {
+                        type = "apiKey",
+                        @in = "header",
+                        name = "X-Api-Key",
+                        description = "Alternativa equivalente usando o mesmo token de ~/.config/custodia/api-token"
+                    }
+                }
+            },
+            security = new[]
+            {
+                new Dictionary<string, string[]> { ["BearerAuth"] = Array.Empty<string>() },
+                new Dictionary<string, string[]> { ["ApiKeyHeader"] = Array.Empty<string>() }
+            },
             paths = new Dictionary<string, object>
             {
                 ["/api/v1/status"] = new { get = new { summary = "Estado geral, conta, cota de armazenamento e pastas sincronizadas", operationId = "getStatus" } },
@@ -572,11 +642,70 @@ public sealed class EmbeddedApiServer : IEmbeddedApiServer
                 ["/api/v1/files/{remoteFileId}"] = new { delete = new { summary = "Move para a Lixeira ou exclui permanentemente com ?permanent=true", operationId = "deleteFile" } },
                 ["/api/v1/transfers"] = new { get = new { summary = "Consulta fila de transferencias ativas e recentes", operationId = "getTransfers" } },
                 ["/api/v1/logs"] = new { get = new { summary = "Consulta logs recentes de atividade e sincronizacao (q, limit)", operationId = "getLogs" } },
-                ["/api/v1/openapi.json"] = new { get = new { summary = "Esquema OpenAPI 3.0.3 para autodescoberta por agentes de IA", operationId = "getOpenApiSpec" } }
+                ["/api/v1/openapi.json"] = new { get = new { summary = "Esquema OpenAPI 3.0.3 para autodescoberta por agentes de IA", operationId = "getOpenApiSpec", security = Array.Empty<object>() } }
             }
         };
 
         return System.Text.Json.JsonSerializer.Serialize(doc, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+    }
+
+    internal static string EnsureOrLoadApiToken(string tokenFilePath)
+    {
+        if (File.Exists(tokenFilePath))
+        {
+            var existing = File.ReadAllText(tokenFilePath, Encoding.UTF8).Trim();
+            if (existing.Length >= 32)
+            {
+                PosixPermissionHelper.EnsurePrivateDirectory(Path.GetDirectoryName(tokenFilePath) ?? AppPaths.ConfigDirectory);
+                PosixPermissionHelper.EnsureFileMode0600(tokenFilePath);
+                return existing;
+            }
+        }
+
+        return GenerateAndPersistApiToken(tokenFilePath);
+    }
+
+    internal static string GenerateAndPersistApiToken(string tokenFilePath)
+    {
+        var dir = Path.GetDirectoryName(tokenFilePath);
+        if (!string.IsNullOrWhiteSpace(dir))
+        {
+            PosixPermissionHelper.EnsurePrivateDirectory(dir);
+        }
+
+        var token = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
+        File.WriteAllText(tokenFilePath, token + Environment.NewLine, Encoding.UTF8);
+        PosixPermissionHelper.EnsureFileMode0600(tokenFilePath);
+        return token;
+    }
+
+    internal static bool IsAuthorizedApiRequest(string expectedToken, string? authorizationHeader, string? apiKeyHeader = null)
+    {
+        if (string.IsNullOrWhiteSpace(expectedToken))
+        {
+            return false;
+        }
+
+        string? provided = null;
+        if (!string.IsNullOrWhiteSpace(authorizationHeader) &&
+            authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            provided = authorizationHeader["Bearer ".Length..].Trim();
+        }
+        else if (!string.IsNullOrWhiteSpace(apiKeyHeader))
+        {
+            provided = apiKeyHeader.Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(provided))
+        {
+            return false;
+        }
+
+        var expectedBytes = Encoding.UTF8.GetBytes(expectedToken.Trim());
+        var providedBytes = Encoding.UTF8.GetBytes(provided);
+        return expectedBytes.Length == providedBytes.Length &&
+               CryptographicOperations.FixedTimeEquals(expectedBytes, providedBytes);
     }
 
     internal static bool IsAllowedLoopbackRequest(

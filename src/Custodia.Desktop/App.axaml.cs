@@ -273,6 +273,7 @@ public partial class App : Application
             mainVm.TransferQueueVm.CopyTextCallback = CopyTextAsync;
             mainVm.ActivityLogsVm.CopyTextCallback = CopyTextAsync;
             mainVm.AboutVm.CopyTextCallback = CopyTextAsync;
+            mainVm.SettingsVm.CopyTextCallback = CopyTextAsync;
 
             async Task OpenLocalFolderAsync(string path)
             {

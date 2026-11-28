@@ -713,6 +713,28 @@
                   </StackPanel>
                 </Grid>
 
+                <Border Classes="m3-divider" />
+
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                  <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                    <TextBlock Classes="m3-meta" FontFamily="monospace" FontSize="12" Text="{Binding Loc.ApiTokenPathLabel}" TextWrapping="Wrap" />
+                    <TextBlock Classes="m3-meta"
+                               Foreground="{DynamicResource M3Success}"
+                               IsVisible="{Binding HasApiTokenFeedback}"
+                               Text="{Binding ApiTokenFeedbackMessage}"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button Classes="m3-tonal m3-compact"
+                            Content="{Binding Loc.CopyApiTokenButton}"
+                            Command="{Binding CopyApiTokenCommand}" />
+                    <Button Classes="m3-outlined m3-compact"
+                            Content="{Binding Loc.RegenerateApiTokenButton}"
+                            Command="{Binding RegenerateApiTokenCommand}" />
+                  </StackPanel>
+                </Grid>
+
                 <Expander Header="{Binding Loc.ApiEndpointsExpanderTitle}"
                           HorizontalAlignment="Stretch"
                           IsExpanded="False">

@@ -15,15 +15,21 @@ O Custódia roda um servidor **ASP.NET Core Minimal API** dentro do aplicativo d
 
 Com isso, scripts locais, agentes de IA e automações (n8n, cron, CLI, wrappers MCP) conseguem operar o Google Drive e as pastas sincronizadas sem lidar diretamente com OAuth2, refresh de tokens ou banco SQLite. O próprio aplicativo gerencia as credenciais (`0600`), registra as transferências na fila visual e grava tudo nos Logs de Atividade.
 
-### Como habilitar
-1. Abra o Custódia e vá em **Configurações > API REST Local (Loopback)**.
-2. Deixe marcada a opção **Habilitar servidor REST local em 127.0.0.1**.
-3. Ajuste a porta se precisar (padrão `5080`, intervalo `1024` a `65535`; exige reiniciar o app caso mude a porta).
+### Estado padrão e autenticação (`Bearer`)
+1. A API REST local vem **habilitada por padrão** (`EmbeddedApiEnabled = true`) escutando exclusivamente em `http://127.0.0.1:5080` enquanto o Custódia estiver aberto. Para desativar ou trocar a porta (`1024` a `65535`), vá em **Configurações > Integração Local** e reinicie caso altere a porta.
+2. Toda rota operacional `/api/v1/*` exige um **token Bearer local** salvo automaticamente com permissão `0600` em `~/.config/custodia/api-token` (envie `Authorization: Bearer <token>` ou `X-Api-Key: <token>`). Você pode copiar ou rotacionar esse token direto em **Configurações > Integração Local**.
+3. Apenas `GET /api/v1/openapi.json` permanece aberto em loopback para autodescoberta do esquema por agentes e clientes locais.
 
 ### Regras de segurança
-- Apenas processos locais da mesma máquina conseguem acessar `127.0.0.1:{porta}`.
-- Operações de exclusão usam a **Lixeira do Google Drive** por padrão (`POST /api/v1/files/{id}/trash` ou `DELETE /api/v1/files/{id}`).
-- A remoção permanente só ocorre quando `?permanent=true` é passado explicitamente no `DELETE`.
+- Além do token `0600` obrigatório, a `EmbeddedApiServer` valida os cabeçalhos `Host`, `Origin`, `Referer` e `Sec-Fetch-Site` contra ataques de DNS rebinding e CSRF cross-site vindo de navegadores.
+- Operações de arquivo (`upload` / `download`) permitem diretórios de trabalho como `/tmp` ou `~/Downloads`, mas bloqueiam explicitamente pastas e arquivos sensíveis (`.ssh`, `.gnupg`, `~/.config/custodia`, `~/.local/share/custodia`, `autostart` e `.bashrc`/`.zshrc`).
+- Operações de exclusão usam a **Lixeira do Google Drive** por padrão (`POST /api/v1/files/{id}/trash` ou `DELETE /api/v1/files/{id}`). A remoção permanente só ocorre quando `?permanent=true` é passado explicitamente no `DELETE`.
+
+```bash
+# Exemplo com leitura direta do token local (0600)
+API_TOKEN="$(cat ~/.config/custodia/api-token)"
+curl -s -H "Authorization: Bearer ${API_TOKEN}" http://127.0.0.1:5080/api/v1/status
+```
 
 ---
 

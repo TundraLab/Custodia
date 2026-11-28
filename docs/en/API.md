@@ -15,15 +15,21 @@ Custódia runs an embedded **ASP.NET Core Minimal API** server inside the deskto
 
 This allows local scripts, AI agents, and automations (n8n, cron, CLI, MCP wrappers) to operate Google Drive and synced folders without directly handling OAuth2, token refreshes, or the SQLite database. The application itself manages credentials (`0600`), records transfers in the visual queue, and writes everything to Activity Logs.
 
-### How to enable
-1. Open Custódia and go to **Settings > Local REST API (Loopback)**.
-2. Keep **Enable local REST server on 127.0.0.1** checked.
-3. Adjust the port if needed (default `5080`, range `1024` to `65535`; requires restarting the app if changed).
+### Default state and Bearer authentication
+1. The local REST API is **enabled by default** (`EmbeddedApiEnabled = true`), listening strictly on `http://127.0.0.1:5080` while Custódia is running. To disable it or change the port (`1024` to `65535`), open **Settings > Local Integration** (restart required if the port changes).
+2. Every operational `/api/v1/*` route requires a **local Bearer token** automatically generated with `0600` permissions at `~/.config/custodia/api-token` (send `Authorization: Bearer <token>` or `X-Api-Key: <token>`). You can copy or regenerate this token under **Settings > Local Integration**.
+3. Only `GET /api/v1/openapi.json` stays unauthenticated on loopback for automatic schema discovery by local scripts and AI agents.
 
 ### Security rules
-- Only local processes on the same machine can access `127.0.0.1:{port}`.
-- Delete operations use **Google Drive Trash** by default (`POST /api/v1/files/{id}/trash` or `DELETE /api/v1/files/{id}`).
-- Permanent removal only occurs when `?permanent=true` is explicitly passed to `DELETE`.
+- Alongside the mandatory `0600` token check, `EmbeddedApiServer` validates `Host`, `Origin`, `Referer`, and `Sec-Fetch-Site` headers against DNS rebinding and cross-site browser CSRF attacks.
+- File transfer routes (`upload` / `download`) allow user working paths such as `/tmp` or `~/Downloads`, while explicitly blocking sensitive directories (`.ssh`, `.gnupg`, `~/.config/custodia`, `~/.local/share/custodia`, `autostart`, and `.bashrc`/`.zshrc`).
+- Delete operations use **Google Drive Trash** by default (`POST /api/v1/files/{id}/trash` or `DELETE /api/v1/files/{id}`). Permanent removal only occurs when `?permanent=true` is explicitly passed to `DELETE`.
+
+```bash
+# Example loading the local 0600 Bearer token
+API_TOKEN="$(cat ~/.config/custodia/api-token)"
+curl -s -H "Authorization: Bearer ${API_TOKEN}" http://127.0.0.1:5080/api/v1/status
+```
 
 ---
 

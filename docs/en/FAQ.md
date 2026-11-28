@@ -21,10 +21,12 @@ Custódia applies the policy configured in **Settings → On conflict** (`Confli
 
 | Policy | Behavior |
 | :--- | :--- |
-| **Newest wins** *(default)* | Compares the local modification timestamp with Google Drive (`ModifiedTimeUtc`) and keeps the newer version. |
+| **Keep conflict copy** *(default)* | Preserves the local file with a `.conflito-<timestamp>` suffix in the same directory, downloads the Drive version, and logs a warning (`ConflictRenamed`). |
+| **Newest wins** | Compares the local modification timestamp with Google Drive (`ModifiedTimeUtc`) and keeps the newer version. |
 | **Prefer local** | Uploads the computer's file and overwrites the Drive version. |
 | **Prefer remote** | Downloads the Google Drive version and overwrites the local file. |
-| **Keep conflict copy** | Preserves the local file with a conflict suffix in the same directory, downloads the Drive version, and logs a warning (`ConflictRenamed`). |
+
+> **Extra safety net:** in addition to the default **Keep conflict copy** policy, Google Drive automatically retains **Version History** for overwritten files (typically up to 30 days or 100 revisions on Drive Web).
 
 ---
 
@@ -43,7 +45,7 @@ Custódia uses safe deletion by default:
 - **Two-Way (`PC <-> Drive`):** keeps PC and Google Drive mirrored in both directions. Changes and deletions on one side reflect on the other (always via Trash).
 - **One-Way Backup (`PC -> Drive`):** treats the PC as the source of truth. New or edited files on PC upload to Drive, and deleting a file on **PC** moves the remote item to **Google Drive Trash** (recoverable for up to 30 days). Conversely, it **never** downloads new files from Drive nor deletes local files on PC if they are removed on Drive.
 
-See the full comparison table in the [README](README.md#sync-modes).
+See the full comparison table in **[Folders, Sync & Backup](sync-guide.md)** and default exclusion rules in **[Known Limitations](LIMITATIONS.md)**.
 
 ---
 
@@ -73,7 +75,7 @@ No files, tokens, or credentials are ever sent to TundraLab servers. For more de
 
 ## 8. How do I completely uninstall Custódia (including local data)?
 
-1. Run the official uninstaller to remove the `.rpm` package or `.AppImage` integration:
+1. Click **Uninstall** in the **Official Installer** (`.AppImage` / `.run`, or run `sudo apt remove custodia` / `sudo dnf remove custodia`), or use the terminal installer script (`Custodia-Installer-x86_64.sh`):
    ```bash
    ./install-custodia.sh --uninstall
    ```

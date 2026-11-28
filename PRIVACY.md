@@ -25,9 +25,9 @@ O **Custódia** funciona diretamente na máquina do usuário:
 
 Quando você conecta uma conta Google no Custódia:
 
-- O aplicativo solicita o escopo `https://www.googleapis.com/auth/drive` (classificado como **escopo sensível** pela documentação oficial do Google OAuth 2.0) estritamente para listar, baixar, enviar, atualizar, organizar e sincronizar arquivos e pastas entre o Google Drive e as pastas configuradas localmente no Linux.
+- O aplicativo solicita o escopo `https://www.googleapis.com/auth/drive` (classificado como **escopo restrito** pela documentação oficial da Google Drive API) estritamente para listar, baixar, enviar, atualizar, organizar e sincronizar arquivos e pastas entre o Google Drive e as pastas configuradas localmente no Linux.
 - O Custódia **não** solicita escopos do Gmail na sua conta Google nem na sua credencial OAuth.
-- No modelo atual **BYO-OAuth (Traga suas Próprias Credenciais)**, cada usuário configura seu próprio Projeto e ID de Cliente OAuth no Google Cloud Console para uso pessoal/individual. Caso venha a existir um Client ID oficial compartilhado e distribuído publicamente pela TundraLab no futuro, ele será submetido previamente ao processo oficial de Verificação OAuth do Google.
+- No modelo atual **BYO-OAuth (Traga suas Próprias Credenciais)**, cada usuário configura seu próprio Projeto e ID de Cliente OAuth no Google Cloud Console para uso pessoal/individual. Caso venha a existir um Client ID oficial compartilhado e distribuído publicamente pela TundraLab no futuro, ele será submetido previamente ao processo oficial de Verificação OAuth do Google e eventual avaliação CASA aplicável.
 
 ### Declaração de Uso Limitado (Google API Services User Data Policy)
 
@@ -35,7 +35,7 @@ O uso e a transferência de informações recebidas das APIs do Google pelo Cust
 
 1. Os dados obtidos via API do Google Drive são utilizados exclusivamente para fornecer e operar os recursos de sincronização e gerenciamento local visíveis ao usuário no Custódia.
 2. Os dados do Google Drive nunca são vendidos, alugados, usados para publicidade direcionada, perfilamento comercial ou treinamento de modelos de IA/ML.
-3. Nenhuma informação ou conteúdo do Google Drive do usuário é transferido para servidores da TundraLab ou terceiros (a comunicação ocorre apenas diretamente entre o Custódia no seu Linux e os endpoints oficiais `googleapis.com` / `accounts.google.com`).
+3. Nenhum arquivo, conteúdo de documento, estrutura de pastas do Drive ou token OAuth do usuário é transferido para servidores da TundraLab ou terceiros (toda operação de arquivos ocorre diretamente entre o Custódia no seu Linux e os endpoints oficiais `googleapis.com` / `accounts.google.com`; apenas quando o usuário mantém ativos os alertas opcionais de ciclo de vida descritos na Seção 3 ocorre o envio restrito de e-mail e nome de perfil ao disparador transacional).
 
 ---
 
@@ -43,10 +43,21 @@ O uso e a transferência de informações recebidas das APIs do Google pelo Cust
 
 Para confirmações opcionais de conexão inicial e revogação/desconexão de conta, o Custódia inclui uma integração opcional com o serviço oficial de disparo da TundraLab (Google Apps Script sob a conta `contato.tundralab@gmail.com`):
 
+- **Estado padrão e consentimento:** a preferência `GmailAccountAlertsEnabled` inicia habilitada por padrão (`true`), sujeita à sua escolha logo na tela inicial de boas-vindas antes da primeira conexão.
 - **O que pode ser enviado:** exclusivamente `recipientEmail` (endereço de e-mail da conta Google conectada/desconectada), `recipientName` (nome de exibição retornado no perfil OAuth), `eventType` (`connect` ou `revoke`), `appName`, `appVersion`, `language` e `timestampUtc`.
 - **O que NUNCA é enviado:** arquivos do Drive, nomes de pastas, metadados de documentos, logs locais, credenciais `credentials.json`, tokens `access_token` / `refresh_token` ou chaves privadas.
 - **Finalidade:** enviar exclusivamente um e-mail transacional informando o usuário quando uma conta é vinculada ou desconectada no Custódia.
-- **Controle e opt-out:** você pode aceitar ou recusar esses e-mails logo na tela inicial de consentimento do Custódia e alterar essa preferência a qualquer momento em **Sobre -> Rever termo inicial** (ou via `GmailAccountAlertsEnabled` em `~/.config/custodia/settings.json`). Quando desativado, nenhuma requisição é enviada ao endpoint de e-mail.
+- **Controle e opt-out:** você pode aceitar ou recusar esses e-mails logo na tela inicial de consentimento do Custódia e alterar essa preferência a qualquer momento em **Sobre -> Rever termo inicial** (ou definindo `GmailAccountAlertsEnabled: false` em `~/.config/custodia/settings.json`). Quando desativado, nenhuma requisição é enviada ao endpoint de e-mail.
+
+---
+
+## 4. Conformidade com a LGPD (Lei nº 13.709/2018)
+
+- **Controlador (pessoa física):** Gustavo Henrique Novaes Gomes (`@GustaHerin`), sob o nome comercial e projeto TundraLab (`contato.tundralab@gmail.com`).
+- **Bases legais:** execução de funcionalidades solicitadas pelo usuário no aplicativo local e consentimento específico para o envio opcional de e-mails de ciclo de vida (Art. 7º, incisos I e V).
+- **Retenção e armazenamento:** os dados de sincronização permanecem exclusivamente no dispositivo do usuário até você desconectar a conta ou desinstalar e remover `~/.config/custodia` e `~/.local/share/custodia`.
+- **Transferência internacional:** o serviço opcional de disparo via Google Apps Script opera em infraestrutura em nuvem da Google LLC fora do Brasil apenas quando os alertas por e-mail estão ativos.
+- **Direitos do titular (Art. 18) e Encarregado:** você pode exercer confirmação, acesso, correção, revogação de consentimento ou eliminação diretamente no app/Conta Google ou escrevendo para o canal de contato (`contato.tundralab@gmail.com`). A redação normativa detalhada está disponível na visão **Juridiquês** de `/docs/privacy`.
 
 ---
 

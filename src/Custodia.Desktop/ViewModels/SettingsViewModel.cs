@@ -316,9 +316,16 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     public string RepositoryUrl => MainWindowViewModel.RepositoryUrl;
     public Func<Uri, Task>? OpenExternalUriCallback { get; set; }
+    public Func<string, Task>? CopyTextCallback { get; set; }
     public Func<string, Task>? OpenLocalFolderCallback { get; set; }
     public Func<Task<string?>>? PickDownloadDirectoryCallback { get; set; }
     public Func<Task<string?>>? PickCredentialsFileCallback { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasApiTokenFeedback))]
+    private string _apiTokenFeedbackMessage = string.Empty;
+
+    public bool HasApiTokenFeedback => !string.IsNullOrWhiteSpace(ApiTokenFeedbackMessage);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CredentialsStatusBadgeText))]
@@ -1351,6 +1358,24 @@ public sealed partial class SettingsViewModel : ViewModelBase
         {
             await OpenExternalUriCallback.Invoke(new Uri($"{_apiServer.BoundAddress}/api/v1/openapi.json"));
         }
+    }
+
+    [RelayCommand]
+    private async Task CopyApiTokenAsync()
+    {
+        var token = _apiServer.GetOrCreateApiToken();
+        if (CopyTextCallback is not null && !string.IsNullOrWhiteSpace(token))
+        {
+            await CopyTextCallback.Invoke(token);
+            ApiTokenFeedbackMessage = Loc.ApiTokenCopiedFeedback;
+        }
+    }
+
+    [RelayCommand]
+    private void RegenerateApiToken()
+    {
+        _apiServer.RegenerateApiToken();
+        ApiTokenFeedbackMessage = Loc.ApiTokenRegeneratedFeedback;
     }
 
     private static string? ResolveLocalDocsPath(params string[] segments)

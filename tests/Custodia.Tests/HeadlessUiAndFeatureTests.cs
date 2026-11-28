@@ -690,6 +690,10 @@ public sealed class HeadlessUiAndFeatureTests
                 return false;
             if (targetMethod?.Name == $"get_{nameof(IEmbeddedApiServer.BoundAddress)}")
                 return "http://127.0.0.1:5080";
+            if (targetMethod?.Name == $"get_{nameof(IEmbeddedApiServer.ApiTokenFilePath)}")
+                return "/tmp/custodia-test-api-token";
+            if (targetMethod?.Name is nameof(IEmbeddedApiServer.GetOrCreateApiToken) or nameof(IEmbeddedApiServer.RegenerateApiToken))
+                return "test-token";
             if (targetMethod?.ReturnType == typeof(Task))
                 return Task.CompletedTask;
             if (targetMethod?.ReturnType == typeof(ValueTask))

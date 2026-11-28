@@ -21,10 +21,12 @@ O Custódia aplica a política configurada em **Configurações → Em caso de c
 
 | Política | Comportamento |
 | :--- | :--- |
-| **Mais recente vence** *(padrão)* | Compara a data de modificação local com a do Google Drive (`ModifiedTimeUtc`) e mantém a versão mais nova. |
+| **Manter cópia de conflito** *(padrão)* | Preserva o arquivo local com sufixo `.conflito-<data>` no mesmo diretório, baixa a versão do Drive e registra um aviso (`ConflictRenamed`) nos logs. |
+| **Mais recente vence** | Compara a data de modificação local com a do Google Drive (`ModifiedTimeUtc`) e mantém a versão mais nova. |
 | **Preferir local** | Envia o arquivo do computador e sobrescreve a versão do Drive. |
 | **Preferir remoto** | Baixa a versão do Google Drive e sobrescreve o arquivo local. |
-| **Manter cópia de conflito** | Preserva o arquivo local com sufixo de conflito no mesmo diretório, baixa a versão do Drive e registra um aviso (`ConflictRenamed`) nos logs. |
+
+> **Rede de segurança adicional:** além da política padrão **Manter cópia de conflito**, o Google Drive mantém automaticamente o **Histórico de Versões** dos arquivos (em geral por até 30 dias ou 100 revisões no Drive Web).
 
 ---
 
@@ -43,7 +45,7 @@ O Custódia adota exclusão segura por padrão:
 - **Bidirecional (`PC <-> Drive`):** mantém PC e Google Drive espelhados nos dois sentidos. Alterações e exclusões em um lado refletem no outro (sempre via Lixeira).
 - **Backup Unidirecional (`PC -> Drive`):** trata o PC como fonte principal. Arquivos novos ou editados no PC sobem para o Drive, e exclusões feitas no **PC** enviam o item remoto para a **Lixeira do Google Drive** (recuperável por até 30 dias). Por outro lado, o modo **nunca** baixa arquivos novos do Drive nem apaga arquivos do PC caso sejam removidos no Drive.
 
-Veja a tabela comparativa completa no [README](../README.md#modos-de-sincronizacao).
+Veja a tabela comparativa detalhada no guia **[Pastas, Espelho e Backup](sync-guide.md)** e as regras de exclusão padrão em **[Limitações Conhecidas](LIMITATIONS.md)**.
 
 ---
 
@@ -73,7 +75,7 @@ Nenhum arquivo, token ou credencial é enviado para servidores da TundraLab. Par
 
 ## 8. Como desinstalar completamente o Custódia (incluindo dados locais)?
 
-1. Execute o desinstalador oficial para remover o pacote `.rpm` ou a integração `.AppImage`:
+1. Use o botão **Desinstalar** no próprio **Instalador Oficial** (`.AppImage` / `.run`, ou rode `sudo apt remove custodia` / `sudo dnf remove custodia`) ou execute o instalador de terminal (`Custodia-Installer-x86_64.sh`):
    ```bash
    ./install-custodia.sh --uninstall
    ```

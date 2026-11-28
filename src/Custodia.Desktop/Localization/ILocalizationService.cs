@@ -203,6 +203,11 @@ public interface ILocalizationService : INotifyPropertyChanged
     string CurrentApiStatusLabel { get; }
     string OpenApiDocsButton { get; }
     string OpenApiSpecButton { get; }
+    string CopyApiTokenButton { get; }
+    string RegenerateApiTokenButton { get; }
+    string ApiTokenPathLabel { get; }
+    string ApiTokenCopiedFeedback { get; }
+    string ApiTokenRegeneratedFeedback { get; }
     string SystemPathsSectionTitle { get; }
     string AboutSectionTitle { get; }
     string AboutDescription { get; }

@@ -25,9 +25,9 @@ This Privacy Policy describes how the **Custódia** desktop application handles 
 
 When you connect a Google account in Custódia:
 
-- The application requests the `https://www.googleapis.com/auth/drive` scope (classified as a **sensitive scope** by official Google OAuth 2.0 documentation) strictly to list, download, upload, update, organize, and sync files and folders between Google Drive and locally configured Linux folders.
+- The application requests the `https://www.googleapis.com/auth/drive` scope (classified as a **restricted scope** by official Google Drive API documentation) strictly to list, download, upload, update, organize, and sync files and folders between Google Drive and locally configured Linux folders.
 - Custódia **does not** request Gmail scopes on your Google account or on your OAuth credential.
-- Under the current **BYO-OAuth (Bring Your Own Credentials)** model, each user configures their own Project and OAuth Client ID in Google Cloud Console for personal/individual use. If an official shared Client ID is ever publicly distributed by TundraLab in the future, it will first undergo Google's official OAuth Verification process.
+- Under the current **BYO-OAuth (Bring Your Own Credentials)** model, each user configures their own Project and OAuth Client ID in Google Cloud Console for personal/individual use. If an official shared Client ID is ever publicly distributed by TundraLab in the future, it will first undergo Google's official OAuth Verification and applicable CASA security assessment.
 
 ### Limited Use Disclosure (Google API Services User Data Policy)
 
@@ -35,7 +35,7 @@ Custódia's use and transfer to any other app of information received from Googl
 
 1. Data obtained via the Google Drive API is used exclusively to provide and operate the local synchronization and management features visible to the user in Custódia.
 2. Google Drive data is never sold, rented, or used for targeted advertising, commercial profiling, or AI/ML model training.
-3. No user Google Drive information or content is transferred to TundraLab servers or third parties (communication occurs strictly between Custódia on your Linux machine and official `googleapis.com` / `accounts.google.com` endpoints).
+3. No Google Drive files, document contents, folder trees, or OAuth tokens are transferred to TundraLab servers or third parties (all file operations occur directly between Custódia on your Linux machine and official `googleapis.com` / `accounts.google.com` endpoints; only if you keep optional lifecycle alerts enabled under Section 3 are your email address and profile name sent to the transactional email dispatcher).
 
 ---
 
@@ -43,10 +43,21 @@ Custódia's use and transfer to any other app of information received from Googl
 
 For optional initial connection confirmations and account revocation/disconnection notices, Custódia includes an optional integration with TundraLab's official delivery service (Google Apps Script under `contato.tundralab@gmail.com`):
 
+- **Default state and consent:** `GmailAccountAlertsEnabled` starts enabled by default (`true`) subject to your choice on the initial welcome prompt before first sign-in.
 - **What may be sent:** strictly `recipientEmail` (email address of the connected/disconnected Google account), `recipientName` (display name returned in the OAuth profile), `eventType` (`connect` or `revoke`), `appName`, `appVersion`, `language`, and `timestampUtc`.
 - **What is NEVER sent:** Drive files, folder names, document metadata, local logs, `credentials.json`, `access_token` / `refresh_token` tokens, or private keys.
 - **Purpose:** solely to send a transactional email informing the user when an account is linked or disconnected in Custódia.
-- **Control and opt-out:** you can accept or decline these emails right on Custódia's initial consent screen and change that preference at any time in **About -> Review initial terms** (or via `GmailAccountAlertsEnabled` in `~/.config/custodia/settings.json`). When disabled, no request is sent to the email endpoint.
+- **Control and opt-out:** you can accept or decline these emails right on Custódia's initial consent screen and change that preference at any time in **About -> Review initial terms** (or set `GmailAccountAlertsEnabled: false` in `~/.config/custodia/settings.json`). When disabled, no request is sent to the email endpoint.
+
+---
+
+## 4. LGPD Compliance (Brazilian Law No. 13,709/2018)
+
+- **Data Controller (natural person):** Gustavo Henrique Novaes Gomes (`@GustaHerin`), operating under the project and trade name TundraLab (`contato.tundralab@gmail.com`).
+- **Legal bases:** execution of local app features requested by the user and explicit consent for optional lifecycle confirmation emails (LGPD Art. 7, I and V).
+- **Retention & storage:** all sync state stays strictly on your Linux machine until you disconnect the account or uninstall and delete `~/.config/custodia` and `~/.local/share/custodia`.
+- **International processing:** optional Google Apps Script lifecycle emails run on Google LLC cloud infrastructure outside Brazil only when email alerts remain enabled.
+- **Data subject rights (Art. 18) & DPO contact:** you may exercise access, correction, consent withdrawal, or erasure directly inside the app/Google Account or via `contato.tundralab@gmail.com`. Full statutory wording is available under the **Legal** sub-mode on `/docs/privacy`.
 
 ---
 

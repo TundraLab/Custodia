@@ -60,6 +60,43 @@ public sealed class SyncAndTrashTests
     }
 
     [Fact]
+    public void AppSettings_DefaultConflictPolicy_PreservesConflictCopy()
+    {
+        var defaults = new TundraDrive.Core.Models.AppSettings();
+        Assert.Equal(TundraDrive.Core.Models.ConflictResolutionPolicy.RenameConflictCopy, defaults.ConflictPolicy);
+    }
+
+    [Fact]
+    public void EmbeddedApiServer_RequiresValidBearerOrApiKeyToken()
+    {
+        var tokenDir = Path.Combine(Path.GetTempPath(), $"custodia-token-test-{Guid.NewGuid():N}");
+        var tokenFile = Path.Combine(tokenDir, "api-token");
+        try
+        {
+            var token = EmbeddedApiServer.EnsureOrLoadApiToken(tokenFile);
+            Assert.True(token.Length >= 32);
+            Assert.Equal(token, EmbeddedApiServer.EnsureOrLoadApiToken(tokenFile));
+
+            Assert.False(EmbeddedApiServer.IsAuthorizedApiRequest(token, null, null));
+            Assert.False(EmbeddedApiServer.IsAuthorizedApiRequest(token, "Bearer wrong-token", null));
+            Assert.True(EmbeddedApiServer.IsAuthorizedApiRequest(token, $"Bearer {token}", null));
+            Assert.True(EmbeddedApiServer.IsAuthorizedApiRequest(token, null, token));
+
+            var rotated = EmbeddedApiServer.GenerateAndPersistApiToken(tokenFile);
+            Assert.NotEqual(token, rotated);
+            Assert.False(EmbeddedApiServer.IsAuthorizedApiRequest(rotated, $"Bearer {token}", null));
+            Assert.True(EmbeddedApiServer.IsAuthorizedApiRequest(rotated, $"Bearer {rotated}", null));
+        }
+        finally
+        {
+            if (Directory.Exists(tokenDir))
+            {
+                Directory.Delete(tokenDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task AuthCredentialManager_RejectsWebTypeOAuthCredentialsJson()
     {
         var mgr = new AuthCredentialManager(NullLogger<AuthCredentialManager>.Instance);

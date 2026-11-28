@@ -63,6 +63,8 @@ Enquanto o aplicativo estiver em modo **Testando** (*Testing*), o Google bloquei
 
 ![Adicionar usuários de teste](images/06-adicionar-usuarios-modal.png)
 
+> **Importante sobre expiração de 7 dias no modo Testando:** enquanto o projeto continuar em **Testando** (*Testing*), o Google revoga automaticamente o `refresh_token` a cada **7 dias**, fazendo o Custódia pedir novo login semanalmente. Para evitar reconectar toda semana no uso pessoal/individual, clique em **Publicar aplicativo** (*Publish app* / *In production*) nessa mesma página **Público-alvo** depois de configurar (você não precisa enviar o app para verificação paga externa do Google; basta continuar clicando em **Avançado -> Acessar Custódia** no aviso inicial da sua própria conta).
+
 ---
 
 ## Passo 5: Selecionar "App para computador" e baixar o JSON
