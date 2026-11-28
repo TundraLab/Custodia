@@ -40,31 +40,31 @@ FORMATS = [
 ]
 
 STEPS = [
-    "Verificando o ambiente",
+    "Preparando o ambiente",
     "Baixando pacote do Custódia",
-    "Verificando integridade (SHA-256)",
+    "Verificando assinatura (SHA-256)",
     "Instalando no sistema",
-    "Finalizando e removendo instalador",
+    "Removendo arquivo do instalador",
 ]
 
-# Crisp inline SVG icons matching the dark desktop installer design.
+# Crisp inline SVG icons matching Material Design 3 Dark Blue tokens.
 SVG_DOWNLOAD = (
-    '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none">'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none">'
     '<path d="M12 4v11m0 0-4-4m4 4 4-4M4.5 16.5v2a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-2" '
-    'stroke="#60A5FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    'stroke="#A8C7FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
     '</svg>'
 )
 
 SVG_CHECK_BLUE = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none">'
-    '<path d="M5 13l4 4L19 7" stroke="#60A5FA" stroke-width="2.6" '
+    '<path d="M5 13l4 4L19 7" stroke="#6DD58C" stroke-width="2.6" '
     'stroke-linecap="round" stroke-linejoin="round"/>'
     '</svg>'
 )
 
 SVG_CHECK_WHITE = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none">'
-    '<path d="M5 13l4 4L19 7" stroke="#FFFFFF" stroke-width="3" '
+    '<path d="M5 13l4 4L19 7" stroke="#062E6F" stroke-width="3" '
     'stroke-linecap="round" stroke-linejoin="round"/>'
     '</svg>'
 )
@@ -79,25 +79,25 @@ SVG_CHECK_GREEN = (
 SVG_BELL = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none">'
     '<path d="M15 18H5.5a1 1 0 0 1-.8-1.6l1.3-1.7V10a6 6 0 1 1 12 0v4.7l1.3 1.7a1 1 0 0 1-.8 1.6H15Zm-5 0a2 2 0 0 0 4 0" '
-    'stroke="#9296A4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
+    'stroke="#C4C6D0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
     '</svg>'
 )
 
 SVG_CLOSE = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none">'
-    '<path d="M6 6l12 12M18 6L6 18" stroke="#9296A4" stroke-width="2.2" stroke-linecap="round"/>'
+    '<path d="M6 6l12 12M18 6L6 18" stroke="#C4C6D0" stroke-width="2.2" stroke-linecap="round"/>'
     '</svg>'
 )
 
 SVG_CHEVRON_DOWN = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none">'
-    '<path d="M6 9l6 6 6-6" stroke="#9296A4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
+    '<path d="M6 9l6 6 6-6" stroke="#C4C6D0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
     '</svg>'
 )
 
 SVG_CHEVRON_UP = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none">'
-    '<path d="M18 15l-6-6-6 6" stroke="#9296A4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
+    '<path d="M18 15l-6-6-6 6" stroke="#C4C6D0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
     '</svg>'
 )
 
@@ -560,6 +560,24 @@ def _resolve_app_icon_path() -> Path | None:
     return None
 
 
+def _resolve_banner_path() -> Path | None:
+    env_banner = os.environ.get("CUSTODIA_INSTALLER_BANNER")
+    candidates: list[Path] = []
+    if env_banner:
+        candidates.append(Path(env_banner))
+    here = Path(__file__).resolve()
+    candidates.extend([
+        here.parent.parent / "custodia-banner.jpg",
+        here.parent.parent.parent / "custodia-banner.jpg",
+        here.parents[2] / "site" / "wwwroot" / "assets" / "custodia-promo.jpg"
+        if len(here.parents) > 2 else here,
+    ])
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def _svg_to_pixbuf(svg_markup: str, width: int, height: int):
     from gi.repository import GdkPixbuf  # type: ignore
 
@@ -574,7 +592,7 @@ SHARED_CSS = """
 window, .installer-root {
     background-color: #111318;
     background-image: none;
-    color: #F2F2F2;
+    color: #E2E2E9;
     font-family: Inter, "Cantarell", "Noto Sans", system-ui, sans-serif;
 }
 
@@ -582,23 +600,27 @@ headerbar.installer-topbar {
     background-color: #111318;
     background-image: none;
     border: none;
-    border-bottom: 1px solid #222630;
+    border-bottom: 1px solid #23262E;
     box-shadow: none;
-    padding: 0 16px;
-    min-height: 46px;
+    padding: 0 18px;
+    min-height: 48px;
 }
 
 .topbar-brand {
     font-weight: 700;
-    font-size: 13.5px;
-    color: #F2F2F2;
+    font-size: 14px;
+    color: #E2E2E9;
 }
 
 .topbar-version {
     font-family: "JetBrains Mono", monospace;
-    font-size: 12px;
-    color: #929292;
-    margin-left: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    background-color: #282A2F;
+    color: #C4C6D0;
+    border-radius: 999px;
+    padding: 2px 9px;
+    margin-left: 4px;
 }
 
 button.topbar-link {
@@ -606,86 +628,105 @@ button.topbar-link {
     background-image: none;
     border: none;
     box-shadow: none;
-    color: #929292;
+    color: #C4C6D0;
     font-size: 12.5px;
-    padding: 4px 8px;
-    margin-left: 6px;
+    font-weight: 500;
+    border-radius: 999px;
+    padding: 4px 10px;
+    margin-left: 4px;
 }
 
 button.topbar-link:hover {
-    color: #F2F2F2;
+    background-color: #1D2024;
+    color: #A8C7FA;
 }
 
 button.topbar-icon-btn {
-    background: transparent;
+    background-color: #1D2024;
     background-image: none;
     border: none;
     box-shadow: none;
     border-radius: 999px;
-    min-width: 28px;
-    min-height: 28px;
+    min-width: 30px;
+    min-height: 30px;
     padding: 4px;
 }
 
 button.topbar-icon-btn:hover {
-    background-color: #1F232C;
+    background-color: #282A2F;
 }
 
 button.topbar-close-btn {
-    background-color: #1A1D24;
+    background-color: #282A2F;
     background-image: none;
-    border: 1px solid #292929;
+    border: none;
     box-shadow: none;
     border-radius: 999px;
-    min-width: 28px;
-    min-height: 28px;
+    min-width: 30px;
+    min-height: 30px;
     padding: 4px;
 }
 
 button.topbar-close-btn:hover {
-    background-color: #252A35;
+    background-color: #33363D;
+}
+
+.m3-banner-card {
+    background-color: #020A1D;
+    border: 1px solid #1C3156;
+    border-radius: 16px;
+    padding: 12px 20px;
+}
+
+.banner-fallback-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #E2E2E9;
+}
+
+.banner-fallback-sub {
+    font-size: 12.5px;
+    color: #A8C7FA;
 }
 
 .hero-icon-blue {
-    background-color: #172742;
-    border: 1px solid #243C63;
-    border-radius: 13px;
-    min-width: 48px;
-    min-height: 48px;
-    padding: 12px;
+    background-color: #374955;
+    border: none;
+    border-radius: 12px;
+    min-width: 42px;
+    min-height: 42px;
+    padding: 10px;
 }
 
 .hero-icon-green {
-    background-color: #142C21;
-    border: 1px solid #214B37;
-    border-radius: 13px;
-    min-width: 48px;
-    min-height: 48px;
-    padding: 12px;
+    background-color: #1B3927;
+    border: none;
+    border-radius: 12px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 11px;
 }
 
 .hero-title {
-    font-size: 23px;
+    font-size: 20px;
     font-weight: 700;
-    color: #F2F2F2;
+    color: #E2E2E9;
 }
 
 .hero-subtitle {
-    font-size: 13.5px;
-    color: #929292;
+    font-size: 13px;
+    color: #C4C6D0;
 }
 
 .source-mono {
     font-family: "JetBrains Mono", monospace;
-    font-size: 12px;
-    color: #7D8390;
-    margin-top: 4px;
-    margin-bottom: 2px;
+    font-size: 11.5px;
+    color: #9296A4;
 }
 
 .installer-card {
-    background-color: #191919;
-    border: 1px solid #292929;
+    background-color: #1D2024;
+    border: none;
     border-radius: 16px;
 }
 
@@ -694,7 +735,7 @@ button.topbar-close-btn:hover {
 }
 
 .card-section-tight {
-    padding: 12px 16px 16px 16px;
+    padding: 10px 16px 16px 16px;
 }
 
 .card-footer-row {
@@ -702,58 +743,57 @@ button.topbar-close-btn:hover {
 }
 
 .h-divider {
-    background-color: #262626;
+    background-color: #2E3138;
     min-height: 1px;
 }
 
 .support-divider {
-    background-color: #222630;
+    background-color: #23262E;
     min-height: 1px;
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
 .field-label {
     font-size: 12.5px;
     font-weight: 600;
-    color: #929292;
+    color: #C4C6D0;
 }
 
 button.fmt-row {
-    background-color: #1E2026;
+    background-color: #282A2F;
     background-image: none;
-    border: 1px solid #292929;
+    border: 1.5px solid transparent;
     border-radius: 12px;
-    padding: 12px 14px;
+    padding: 11px 14px;
     box-shadow: none;
 }
 
 button.fmt-row:hover {
-    background-color: #23262E;
-    border-color: #363A45;
+    background-color: #2F3238;
 }
 
 button.fmt-row.selected {
-    background-color: #18263D;
-    border-color: #3478F6;
+    background-color: #213147;
+    border-color: #A8C7FA;
 }
 
 .fmt-title {
     font-family: "JetBrains Mono", monospace;
     font-size: 13.5px;
     font-weight: 700;
-    color: #F2F2F2;
+    color: #E2E2E9;
 }
 
 .fmt-sub {
     font-size: 12px;
-    color: #929292;
+    color: #C4C6D0;
 }
 
 .badge-rec {
-    background-color: #182D4F;
-    color: #7DB2FF;
+    background-color: #374955;
+    color: #D3E4F3;
     border-radius: 999px;
-    padding: 2px 9px;
+    padding: 2px 10px;
     font-size: 11px;
     font-weight: 600;
 }
@@ -762,81 +802,83 @@ button.fmt-row.selected {
     min-width: 18px;
     min-height: 18px;
     border-radius: 999px;
-    border: 1.5px solid #4A5160;
+    border: 1.5px solid #8E9099;
     background-color: transparent;
 }
 
 .fmt-dot.selected {
-    background-color: #3478F6;
-    border-color: #3478F6;
+    background-color: #A8C7FA;
+    border-color: #A8C7FA;
 }
 
 .distro-hint {
     font-size: 12px;
-    color: #929292;
+    color: #9296A4;
 }
 
 button.btn-primary {
-    background-color: #3478F6;
+    background-color: #A8C7FA;
     background-image: none;
-    color: #FFFFFF;
+    color: #062E6F;
     border: none;
-    border-radius: 11px;
-    padding: 9px 18px;
-    font-weight: 600;
+    border-radius: 20px;
+    padding: 9px 22px;
+    font-weight: 700;
     font-size: 13px;
     box-shadow: none;
 }
 
 button.btn-primary:hover {
-    background-color: #2563EB;
+    background-color: #B9D2FB;
 }
 
 button.btn-secondary {
-    background-color: #23262E;
+    background-color: #374955;
     background-image: none;
-    color: #F2F2F2;
-    border: 1px solid #333742;
-    border-radius: 11px;
-    padding: 8px 16px;
+    color: #D3E4F3;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 18px;
     font-weight: 600;
     font-size: 13px;
     box-shadow: none;
 }
 
 button.btn-secondary:hover {
-    background-color: #2C303A;
+    background-color: #425665;
 }
 
 button.btn-danger {
-    background-color: #B3261E;
+    background-color: #4A1C20;
     background-image: none;
-    color: #FFFFFF;
+    color: #FFB4AB;
     border: none;
-    border-radius: 11px;
-    padding: 8px 16px;
+    border-radius: 20px;
+    padding: 8px 18px;
     font-weight: 600;
     font-size: 13px;
     box-shadow: none;
 }
 
 button.btn-danger:hover {
-    background-color: #991F18;
+    background-color: #5B2328;
 }
 
 button.btn-ghost {
-    background: transparent;
+    background-color: #282A2F;
     background-image: none;
     border: none;
     box-shadow: none;
-    color: #929292;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 4px 6px;
+    border-radius: 20px;
+    color: #C4C6D0;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 14px;
 }
 
 button.btn-ghost:hover {
-    color: #F2F2F2;
+    background-color: #33363D;
+    color: #E2E2E9;
 }
 
 button.btn-cancel {
@@ -844,18 +886,19 @@ button.btn-cancel {
     background-image: none;
     border: none;
     box-shadow: none;
-    color: #F2F2F2;
+    border-radius: 20px;
+    color: #FFB4AB;
     font-size: 13px;
     font-weight: 600;
-    padding: 4px 8px;
+    padding: 6px 12px;
 }
 
 button.btn-cancel:hover {
-    color: #7DB2FF;
+    background-color: #4A1C20;
 }
 
 progressbar.slim-progress trough {
-    background-color: #292929;
+    background-color: #33363D;
     background-image: none;
     border: none;
     border-radius: 999px;
@@ -863,7 +906,7 @@ progressbar.slim-progress trough {
 }
 
 progressbar.slim-progress progress {
-    background-color: #3478F6;
+    background-color: #A8C7FA;
     background-image: none;
     border: none;
     border-radius: 999px;
@@ -873,29 +916,29 @@ progressbar.slim-progress progress {
 .stats-mono {
     font-family: "JetBrains Mono", monospace;
     font-size: 12px;
-    color: #929292;
+    color: #9296A4;
 }
 
 .stats-pct {
     font-family: "JetBrains Mono", monospace;
     font-size: 12px;
     font-weight: 700;
-    color: #F2F2F2;
+    color: #A8C7FA;
 }
 
 .step-row {
-    padding: 9px 12px;
+    padding: 8px 12px;
     border-radius: 12px;
 }
 
 .step-row.active {
-    background-color: #23252C;
-    border: 1px solid #2F323B;
-    padding: 11px 13px;
+    background-color: #282A2F;
+    border: none;
+    padding: 10px 13px;
 }
 
 .step-circle-done {
-    background-color: #182942;
+    background-color: #1B3927;
     border-radius: 999px;
     min-width: 22px;
     min-height: 22px;
@@ -903,54 +946,54 @@ progressbar.slim-progress progress {
 }
 
 .step-dot-pending {
-    background-color: #4B505B;
+    background-color: #6B6F7B;
     border-radius: 999px;
     min-width: 6px;
     min-height: 6px;
 }
 
 spinner.step-spinner {
-    color: #3478F6;
+    color: #A8C7FA;
 }
 
 .step-title-done {
-    font-size: 13.5px;
-    color: #929292;
+    font-size: 13px;
+    color: #C4C6D0;
 }
 
 .step-title-active {
     font-size: 13.5px;
     font-weight: 600;
-    color: #F2F2F2;
+    color: #E2E2E9;
 }
 
 .step-title-pending {
-    font-size: 13.5px;
-    color: #6B707B;
+    font-size: 13px;
+    color: #9296A4;
 }
 
 .step-sub {
     font-family: "JetBrains Mono", monospace;
     font-size: 11.5px;
-    color: #929292;
+    color: #9296A4;
 }
 
 .log-box {
     background-color: #111318;
-    border: 1px solid #292929;
-    border-radius: 10px;
-    padding: 8px 10px;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 12px;
     font-family: "JetBrains Mono", monospace;
     font-size: 11px;
-    color: #9AA4B2;
+    color: #C4C6D0;
 }
 
 .error-box {
-    background-color: #31171B;
-    border: 1px solid #5B242B;
+    background-color: #4A1C20;
+    border: none;
     border-radius: 12px;
     padding: 12px 14px;
-    color: #FFB4AB;
+    color: #FFDAD6;
     font-size: 12.5px;
 }
 
@@ -959,61 +1002,63 @@ button.footer-link {
     background-image: none;
     border: none;
     box-shadow: none;
-    color: #929292;
+    color: #9296A4;
     font-size: 12px;
-    padding: 2px 4px;
+    border-radius: 20px;
+    padding: 2px 6px;
 }
 
 button.footer-link:hover {
-    color: #F2F2F2;
+    color: #A8C7FA;
 }
 
 .dialog-card {
-    background-color: #191919;
-    color: #F2F2F2;
-    padding: 20px;
+    background-color: #282A2F;
+    color: #E2E2E9;
+    border-radius: 24px;
+    padding: 22px;
 }
 
 .dialog-title {
-    font-size: 16px;
+    font-size: 16.5px;
     font-weight: 700;
-    color: #F2F2F2;
+    color: #E2E2E9;
 }
 
 .dialog-body {
     font-size: 13px;
-    color: #929292;
+    color: #C4C6D0;
 }
 
 popover.info-popover > contents {
-    background-color: #191919;
+    background-color: #282A2F;
     background-image: none;
-    border: 1px solid #292929;
-    border-radius: 12px;
-    color: #F2F2F2;
-    padding: 12px 14px;
+    border: 1px solid #44474F;
+    border-radius: 16px;
+    color: #E2E2E9;
+    padding: 14px 16px;
 }
 """
 
 GTK4_EXTRA_CSS = """
 dropdown > button {
-    background-color: #1E2026;
+    background-color: #282A2F;
     background-image: none;
-    border: 1px solid #292929;
-    border-radius: 11px;
-    color: #F2F2F2;
-    padding: 7px 12px;
+    border: 1px solid #44474F;
+    border-radius: 12px;
+    color: #E2E2E9;
+    padding: 7px 14px;
 }
 """
 
 GTK3_EXTRA_CSS = """
 combobox button {
-    background-color: #1E2026;
+    background-color: #282A2F;
     background-image: none;
-    border: 1px solid #292929;
-    border-radius: 11px;
-    color: #F2F2F2;
-    padding: 6px 12px;
+    border: 1px solid #44474F;
+    border-radius: 12px;
+    color: #E2E2E9;
+    padding: 6px 14px;
 }
 """
 
@@ -1068,19 +1113,49 @@ def _app_icon_gtk4_image(size: int):
     return _svg_gtk4_image(SVG_BRAND_FALLBACK, size)
 
 
+def _banner_gtk4_picture(max_width: int, max_height: int):
+    from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # type: ignore
+
+    banner_path = _resolve_banner_path()
+    if banner_path is not None:
+        try:
+            pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(banner_path), max_width, max_height, True)
+            _, png_bytes = pb.save_to_bufferv("png", [], [])
+            tex = Gdk.Texture.new_from_bytes(GLib.Bytes.new(png_bytes))
+            pic = Gtk.Picture.new_for_paintable(tex)
+            pic.set_size_request(pb.get_width(), pb.get_height())
+            if hasattr(pic, "set_can_shrink"):
+                pic.set_can_shrink(False)
+            return pic
+        except Exception:
+            pass
+    fallback = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+    fallback.set_valign(Gtk.Align.CENTER)
+    t = Gtk.Label(label="Custódia by TundraLab", xalign=0)
+    t.add_css_class("banner-fallback-title")
+    s = Gtk.Label(label="Seus arquivos. Sempre seguros.", xalign=0)
+    s.add_css_class("banner-fallback-sub")
+    fallback.append(t)
+    fallback.append(s)
+    return fallback
+
+
 def run_gtk4() -> bool:
     try:
         import gi
         gi.require_version("Gdk", "4.0")
         gi.require_version("Gtk", "4.0")
         gi.require_version("GdkPixbuf", "2.0")
-        from gi.repository import Gdk, GLib, Gtk, Pango  # type: ignore
+        from gi.repository import Gdk, Gio, GLib, Gtk, Pango  # type: ignore
     except Exception:
         return False
 
     class CustodiaInstallerApp(Gtk.Application):
         def __init__(self) -> None:
-            super().__init__(application_id="com.tundralab.CustodiaInstaller")
+            super().__init__(
+                application_id="com.tundralab.CustodiaInstaller",
+                flags=Gio.ApplicationFlags.NON_UNIQUE,
+            )
             self.releases: list[dict] = [build_fallback_release()]
             self.recommended_fmt = detect_default_format()
             self.selected_fmt = self.recommended_fmt
@@ -1115,12 +1190,12 @@ def run_gtk4() -> bool:
 
             self.win = Gtk.ApplicationWindow(application=self)
             self.win.set_title("Custódia")
-            self.win.set_default_size(860, 620)
+            self.win.set_default_size(840, 710)
             self.win.set_resizable(True)
             self.win.add_css_class("installer-root")
             self.win.connect("close-request", self._on_window_close_request)
 
-            # Custom 46px dark top bar matching the reference layout.
+            # Custom 48px M3 dark top bar.
             header = Gtk.HeaderBar()
             header.add_css_class("installer-topbar")
             header.set_show_title_buttons(False)
@@ -1128,13 +1203,13 @@ def run_gtk4() -> bool:
 
             brand_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
             brand_box.set_valign(Gtk.Align.CENTER)
-            brand_box.append(_app_icon_gtk4_image(20))
+            brand_box.append(_app_icon_gtk4_image(22))
 
             brand_lbl = Gtk.Label(label="Custódia")
             brand_lbl.add_css_class("topbar-brand")
             self.topbar_ver = Gtk.Label(label=f"v{FALLBACK_VERSION}")
             self.topbar_ver.add_css_class("topbar-version")
-            whats_new = Gtk.Button(label="O que há de novo")
+            whats_new = Gtk.Button(label="Novidades")
             whats_new.add_css_class("topbar-link")
             whats_new.connect("clicked", lambda *_: webbrowser.open(RELEASES_URL))
             brand_box.append(brand_lbl)
@@ -1259,8 +1334,8 @@ def run_gtk4() -> bool:
             outer.set_valign(Gtk.Align.CENTER)
             outer.set_hexpand(True)
             outer.set_vexpand(True)
-            outer.set_margin_top(26)
-            outer.set_margin_bottom(26)
+            outer.set_margin_top(18)
+            outer.set_margin_bottom(18)
             outer.set_margin_start(28)
             outer.set_margin_end(28)
 
@@ -1325,21 +1400,42 @@ def run_gtk4() -> bool:
             wrap.append(row2)
             return wrap
 
+        def _make_banner_card(self) -> Gtk.Box:
+            card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            card.add_css_class("m3-banner-card")
+            card.set_hexpand(True)
+
+            inner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            inner.set_halign(Gtk.Align.CENTER)
+            inner.set_valign(Gtk.Align.CENTER)
+            inner.set_hexpand(True)
+
+            app_icon = _app_icon_gtk4_image(64)
+            app_icon.set_valign(Gtk.Align.CENTER)
+            banner_pic = _banner_gtk4_picture(296, 102)
+            banner_pic.set_valign(Gtk.Align.CENTER)
+
+            inner.append(app_icon)
+            inner.append(banner_pic)
+            card.append(inner)
+            return card
+
         def _build_select_page(self) -> Gtk.Widget:
             shell, col = self._centered_shell()
+            col.append(self._make_banner_card())
 
-            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
             icon_tile = Gtk.Box()
             icon_tile.add_css_class("hero-icon-blue")
             icon_tile.set_valign(Gtk.Align.START)
             icon_tile.set_halign(Gtk.Align.CENTER)
-            icon_tile.append(_svg_gtk4_image(SVG_DOWNLOAD, 22, centered=True))
+            icon_tile.append(_svg_gtk4_image(SVG_DOWNLOAD, 20, centered=True))
 
-            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-            title = Gtk.Label(label="Instalar o Custódia", xalign=0)
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            title = Gtk.Label(label="Instalar no seu Linux", xalign=0)
             title.add_css_class("hero-title")
             sub = Gtk.Label(
-                label="Escolha a versão e o formato para o seu Linux. Ao concluir, o instalador se apaga sozinho.",
+                label="Já escolhemos a opção ideal para o seu computador. Quando terminar, o instalador se apaga sozinho.",
                 xalign=0,
             )
             sub.set_wrap(True)
@@ -1351,10 +1447,6 @@ def run_gtk4() -> bool:
             hero.append(hero_text)
             col.append(hero)
 
-            source_lbl = Gtk.Label(label="De github.com/TundraLab/Custodia", xalign=0)
-            source_lbl.add_css_class("source-mono")
-            col.append(source_lbl)
-
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
             card.add_css_class("installer-card")
 
@@ -1362,7 +1454,7 @@ def run_gtk4() -> bool:
             top_block.add_css_class("card-section")
 
             ver_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-            ver_lbl = Gtk.Label(label="Versão", xalign=0)
+            ver_lbl = Gtk.Label(label="Versão do Custódia", xalign=0)
             ver_lbl.add_css_class("field-label")
             ver_lbl.set_hexpand(True)
             self.ver_model = Gtk.StringList.new([f"v{FALLBACK_VERSION} (Mais recente)"])
@@ -1445,19 +1537,20 @@ def run_gtk4() -> bool:
 
         def _build_install_page(self) -> Gtk.Widget:
             shell, col = self._centered_shell()
+            col.append(self._make_banner_card())
 
-            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
             icon_tile = Gtk.Box()
             icon_tile.add_css_class("hero-icon-blue")
             icon_tile.set_valign(Gtk.Align.START)
             icon_tile.set_halign(Gtk.Align.CENTER)
-            icon_tile.append(_svg_gtk4_image(SVG_DOWNLOAD, 22, centered=True))
+            icon_tile.append(_svg_gtk4_image(SVG_DOWNLOAD, 20, centered=True))
 
-            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-            self.inst_title = Gtk.Label(label="Instalando...", xalign=0)
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            self.inst_title = Gtk.Label(label="Instalando o Custódia...", xalign=0)
             self.inst_title.add_css_class("hero-title")
             self.inst_subtitle = Gtk.Label(
-                label="Aguarde alguns instantes enquanto baixamos e preparamos o Custódia no seu sistema.",
+                label="Baixando o pacote oficial e preparando os atalhos no seu computador.",
                 xalign=0,
             )
             self.inst_subtitle.set_wrap(True)
@@ -1639,19 +1732,20 @@ def run_gtk4() -> bool:
 
         def _build_done_page(self) -> Gtk.Widget:
             shell, col = self._centered_shell()
+            col.append(self._make_banner_card())
 
-            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
             icon_tile = Gtk.Box()
             icon_tile.add_css_class("hero-icon-green")
             icon_tile.set_valign(Gtk.Align.START)
             icon_tile.set_halign(Gtk.Align.CENTER)
             icon_tile.append(_svg_gtk4_image(SVG_CHECK_GREEN, 22, centered=True))
 
-            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-            title = Gtk.Label(label="Custódia instalado!", xalign=0)
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            title = Gtk.Label(label="Tudo pronto!", xalign=0)
             title.add_css_class("hero-title")
             self.done_sub = Gtk.Label(
-                label="Tudo pronto para usar. O arquivo do instalador foi removido automaticamente.",
+                label="O Custódia foi instalado e este instalador já foi removido automaticamente.",
                 xalign=0,
             )
             self.done_sub.set_wrap(True)
@@ -1979,6 +2073,26 @@ def _app_icon_gtk3_image(size: int):
     return _svg_gtk3_image(SVG_BRAND_FALLBACK, size)
 
 
+def _banner_gtk3_image(max_width: int, max_height: int):
+    from gi.repository import GdkPixbuf, Gtk  # type: ignore
+
+    banner_path = _resolve_banner_path()
+    if banner_path is not None:
+        try:
+            pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(banner_path), max_width, max_height, True)
+            return Gtk.Image.new_from_pixbuf(pb)
+        except Exception:
+            pass
+    fallback = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+    t = Gtk.Label(label="Custódia by TundraLab", xalign=0)
+    t.get_style_context().add_class("banner-fallback-title")
+    s = Gtk.Label(label="Seus arquivos. Sempre seguros.", xalign=0)
+    s.get_style_context().add_class("banner-fallback-sub")
+    fallback.pack_start(t, False, False, 0)
+    fallback.pack_start(s, False, False, 0)
+    return fallback
+
+
 def run_gtk3() -> bool:
     try:
         import gi
@@ -2023,7 +2137,13 @@ def run_gtk3() -> bool:
             self.save_log_buttons: list[Gtk.Button] = []
 
             self.win = Gtk.Window(title="Custódia")
-            self.win.set_default_size(860, 620)
+            self.win.set_default_size(840, 710)
+            icon_path = _resolve_app_icon_path()
+            if icon_path is not None:
+                try:
+                    self.win.set_icon_from_file(str(icon_path))
+                except Exception:
+                    pass
             self.win.get_style_context().add_class("installer-root")
             self.win.connect("delete-event", self._on_delete)
 
@@ -2033,12 +2153,12 @@ def run_gtk3() -> bool:
             header.set_custom_title(Gtk.Box())
 
             brand_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-            brand_box.pack_start(_app_icon_gtk3_image(20), False, False, 0)
+            brand_box.pack_start(_app_icon_gtk3_image(22), False, False, 0)
             brand_lbl = Gtk.Label(label="Custódia")
             brand_lbl.get_style_context().add_class("topbar-brand")
             self.topbar_ver = Gtk.Label(label=f"v{FALLBACK_VERSION}")
             self.topbar_ver.get_style_context().add_class("topbar-version")
-            whats_new = Gtk.Button(label="O que há de novo")
+            whats_new = Gtk.Button(label="Novidades")
             whats_new.get_style_context().add_class("topbar-link")
             whats_new.connect("clicked", lambda *_: webbrowser.open(RELEASES_URL))
             brand_box.pack_start(brand_lbl, False, False, 0)
@@ -2191,17 +2311,29 @@ def run_gtk3() -> bool:
             wrap.pack_start(row2, False, False, 0)
             return wrap
 
+        def _make_banner_card(self) -> Gtk.Box:
+            card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            card.get_style_context().add_class("m3-banner-card")
+            inner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            inner.set_halign(Gtk.Align.CENTER)
+            inner.set_valign(Gtk.Align.CENTER)
+            inner.pack_start(_app_icon_gtk3_image(64), False, False, 0)
+            inner.pack_start(_banner_gtk3_image(296, 102), False, False, 0)
+            card.pack_start(inner, True, True, 0)
+            return card
+
         def _build_select_page(self):
             shell, col = self._centered_shell()
-            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            col.pack_start(self._make_banner_card(), False, False, 0)
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
             icon_tile = Gtk.Box()
             icon_tile.get_style_context().add_class("hero-icon-blue")
-            icon_tile.pack_start(_svg_gtk3_image(SVG_DOWNLOAD, 22), True, True, 0)
-            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-            title = Gtk.Label(label="Instalar o Custódia", xalign=0)
+            icon_tile.pack_start(_svg_gtk3_image(SVG_DOWNLOAD, 20), True, True, 0)
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            title = Gtk.Label(label="Instalar no seu Linux", xalign=0)
             title.get_style_context().add_class("hero-title")
             sub = Gtk.Label(
-                label="Escolha a versão e o formato para o seu Linux. Ao concluir, o instalador se apaga sozinho.",
+                label="Já escolhemos a opção ideal para o seu computador. Quando terminar, o instalador se apaga sozinho.",
                 xalign=0,
             )
             sub.set_line_wrap(True)
@@ -2212,17 +2344,13 @@ def run_gtk3() -> bool:
             hero.pack_start(hero_text, True, True, 0)
             col.pack_start(hero, False, False, 0)
 
-            source_lbl = Gtk.Label(label="De github.com/TundraLab/Custodia", xalign=0)
-            source_lbl.get_style_context().add_class("source-mono")
-            col.pack_start(source_lbl, False, False, 0)
-
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
             card.get_style_context().add_class("installer-card")
             top_block = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
             top_block.get_style_context().add_class("card-section")
 
             ver_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-            ver_lbl = Gtk.Label(label="Versão", xalign=0)
+            ver_lbl = Gtk.Label(label="Versão do Custódia", xalign=0)
             ver_lbl.get_style_context().add_class("field-label")
             self.ver_combo = Gtk.ComboBoxText()
             self.ver_combo.append_text(f"v{FALLBACK_VERSION} (Mais recente)")
@@ -2290,15 +2418,16 @@ def run_gtk3() -> bool:
 
         def _build_install_page(self):
             shell, col = self._centered_shell()
-            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            col.pack_start(self._make_banner_card(), False, False, 0)
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
             icon_tile = Gtk.Box()
             icon_tile.get_style_context().add_class("hero-icon-blue")
-            icon_tile.pack_start(_svg_gtk3_image(SVG_DOWNLOAD, 22), True, True, 0)
-            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-            title = Gtk.Label(label="Instalando...", xalign=0)
+            icon_tile.pack_start(_svg_gtk3_image(SVG_DOWNLOAD, 20), True, True, 0)
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            title = Gtk.Label(label="Instalando o Custódia...", xalign=0)
             title.get_style_context().add_class("hero-title")
             sub = Gtk.Label(
-                label="Aguarde alguns instantes enquanto baixamos e preparamos o Custódia no seu sistema.",
+                label="Baixando o pacote oficial e preparando os atalhos no seu computador.",
                 xalign=0,
             )
             sub.set_line_wrap(True)
@@ -2452,15 +2581,16 @@ def run_gtk3() -> bool:
 
         def _build_done_page(self):
             shell, col = self._centered_shell()
-            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            col.pack_start(self._make_banner_card(), False, False, 0)
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
             icon_tile = Gtk.Box()
             icon_tile.get_style_context().add_class("hero-icon-green")
             icon_tile.pack_start(_svg_gtk3_image(SVG_CHECK_GREEN, 22), True, True, 0)
-            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-            title = Gtk.Label(label="Custódia instalado!", xalign=0)
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            title = Gtk.Label(label="Tudo pronto!", xalign=0)
             title.get_style_context().add_class("hero-title")
             self.done_sub = Gtk.Label(
-                label="Tudo pronto para usar. O arquivo do instalador foi removido automaticamente.",
+                label="O Custódia foi instalado e este instalador já foi removido automaticamente.",
                 xalign=0,
             )
             self.done_sub.set_line_wrap(True)

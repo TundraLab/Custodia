@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 ASSETS_DIR="${REPO_ROOT}/src/Custodia.Desktop/Assets"
+SITE_BANNER="${REPO_ROOT}/site/wwwroot/assets/custodia-promo.jpg"
 SRC_INSTALLER="${SCRIPT_DIR}/custodia-installer.py"
 DIST_DIR="${REPO_ROOT}/dist"
 OUT_APPIMAGE="${DIST_DIR}/Custodia-Installer-x86_64.AppImage"
@@ -31,6 +32,9 @@ fi
 if [[ -f "${ASSETS_DIR}/custodia-icon.svg" ]]; then
   cp -f "${ASSETS_DIR}/custodia-icon.svg" "${APPDIR}/usr/share/icons/hicolor/scalable/apps/custodia-installer.svg"
 fi
+if [[ -f "${SITE_BANNER}" ]]; then
+  cp -f "${SITE_BANNER}" "${APPDIR}/custodia-banner.jpg"
+fi
 
 cat > "${APPDIR}/custodia-installer.desktop" <<'EOF'
 [Desktop Entry]
@@ -52,6 +56,9 @@ if [[ -f "${HERE}/custodia-installer.png" ]]; then
   export CUSTODIA_INSTALLER_ICON="${HERE}/custodia-installer.png"
 elif [[ -f "${HERE}/usr/share/icons/hicolor/scalable/apps/custodia-installer.svg" ]]; then
   export CUSTODIA_INSTALLER_ICON="${HERE}/usr/share/icons/hicolor/scalable/apps/custodia-installer.svg"
+fi
+if [[ -f "${HERE}/custodia-banner.jpg" ]]; then
+  export CUSTODIA_INSTALLER_BANNER="${HERE}/custodia-banner.jpg"
 fi
 exec /usr/bin/env python3 "${HERE}/usr/bin/custodia-installer.py" "$@"
 EOF
