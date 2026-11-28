@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Custodia Linux Installer by TundraLab
-Lightweight graphical installer allowing release and package format (.deb, .rpm, .AppImage) selection.
-Auto-deletes itself after a successful installation.
+Lightweight native graphical installer for Custodia by TundraLab.
+Lets the user pick a GitHub release version and package format (.deb, .rpm, or
+.AppImage) with the recommended format highlighted per distro, verifies SHA-256,
+installs cleanly, and auto-deletes itself when finished.
 """
 
 from __future__ import annotations
@@ -19,355 +20,675 @@ import threading
 import time
 import urllib.error
 import urllib.request
+import webbrowser
 from pathlib import Path
+from typing import Callable
 
-REPO_SLUG = "TundraLab/Custodia"
-RELEASES_API = f"https://api.github.com/repos/{REPO_SLUG}/releases?per_page=12"
+REPO = "TundraLab/Custodia"
+RELEASES_API = f"https://api.github.com/repos/{REPO}/releases?per_page=12"
+RELEASES_URL = f"https://github.com/{REPO}/releases"
+ISSUES_URL = f"https://github.com/{REPO}/issues/new"
+GUIDE_URL = "https://custodia.tundralab.com.br/#instalacao"
 FALLBACK_VERSION = "4.0.0"
-USER_AGENT = "Custodia-Installer/4.0.0"
+USER_AGENT = "Custodia-Installer/4.0"
+
+FORMATS = [
+    ("deb", ".deb", "Ubuntu, Debian, Pop!_OS e Linux Mint"),
+    ("rpm", ".rpm", "Fedora, RHEL e openSUSE"),
+    ("appimage", ".AppImage", "Portátil para qualquer Linux"),
+]
+
+STEPS = [
+    "Verificando o ambiente",
+    "Baixando pacote do Custódia",
+    "Verificando integridade (SHA-256)",
+    "Instalando no sistema",
+    "Finalizando e removendo instalador",
+]
+
+
+def read_os_release() -> dict[str, str]:
+    data: dict[str, str] = {}
+    for candidate in ("/etc/os-release", "/usr/lib/os-release"):
+        if os.path.isfile(candidate):
+            try:
+                with open(candidate, "r", encoding="utf-8", errors="ignore") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        k, v = line.split("=", 1)
+                        data[k] = v.strip().strip('"').strip("'")
+                break
+            except OSError:
+                pass
+    return data
+
+
+def detect_distro_label() -> str:
+    info = read_os_release()
+    return info.get("PRETTY_NAME") or info.get("NAME") or "Linux x86_64"
 
 
 def detect_default_format() -> str:
-    if (
-        os.path.exists("/etc/fedora-release")
-        or os.path.exists("/etc/redhat-release")
-        or shutil.which("dnf")
-        or shutil.which("zypper")
-    ):
-        return "rpm"
-    if (
-        os.path.exists("/etc/debian_version")
-        or shutil.which("apt-get")
-        or shutil.which("dpkg")
-    ):
+    info = read_os_release()
+    distro_ids = f"{info.get('ID', '')} {info.get('ID_LIKE', '')}".lower()
+    if any(k in distro_ids for k in ("ubuntu", "debian", "pop", "linuxmint", "mint", "elementary", "zorin", "kali")):
+        if shutil.which("apt-get") or shutil.which("dpkg"):
+            return "deb"
+    if any(k in distro_ids for k in ("fedora", "rhel", "centos", "rocky", "almalinux", "opensuse", "suse")):
+        if shutil.which("dnf") or shutil.which("zypper") or shutil.which("rpm"):
+            return "rpm"
+    if shutil.which("apt-get") or shutil.which("dpkg"):
         return "deb"
+    if shutil.which("dnf") or shutil.which("zypper") or shutil.which("rpm"):
+        return "rpm"
     return "appimage"
+
+
+def build_fallback_release() -> dict:
+    v = FALLBACK_VERSION
+    base = f"https://github.com/{REPO}/releases/download/v{v}"
+    return {
+        "tag": f"v{v}",
+        "version": v,
+        "name": f"v{v}",
+        "assets": {
+            "deb": {"name": f"Custodia-{v}_amd64.deb", "url": f"{base}/Custodia-{v}_amd64.deb", "size": 0},
+            "rpm": {"name": f"Custodia-{v}-1.x86_64.rpm", "url": f"{base}/Custodia-{v}-1.x86_64.rpm", "size": 0},
+            "appimage": {"name": f"Custodia-{v}-x86_64.AppImage", "url": f"{base}/Custodia-{v}-x86_64.AppImage", "size": 0},
+            "sums": {"name": "SHA256SUMS.txt", "url": f"{base}/SHA256SUMS.txt", "size": 0},
+        },
+    }
 
 
 def fetch_releases() -> list[dict]:
     req = urllib.request.Request(
         RELEASES_API,
-        headers={
-            "User-Agent": USER_AGENT,
-            "Accept": "application/vnd.github+json",
-        },
+        headers={"Accept": "application/vnd.github+json", "User-Agent": USER_AGENT},
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        releases = []
-        for rel in data:
-            if rel.get("draft"):
-                continue
-            tag = (rel.get("tag_name") or "").strip()
-            if not tag:
-                continue
-            assets = {}
-            for a in rel.get("assets", []):
-                name = a.get("name") or ""
-                url = a.get("browser_download_url") or ""
-                size = int(a.get("size") or 0)
-                if not name or not url:
-                    continue
-                lower = name.lower()
-                if lower.endswith(".deb"):
-                    assets["deb"] = (name, url, size)
-                elif lower.endswith(".rpm"):
-                    assets["rpm"] = (name, url, size)
-                elif lower.endswith(".appimage") and "installer" not in lower:
-                    assets["appimage"] = (name, url, size)
-                elif lower == "sha256sums.txt":
-                    assets["sums"] = (name, url, size)
-            if any(k in assets for k in ("deb", "rpm", "appimage")):
-                releases.append({"tag": tag, "name": rel.get("name") or tag, "assets": assets})
-        if releases:
-            return releases
+            raw = json.loads(resp.read().decode("utf-8", errors="replace"))
     except Exception:
-        pass
+        return [build_fallback_release()]
 
-    tag = f"v{FALLBACK_VERSION}"
-    base = f"https://github.com/{REPO_SLUG}/releases/download/{tag}"
-    return [
-        {
-            "tag": tag,
-            "name": f"Custódia {tag}",
-            "assets": {
-                "deb": (f"Custodia-{FALLBACK_VERSION}_amd64.deb", f"{base}/Custodia-{FALLBACK_VERSION}_amd64.deb", 0),
-                "rpm": (f"Custodia-{FALLBACK_VERSION}-1.x86_64.rpm", f"{base}/Custodia-{FALLBACK_VERSION}-1.x86_64.rpm", 0),
-                "appimage": (f"Custodia-{FALLBACK_VERSION}-x86_64.AppImage", f"{base}/Custodia-{FALLBACK_VERSION}-x86_64.AppImage", 0),
-                "sums": ("SHA256SUMS.txt", f"{base}/SHA256SUMS.txt", 0),
-            },
-        }
-    ]
+    parsed: list[dict] = []
+    for rel in raw:
+        if not isinstance(rel, dict) or rel.get("draft"):
+            continue
+        tag = str(rel.get("tag_name") or "").strip()
+        if not tag:
+            continue
+        assets_map: dict[str, dict] = {}
+        for asset in rel.get("assets") or []:
+            name = str(asset.get("name") or "")
+            url = str(asset.get("browser_download_url") or "")
+            size = int(asset.get("size") or 0)
+            if not name or not url:
+                continue
+            low = name.lower()
+            if low.endswith(".deb"):
+                assets_map["deb"] = {"name": name, "url": url, "size": size}
+            elif low.endswith(".rpm"):
+                assets_map["rpm"] = {"name": name, "url": url, "size": size}
+            elif low.endswith(".appimage") and "installer" not in low:
+                assets_map["appimage"] = {"name": name, "url": url, "size": size}
+            elif name == "SHA256SUMS.txt":
+                assets_map["sums"] = {"name": name, "url": url, "size": size}
+        if any(k in assets_map for k in ("deb", "rpm", "appimage")):
+            parsed.append({
+                "tag": tag,
+                "version": tag.lstrip("v"),
+                "name": tag,
+                "assets": assets_map,
+            })
+
+    return parsed if parsed else [build_fallback_release()]
 
 
-def download_file(url: str, dest: Path, on_progress, cancel_event: threading.Event) -> None:
+def format_bytes(num_bytes: int) -> str:
+    if num_bytes <= 0:
+        return "0 MB"
+    mb = num_bytes / (1024 * 1024)
+    if mb >= 1:
+        return f"{mb:.1f} MB".replace(".", ",")
+    kb = num_bytes / 1024
+    return f"{kb:.0f} KB"
+
+
+def format_eta(seconds: float) -> str:
+    if seconds <= 0 or seconds > 3600:
+        return ""
+    s = int(round(seconds))
+    mins, secs = divmod(s, 60)
+    return f"~{mins}:{secs:02d} restantes"
+
+
+def download_file(
+    url: str,
+    dest: Path,
+    on_progress: Callable[[int, int, float, float], None],
+    cancel_event: threading.Event,
+    expected_size: int = 0,
+) -> None:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        total = int(resp.headers.get("Content-Length") or 0)
-        downloaded = 0
-        start = time.monotonic()
-        last_tick = 0.0
-        with open(dest, "wb") as fh:
+    start = time.monotonic()
+    last_emit = 0.0
+    downloaded = 0
+
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        header_len = int(resp.headers.get("Content-Length") or 0)
+        total = header_len if header_len > 0 else expected_size
+        with open(dest, "wb") as out:
             while True:
                 if cancel_event.is_set():
-                    raise InterruptedError("Instalação cancelada.")
-                chunk = resp.read(65536)
+                    raise RuntimeError("Instalação cancelada pelo usuário.")
+                chunk = resp.read(128 * 1024)
                 if not chunk:
                     break
-                fh.write(chunk)
+                out.write(chunk)
                 downloaded += len(chunk)
                 now = time.monotonic()
-                if now - last_tick >= 0.12 or (total > 0 and downloaded >= total):
-                    last_tick = now
+                if now - last_emit >= 0.12 or (total > 0 and downloaded >= total):
                     elapsed = max(0.05, now - start)
-                    mbps = (downloaded / (1024 * 1024)) / elapsed
-                    pct = (downloaded / total) if total > 0 else 0.0
-                    on_progress(downloaded, total, min(1.0, pct), mbps)
+                    speed = downloaded / elapsed
+                    eta = (total - downloaded) / speed if (total > downloaded and speed > 0) else 0.0
+                    on_progress(downloaded, total, speed, eta)
+                    last_emit = now
+
+    elapsed = max(0.05, time.monotonic() - start)
+    on_progress(downloaded, max(downloaded, expected_size), downloaded / elapsed, 0.0)
 
 
-def verify_sha256(file_path: Path, asset_name: str, sums_url: str | None) -> bool:
+def verify_sha256(file_path: Path, sums_url: str | None, asset_name: str, log: Callable[[str], None]) -> None:
     if not sums_url:
-        return False
+        log("SHA256SUMS.txt não publicado para esta versão; prosseguindo.")
+        return
+
     req = urllib.request.Request(sums_url, headers={"User-Agent": USER_AGENT})
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
-            text = resp.read().decode("utf-8", errors="ignore")
-    except Exception:
-        return False
+            content = resp.read().decode("utf-8", errors="replace")
+    except Exception as exc:
+        log(f"Aviso: não foi possível baixar SHA256SUMS.txt ({exc}).")
+        return
 
-    expected = None
-    for line in text.splitlines():
+    expected = ""
+    for line in content.splitlines():
         parts = line.strip().split()
-        if len(parts) >= 2 and Path(parts[-1].lstrip("*")).name == asset_name:
+        if len(parts) >= 2 and parts[-1].lstrip("*") == asset_name:
             expected = parts[0].lower()
             break
+
     if not expected:
-        return False
+        log(f"Aviso: hash de {asset_name} não encontrado em SHA256SUMS.txt.")
+        return
 
     h = hashlib.sha256()
-    with open(file_path, "rb") as fh:
-        for block in iter(lambda: fh.read(131072), b""):
-            h.update(block)
+    with open(file_path, "rb") as f:
+        while True:
+            buf = f.read(1024 * 1024)
+            if not buf:
+                break
+            h.update(buf)
     actual = h.hexdigest().lower()
     if actual != expected:
-        raise RuntimeError(f"Falha na verificação SHA-256 de {asset_name}.")
-    return True
+        raise RuntimeError("Falha na verificação SHA-256. O arquivo baixado está corrompido.")
+    log(f"Integridade SHA-256 verificada ({actual[:12]}...).")
 
 
-def write_desktop_files(exec_path: str, is_appimage: bool) -> None:
-    home = Path.home()
-    apps_dir = home / ".local" / "share" / "applications"
-    autostart_dir = home / ".config" / "autostart"
-    apps_dir.mkdir(parents=True, exist_ok=True)
-    autostart_dir.mkdir(parents=True, exist_ok=True)
-
-    if is_appimage:
-        local_bin = home / ".local" / "bin"
-        local_bin.mkdir(parents=True, exist_ok=True)
-        wrapper = local_bin / "custodia"
-        wrapper.write_text(f'#!/usr/bin/env bash\nexec "{exec_path}" "$@"\n', encoding="utf-8")
-        wrapper.chmod(0o755)
-        menu_entry = apps_dir / "custodia.desktop"
-        menu_entry.write_text(
-            "[Desktop Entry]\n"
-            "Type=Application\n"
-            "Version=1.0\n"
-            "Name=Custódia\n"
-            "GenericName=Google Drive Client\n"
-            "Comment=Custódia by TundraLab - Seus arquivos. Sempre seguros.\n"
-            "Icon=custodia\n"
-            f'Exec="{exec_path}"\n'
-            "Terminal=false\n"
-            "Categories=Network;Utility;\n"
-            "StartupWMClass=Custodia\n",
-            encoding="utf-8",
-        )
+def run_privileged(cmd: list[str], log: Callable[[str], None]) -> None:
+    if os.geteuid() == 0:
+        full_cmd = cmd
+    elif shutil.which("pkexec"):
+        full_cmd = ["pkexec"] + cmd
     else:
-        user_entry = apps_dir / "custodia.desktop"
-        if user_entry.exists():
-            try:
-                user_entry.unlink()
-            except OSError:
-                pass
+        raise RuntimeError("pkexec não encontrado. Instale o pacote manualmente pelo terminal.")
 
-    autostart_entry = autostart_dir / "custodia.desktop"
-    autostart_entry.write_text(
-        "[Desktop Entry]\n"
-        "Type=Application\n"
-        "Version=1.0\n"
-        "Name=Custódia\n"
-        "Comment=Custódia by TundraLab - Seus arquivos. Sempre seguros.\n"
-        "Icon=custodia\n"
-        f'Exec="{exec_path}"\n'
-        "Terminal=false\n"
-        "X-GNOME-Autostart-enabled=true\n",
-        encoding="utf-8",
-    )
-
-    if shutil.which("update-desktop-database"):
-        subprocess.run(["update-desktop-database", "-q", str(apps_dir)], check=False)
-
-
-def install_package(pkg_path: Path, fmt: str, log_cb) -> str:
-    subprocess.run(["pkill", "-x", "Custodia"], check=False)
-    time.sleep(0.3)
-
-    if fmt == "appimage":
-        target_dir = Path.home() / ".local" / "opt" / "custodia"
-        target_dir.mkdir(parents=True, exist_ok=True)
-        target_bin = target_dir / "Custodia.AppImage"
-        tmp_bin = target_dir / "Custodia.AppImage.tmp"
-        shutil.copy2(pkg_path, tmp_bin)
-        tmp_bin.chmod(0o755)
-        tmp_bin.replace(target_bin)
-        write_desktop_files(str(target_bin), is_appimage=True)
-        log_cb(f"AppImage instalado em {target_bin}")
-        return str(target_bin)
-
-    quoted = str(pkg_path).replace("'", "'\\''")
-    if fmt == "deb":
-        if shutil.which("apt-get"):
-            cmd = f"pkexec apt-get install -y '{quoted}'"
-        else:
-            cmd = f"pkexec dpkg -i '{quoted}'"
-    else:
-        if shutil.which("dnf"):
-            cmd = f"pkexec dnf install -y '{quoted}'"
-        elif shutil.which("zypper"):
-            cmd = f"pkexec zypper --non-interactive install -y --allow-unsigned-rpm '{quoted}'"
-        else:
-            cmd = f"pkexec rpm -Uvh --replacepkgs --nosignature '{quoted}'"
-
-    log_cb(f"Executando instalação do pacote .{fmt}...")
+    log(f"Executando: {' '.join(full_cmd)}")
     proc = subprocess.Popen(
-        ["bash", "-c", cmd],
+        full_cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        errors="replace",
     )
     assert proc.stdout is not None
+    tail_lines: list[str] = []
     for line in proc.stdout:
-        stripped = line.strip()
-        if stripped:
-            log_cb(stripped)
+        clean = line.strip()
+        if clean:
+            tail_lines.append(clean)
+            if len(tail_lines) > 12:
+                tail_lines.pop(0)
+            log(clean)
     rc = proc.wait()
     if rc != 0:
-        raise RuntimeError(f"A instalação do pacote .{fmt} retornou código {rc}.")
+        if rc in (126, 127):
+            raise RuntimeError("Autenticação administrativa cancelada.")
+        detail = tail_lines[-1] if tail_lines else f"código {rc}"
+        raise RuntimeError(f"Falha ao instalar o pacote ({detail}).")
 
-    write_desktop_files("/usr/bin/custodia", is_appimage=False)
-    return "/usr/bin/custodia"
+
+def install_deb(pkg_path: Path, log: Callable[[str], None]) -> None:
+    if shutil.which("apt-get"):
+        run_privileged(["apt-get", "install", "-y", str(pkg_path)], log)
+    elif shutil.which("dpkg"):
+        run_privileged(["dpkg", "-i", str(pkg_path)], log)
+    else:
+        raise RuntimeError("Nem apt-get nem dpkg estão disponíveis neste sistema.")
 
 
-def self_delete_installer(log_cb) -> None:
+def install_rpm(pkg_path: Path, log: Callable[[str], None]) -> None:
+    if shutil.which("dnf"):
+        run_privileged(["dnf", "install", "-y", "--nogpgcheck", str(pkg_path)], log)
+    elif shutil.which("zypper"):
+        run_privileged(["zypper", "--non-interactive", "--no-gpg-checks", "install", str(pkg_path)], log)
+    elif shutil.which("rpm"):
+        run_privileged(["rpm", "-Uvh", "--replacepkgs", "--nosignature", str(pkg_path)], log)
+    else:
+        raise RuntimeError("Nem dnf, zypper nem rpm estão disponíveis neste sistema.")
+
+
+def install_appimage(pkg_path: Path, log: Callable[[str], None]) -> None:
+    home = Path.home()
+    install_dir = home / ".local" / "opt" / "custodia"
+    bin_dir = home / ".local" / "bin"
+    apps_dir = home / ".local" / "share" / "applications"
+    autostart_dir = home / ".config" / "autostart"
+
+    for d in (install_dir, bin_dir, apps_dir, autostart_dir):
+        d.mkdir(parents=True, exist_ok=True)
+
+    target_app = install_dir / "Custodia.AppImage"
+    shutil.copy2(pkg_path, target_app)
+    target_app.chmod(target_app.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+    wrapper = bin_dir / "custodia"
+    wrapper.write_text(
+        f'#!/usr/bin/env bash\nexec "{target_app}" "$@"\n',
+        encoding="utf-8",
+    )
+    wrapper.chmod(wrapper.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+    desktop_content = (
+        "[Desktop Entry]\n"
+        "Type=Application\n"
+        "Name=Custódia\n"
+        "Comment=Google Drive nativo para Linux\n"
+        f"Exec={wrapper}\n"
+        "Icon=custodia\n"
+        "Terminal=false\n"
+        "Categories=Network;FileTransfer;Utility;\n"
+        "StartupWMClass=Custodia\n"
+    )
+    (apps_dir / "custodia.desktop").write_text(desktop_content, encoding="utf-8")
+    (autostart_dir / "custodia.desktop").write_text(
+        desktop_content + "X-GNOME-Autostart-enabled=true\n",
+        encoding="utf-8",
+    )
+    if shutil.which("update-desktop-database"):
+        subprocess.run(["update-desktop-database", str(apps_dir)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    log(f"AppImage instalado em {target_app}")
+
+
+def self_delete_installer(log: Callable[[str], None]) -> bool:
     try:
-        self_path = Path(os.path.realpath(sys.argv[0]))
-        if not self_path.is_file():
-            return
-        sp = str(self_path)
-        if sp.startswith("/opt/") or sp.startswith("/usr/"):
-            return
-        if self_path.name.endswith(".py") and "packaging/linux" in sp:
-            return
-        self_path.unlink()
-        log_cb(f"Instalador removido automaticamente: {self_path.name}")
-    except Exception as ex:
-        log_cb(f"Aviso ao remover instalador: {ex}")
+        script_path = Path(os.path.realpath(__file__))
+        if not script_path.exists():
+            return False
+        # Never delete the source file inside the repository during development.
+        if script_path.name.endswith(".py") or (script_path.parent.name == "linux" and script_path.parent.parent.name == "packaging"):
+            log("Modo desenvolvimento: arquivo fonte preservado.")
+            return False
+        script_path.unlink(missing_ok=True)
+        log(f"Instalador removido: {script_path.name}")
+        return True
+    except Exception as exc:
+        log(f"Aviso: não foi possível remover o instalador ({exc}).")
+        return False
 
 
-def launch_custodia(bin_path: str) -> None:
-    try:
-        if shutil.which("systemd-run"):
+def launch_custodia() -> None:
+    candidates = [
+        "/opt/custodia/Custodia",
+        "/usr/bin/custodia",
+        str(Path.home() / ".local" / "bin" / "custodia"),
+        str(Path.home() / ".local" / "opt" / "custodia" / "Custodia.AppImage"),
+    ]
+    for path in candidates:
+        if os.path.isfile(path) and os.access(path, os.X_OK):
             subprocess.Popen(
-                ["systemd-run", "--user", "--collect", bin_path],
+                [path],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,
             )
-        else:
-            subprocess.Popen(
-                [bin_path],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True,
-            )
-    except Exception:
-        pass
+            return
+    if shutil.which("custodia"):
+        subprocess.Popen(
+            ["custodia"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
 
 
-GTK_CSS = b"""
-window, .custodia-root {
-  background-color: #111318;
-  color: #E2E2E9;
-  font-family: Inter, Cantarell, sans-serif;
+def stop_running_custodia() -> None:
+    subprocess.run(["pkill", "-x", "Custodia"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+CSS = """
+window, .installer-root {
+    background-color: #0E1117;
+    color: #E6EDF3;
+    font-family: Inter, "Cantarell", "Noto Sans", system-ui, sans-serif;
 }
-.title-label {
-  font-size: 20px;
-  font-weight: 700;
-  color: #E2E2E9;
+
+headerbar.installer-topbar {
+    background-color: #0E1117;
+    border-bottom: 1px solid #1C212B;
+    box-shadow: none;
+    padding: 4px 12px;
+    min-height: 44px;
 }
-.subtitle-label {
-  font-size: 13px;
-  color: #9296A4;
+
+.topbar-brand {
+    font-weight: 700;
+    font-size: 13.5px;
+    color: #E6EDF3;
 }
-.section-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #C4C6D0;
+
+.topbar-version {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    color: #7D8590;
+    margin-left: 6px;
 }
-.m3-card {
-  background-color: #1D2024;
-  border-radius: 16px;
-  padding: 16px;
+
+button.topbar-link {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: #8B949E;
+    font-size: 12px;
+    padding: 2px 8px;
+    margin-left: 6px;
 }
-.status-label {
-  font-size: 13px;
-  color: #C4C6D0;
+
+button.topbar-link:hover {
+    color: #A8C7FA;
 }
-.status-ok {
-  color: #6DD58C;
-  font-weight: 600;
+
+.hero-icon-blue {
+    background-color: #16243A;
+    border: 1px solid #243A5E;
+    border-radius: 12px;
+    min-width: 44px;
+    min-height: 44px;
+    color: #60A5FA;
+    font-size: 20px;
+    font-weight: 700;
 }
-.status-err {
-  color: #FFB4AB;
-  font-weight: 600;
+
+.hero-icon-green {
+    background-color: #132C20;
+    border: 1px solid #1F4E38;
+    border-radius: 12px;
+    min-width: 44px;
+    min-height: 44px;
+    color: #6DD58C;
+    font-size: 20px;
+    font-weight: 700;
 }
-button.m3-primary {
-  background-image: none;
-  background-color: #A8C7FA;
-  color: #062E6F;
-  border-radius: 20px;
-  border: none;
-  padding: 9px 20px;
-  font-weight: 700;
+
+.hero-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #F0F6FC;
 }
-button.m3-primary:hover {
-  background-color: #BDD6FF;
+
+.hero-subtitle {
+    font-size: 13.5px;
+    color: #8B949E;
 }
-button.m3-secondary {
-  background-image: none;
-  background-color: #282A2F;
-  color: #E2E2E9;
-  border-radius: 20px;
-  border: 1px solid #44474F;
-  padding: 8px 16px;
-  font-weight: 600;
+
+.source-mono {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11.5px;
+    color: #6E7681;
+    margin-top: 2px;
 }
-progressbar trough {
-  min-height: 7px;
-  border-radius: 4px;
-  background-color: #33363D;
+
+.installer-card {
+    background-color: #161920;
+    border: 1px solid #242934;
+    border-radius: 14px;
+    padding: 18px 20px;
 }
-progressbar progress {
-  min-height: 7px;
-  border-radius: 4px;
-  background-color: #A8C7FA;
+
+.field-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #9AA4B2;
 }
-textview, textview text {
-  background-color: #111318;
-  color: #C4C6D0;
-  font-family: monospace;
-  font-size: 11px;
+
+button.fmt-row {
+    background-color: #1C2029;
+    border: 1px solid #282D3A;
+    border-radius: 11px;
+    padding: 11px 14px;
+    box-shadow: none;
+}
+
+button.fmt-row:hover {
+    background-color: #212633;
+    border-color: #363D4E;
+}
+
+button.fmt-row.selected {
+    background-color: #18253A;
+    border-color: #4D8BF5;
+}
+
+.fmt-title {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #F0F6FC;
+}
+
+.fmt-sub {
+    font-size: 12px;
+    color: #8B949E;
+}
+
+.badge-rec {
+    background-color: #1E3A5F;
+    color: #93C5FD;
+    border-radius: 999px;
+    padding: 2px 9px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.fmt-dot {
+    min-width: 18px;
+    min-height: 18px;
+    border-radius: 999px;
+    border: 1.5px solid #4B5563;
+    color: transparent;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.fmt-dot.selected {
+    background-color: #3B82F6;
+    border-color: #3B82F6;
+    color: #FFFFFF;
+}
+
+.distro-hint {
+    font-size: 12px;
+    color: #7D8590;
+}
+
+button.btn-primary {
+    background-color: #3B82F6;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 13.5px;
+    box-shadow: none;
+}
+
+button.btn-primary:hover {
+    background-color: #2563EB;
+}
+
+button.btn-secondary {
+    background-color: #212631;
+    color: #E6EDF3;
+    border: 1px solid #303644;
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-weight: 600;
+    font-size: 13px;
+    box-shadow: none;
+}
+
+button.btn-secondary:hover {
+    background-color: #2A303E;
+}
+
+button.btn-ghost {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: #9AA4B2;
+    font-size: 12.5px;
+    padding: 4px 8px;
+}
+
+button.btn-ghost:hover {
+    color: #F0F6FC;
+}
+
+progressbar.slim-progress trough {
+    background-color: #232834;
+    border-radius: 999px;
+    min-height: 5px;
+}
+
+progressbar.slim-progress progress {
+    background-color: #3B82F6;
+    border-radius: 999px;
+    min-height: 5px;
+}
+
+.stats-mono {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11.5px;
+    color: #8B949E;
+}
+
+.stats-pct {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: #F0F6FC;
+}
+
+.step-row {
+    padding: 8px 12px;
+    border-radius: 10px;
+}
+
+.step-row.active {
+    background-color: #1F2430;
+    border: 1px solid #2A3040;
+}
+
+.step-icon-done {
+    background-color: #1A2B46;
+    color: #60A5FA;
+    border-radius: 999px;
+    min-width: 22px;
+    min-height: 22px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.step-icon-pending {
+    color: #4B5563;
+    min-width: 22px;
+    min-height: 22px;
+    font-size: 14px;
+}
+
+.step-title-done {
+    font-size: 13px;
+    color: #8B949E;
+}
+
+.step-title-active {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #F0F6FC;
+}
+
+.step-title-pending {
+    font-size: 13px;
+    color: #5D6674;
+}
+
+.step-sub {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11.5px;
+    color: #8B949E;
+}
+
+.log-box {
+    background-color: #0D1016;
+    border: 1px solid #222732;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: #9AA4B2;
+}
+
+.error-box {
+    background-color: #31171B;
+    border: 1px solid #5B242B;
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #FFB4AB;
+    font-size: 12.5px;
+}
+
+button.footer-link {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: #6E7681;
+    font-size: 12px;
+    padding: 2px 6px;
+}
+
+button.footer-link:hover {
+    color: #A8C7FA;
+}
+
+dropdown button {
+    background-color: #1C2029;
+    border: 1px solid #2C3240;
+    border-radius: 10px;
+    color: #F0F6FC;
+    padding: 6px 12px;
 }
 """
 
@@ -375,486 +696,687 @@ textview, textview text {
 def run_gtk4() -> bool:
     try:
         import gi
+        gi.require_version("Gdk", "4.0")
         gi.require_version("Gtk", "4.0")
-        from gi.repository import Gdk, GLib, Gtk
+        from gi.repository import Gdk, GLib, Gtk  # type: ignore
     except Exception:
         return False
 
     class CustodiaInstallerApp(Gtk.Application):
         def __init__(self) -> None:
-            super().__init__(application_id="com.tundralab.custodia.installer")
-            self.releases: list[dict] = []
-            self.selected_fmt = detect_default_format()
+            super().__init__(application_id="com.tundralab.CustodiaInstaller")
+            self.releases: list[dict] = [build_fallback_release()]
+            self.recommended_fmt = detect_default_format()
+            self.selected_fmt = self.recommended_fmt
+            self.distro_label = detect_distro_label()
             self.cancel_event = threading.Event()
-            self.installed_bin: str | None = None
-            self.is_running = False
+            self.install_started_at = 0.0
+            self.timer_source_id: int | None = None
+            self.installing = False
+            self.self_deleted = False
+
+            self.fmt_buttons: dict[str, Gtk.Button] = {}
+            self.fmt_dots: dict[str, Gtk.Label] = {}
+            self.step_widgets: list[dict] = []
 
         def do_activate(self) -> None:
             provider = Gtk.CssProvider()
-            provider.load_from_data(GTK_CSS)
+            provider.load_from_data(CSS.encode("utf-8"))
             Gtk.StyleContext.add_provider_for_display(
                 Gdk.Display.get_default(),
                 provider,
                 Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
             )
 
-            win = Gtk.ApplicationWindow(application=self)
-            win.set_title("Custódia — Instalador")
-            win.set_default_size(520, 470)
-            win.set_resizable(False)
-            self.win = win
+            self.win = Gtk.ApplicationWindow(application=self)
+            self.win.set_title("Custódia")
+            self.win.set_default_size(680, 560)
+            self.win.set_resizable(True)
+            self.win.add_css_class("installer-root")
 
-            root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
-            root.set_margin_top(22)
-            root.set_margin_bottom(20)
-            root.set_margin_start(22)
-            root.set_margin_end(22)
-            root.add_css_class("custodia-root")
-            win.set_child(root)
+            # Clean dark top bar matching the reference screenshot
+            header = Gtk.HeaderBar()
+            header.add_css_class("installer-topbar")
+            header.set_show_title_buttons(True)
+            header.set_title_widget(Gtk.Box())
 
-            title = Gtk.Label(label="Instalador do Custódia", xalign=0)
-            title.add_css_class("title-label")
-            subtitle = Gtk.Label(
-                label="Escolha a versão e o formato para instalar no seu Linux.",
+            brand_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+            brand_box.set_valign(Gtk.Align.CENTER)
+            brand_lbl = Gtk.Label(label="Custódia")
+            brand_lbl.add_css_class("topbar-brand")
+            self.topbar_ver = Gtk.Label(label=f"v{FALLBACK_VERSION}")
+            self.topbar_ver.add_css_class("topbar-version")
+            whats_new = Gtk.Button(label="O que há de novo")
+            whats_new.add_css_class("topbar-link")
+            whats_new.connect("clicked", lambda *_: webbrowser.open(RELEASES_URL))
+            brand_box.append(brand_lbl)
+            brand_box.append(self.topbar_ver)
+            brand_box.append(whats_new)
+            header.pack_start(brand_box)
+            self.win.set_titlebar(header)
+
+            self.stack = Gtk.Stack()
+            self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+            self.stack.set_transition_duration(180)
+            self.stack.set_vexpand(True)
+            self.stack.set_hexpand(True)
+
+            self.stack.add_named(self._build_select_page(), "select")
+            self.stack.add_named(self._build_install_page(), "install")
+            self.stack.add_named(self._build_done_page(), "done")
+            self.stack.set_visible_child_name("select")
+
+            self.win.set_child(self.stack)
+            self.win.present()
+
+            threading.Thread(target=self._load_releases_bg, daemon=True).start()
+
+        def _centered_shell(self) -> tuple[Gtk.Box, Gtk.Box]:
+            outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            outer.set_halign(Gtk.Align.CENTER)
+            outer.set_valign(Gtk.Align.CENTER)
+            outer.set_hexpand(True)
+            outer.set_vexpand(True)
+            outer.set_margin_top(24)
+            outer.set_margin_bottom(24)
+            outer.set_margin_start(28)
+            outer.set_margin_end(28)
+
+            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+            col.set_size_request(520, -1)
+            outer.append(col)
+            return outer, col
+
+        def _build_footer_links(self) -> Gtk.Box:
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            row.set_margin_top(4)
+            for label, url in (
+                ("Guia de instalação", GUIDE_URL),
+                ("Relatar um problema", ISSUES_URL),
+                ("GitHub", RELEASES_URL),
+            ):
+                btn = Gtk.Button(label=label)
+                btn.add_css_class("footer-link")
+                btn.connect("clicked", lambda _b, u=url: webbrowser.open(u))
+                row.append(btn)
+            return row
+
+        def _build_select_page(self) -> Gtk.Widget:
+            outer, col = self._centered_shell()
+
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            icon_box = Gtk.Label(label="↓")
+            icon_box.add_css_class("hero-icon-blue")
+            icon_box.set_valign(Gtk.Align.START)
+
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            title = Gtk.Label(label="Instalar o Custódia", xalign=0)
+            title.add_css_class("hero-title")
+            sub = Gtk.Label(
+                label="Escolha a versão e o formato para o seu Linux. Ao terminar, este instalador se apaga sozinho.",
                 xalign=0,
             )
-            subtitle.add_css_class("subtitle-label")
-            root.append(title)
-            root.append(subtitle)
+            sub.set_wrap(True)
+            sub.add_css_class("hero-subtitle")
+            hero_text.append(title)
+            hero_text.append(sub)
+            hero.append(icon_box)
+            hero.append(hero_text)
+            col.append(hero)
 
-            card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-            card.add_css_class("m3-card")
-            root.append(card)
+            card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+            card.add_css_class("installer-card")
 
-            ver_lbl = Gtk.Label(label="Versão (Release no GitHub)", xalign=0)
-            ver_lbl.add_css_class("section-label")
-            card.append(ver_lbl)
+            # Release version dropdown
+            ver_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            ver_lbl = Gtk.Label(label="Versão", xalign=0)
+            ver_lbl.add_css_class("field-label")
+            ver_lbl.set_hexpand(True)
+            self.ver_model = Gtk.StringList.new([f"v{FALLBACK_VERSION} (Mais recente)"])
+            self.ver_dropdown = Gtk.DropDown(model=self.ver_model)
+            self.ver_dropdown.set_selected(0)
+            self.ver_dropdown.connect("notify::selected", self._on_release_changed)
+            ver_row.append(ver_lbl)
+            ver_row.append(self.ver_dropdown)
+            card.append(ver_row)
 
-            self.ver_dropdown = Gtk.DropDown.new_from_strings(["Carregando versões..."])
-            self.ver_dropdown.set_sensitive(False)
-            card.append(self.ver_dropdown)
-
+            # Format selector with per-distro Recommended badge
             fmt_lbl = Gtk.Label(label="Formato de instalação", xalign=0)
-            fmt_lbl.add_css_class("section-label")
+            fmt_lbl.add_css_class("field-label")
             card.append(fmt_lbl)
 
-            fmt_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-            self.rb_deb = Gtk.CheckButton(label="Pacote nativo .deb (Ubuntu, Debian, Pop!_OS, Mint)")
-            self.rb_rpm = Gtk.CheckButton(label="Pacote nativo .rpm (Fedora, RHEL, openSUSE)")
-            self.rb_rpm.set_group(self.rb_deb)
-            self.rb_app = Gtk.CheckButton(label="Portátil .AppImage (Qualquer Linux, sem senha root)")
-            self.rb_app.set_group(self.rb_deb)
+            fmt_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+            for key, name, desc in FORMATS:
+                btn = Gtk.Button()
+                btn.add_css_class("fmt-row")
+                row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+                row.set_valign(Gtk.Align.CENTER)
 
-            if self.selected_fmt == "rpm":
-                self.rb_rpm.set_active(True)
-            elif self.selected_fmt == "deb":
-                self.rb_deb.set_active(True)
-            else:
-                self.rb_app.set_active(True)
+                dot = Gtk.Label(label="✓")
+                dot.add_css_class("fmt-dot")
+                dot.set_valign(Gtk.Align.CENTER)
 
-            fmt_box.append(self.rb_deb)
-            fmt_box.append(self.rb_rpm)
-            fmt_box.append(self.rb_app)
-            card.append(fmt_box)
+                text_col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+                text_col.set_hexpand(True)
+                name_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+                t_lbl = Gtk.Label(label=name, xalign=0)
+                t_lbl.add_css_class("fmt-title")
+                name_row.append(t_lbl)
+                if key == self.recommended_fmt:
+                    rec = Gtk.Label(label="Recomendado")
+                    rec.add_css_class("badge-rec")
+                    name_row.append(rec)
+                d_lbl = Gtk.Label(label=desc, xalign=0)
+                d_lbl.add_css_class("fmt-sub")
+                text_col.append(name_row)
+                text_col.append(d_lbl)
 
-            self.progress = Gtk.ProgressBar()
-            self.progress.set_fraction(0.0)
-            self.progress.set_visible(False)
-            card.append(self.progress)
+                row.append(dot)
+                row.append(text_col)
+                btn.set_child(row)
+                btn.connect("clicked", lambda _b, k=key: self._select_format(k))
+                fmt_list.append(btn)
+                self.fmt_buttons[key] = btn
+                self.fmt_dots[key] = dot
 
-            self.status_lbl = Gtk.Label(label="Pronto para instalar.", xalign=0)
-            self.status_lbl.set_wrap(True)
-            self.status_lbl.add_css_class("status-label")
-            card.append(self.status_lbl)
+            card.append(fmt_list)
 
-            expander = Gtk.Expander(label="Detalhes")
-            scroll = Gtk.ScrolledWindow()
-            scroll.set_min_content_height(100)
-            self.log_buf = Gtk.TextBuffer()
-            tv = Gtk.TextView(buffer=self.log_buf)
-            tv.set_editable(False)
-            tv.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-            scroll.set_child(tv)
-            expander.set_child(scroll)
-            root.append(expander)
+            # Bottom row: distro detection + Install CTA
+            action_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            action_row.set_margin_top(4)
+            distro_lbl = Gtk.Label(label=f"Sistema: {self.distro_label}", xalign=0)
+            distro_lbl.add_css_class("distro-hint")
+            distro_lbl.set_hexpand(True)
+            distro_lbl.set_ellipsize(3)  # PANGO_ELLIPSIZE_END
+
+            self.install_btn = Gtk.Button(label="Instalar agora")
+            self.install_btn.add_css_class("btn-primary")
+            self.install_btn.connect("clicked", self._on_start_install)
+
+            action_row.append(distro_lbl)
+            action_row.append(self.install_btn)
+            card.append(action_row)
+
+            col.append(card)
+            col.append(self._build_footer_links())
+            self._select_format(self.selected_fmt)
+            return outer
+
+        def _build_install_page(self) -> Gtk.Widget:
+            outer, col = self._centered_shell()
+
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            icon_box = Gtk.Label(label="↓")
+            icon_box.add_css_class("hero-icon-blue")
+            icon_box.set_valign(Gtk.Align.START)
+
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            self.inst_title = Gtk.Label(label="Instalando...", xalign=0)
+            self.inst_title.add_css_class("hero-title")
+            self.inst_subtitle = Gtk.Label(
+                label="Baixando e preparando o Custódia no seu computador.",
+                xalign=0,
+            )
+            self.inst_subtitle.set_wrap(True)
+            self.inst_subtitle.add_css_class("hero-subtitle")
+            hero_text.append(self.inst_title)
+            hero_text.append(self.inst_subtitle)
+            hero.append(icon_box)
+            hero.append(hero_text)
+            col.append(hero)
+
+            source_lbl = Gtk.Label(label="De github.com/TundraLab/Custodia", xalign=0)
+            source_lbl.add_css_class("source-mono")
+            col.append(source_lbl)
+
+            card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+            card.add_css_class("installer-card")
+
+            self.progress_bar = Gtk.ProgressBar()
+            self.progress_bar.add_css_class("slim-progress")
+            self.progress_bar.set_fraction(0.0)
+            card.append(self.progress_bar)
+
+            stats_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            self.stats_pct = Gtk.Label(label="0%", xalign=0)
+            self.stats_pct.add_css_class("stats-pct")
+            self.stats_bytes = Gtk.Label(label="", xalign=0)
+            self.stats_bytes.add_css_class("stats-mono")
+            self.stats_bytes.set_hexpand(True)
+            self.stats_speed = Gtk.Label(label="", xalign=1)
+            self.stats_speed.add_css_class("stats-mono")
+            stats_row.append(self.stats_pct)
+            stats_row.append(self.stats_bytes)
+            stats_row.append(self.stats_speed)
+            card.append(stats_row)
+
+            # 5-step checklist
+            steps_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            self.step_widgets = []
+            for label_text in STEPS:
+                row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+                row.add_css_class("step-row")
+
+                icon_stack = Gtk.Stack()
+                icon_stack.set_valign(Gtk.Align.CENTER)
+                dot_lbl = Gtk.Label(label="•")
+                dot_lbl.add_css_class("step-icon-pending")
+                spinner = Gtk.Spinner()
+                spinner.set_size_request(18, 18)
+                done_lbl = Gtk.Label(label="✓")
+                done_lbl.add_css_class("step-icon-done")
+                icon_stack.add_named(dot_lbl, "pending")
+                icon_stack.add_named(spinner, "active")
+                icon_stack.add_named(done_lbl, "done")
+                icon_stack.set_visible_child_name("pending")
+
+                text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+                text_box.set_hexpand(True)
+                t_lbl = Gtk.Label(label=label_text, xalign=0)
+                t_lbl.add_css_class("step-title-pending")
+                sub_lbl = Gtk.Label(label="", xalign=0)
+                sub_lbl.add_css_class("step-sub")
+                sub_lbl.set_visible(False)
+                text_box.append(t_lbl)
+                text_box.append(sub_lbl)
+
+                row.append(icon_stack)
+                row.append(text_box)
+                steps_box.append(row)
+                self.step_widgets.append({
+                    "row": row,
+                    "icon_stack": icon_stack,
+                    "spinner": spinner,
+                    "title": t_lbl,
+                    "sub": sub_lbl,
+                })
+            card.append(steps_box)
+
+            # Error banner (hidden unless error)
+            self.error_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+            self.error_box.add_css_class("error-box")
+            self.error_box.set_visible(False)
+            self.error_lbl = Gtk.Label(label="", xalign=0)
+            self.error_lbl.set_wrap(True)
+            err_actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            back_btn = Gtk.Button(label="Voltar")
+            back_btn.add_css_class("btn-secondary")
+            back_btn.connect("clicked", lambda *_: self.stack.set_visible_child_name("select"))
+            retry_btn = Gtk.Button(label="Tentar novamente")
+            retry_btn.add_css_class("btn-primary")
+            retry_btn.connect("clicked", self._on_start_install)
+            err_actions.append(back_btn)
+            err_actions.append(retry_btn)
+            self.error_box.append(self.error_lbl)
+            self.error_box.append(err_actions)
+            card.append(self.error_box)
+
+            # Collapsible log details
+            self.log_revealer = Gtk.Revealer()
+            self.log_revealer.set_reveal_child(False)
+            log_scroll = Gtk.ScrolledWindow()
+            log_scroll.set_min_content_height(96)
+            log_scroll.set_max_content_height(130)
+            self.log_view = Gtk.TextView()
+            self.log_view.set_editable(False)
+            self.log_view.set_cursor_visible(False)
+            self.log_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+            self.log_view.add_css_class("log-box")
+            self.log_buffer = self.log_view.get_buffer()
+            log_scroll.set_child(self.log_view)
+            self.log_revealer.set_child(log_scroll)
+            card.append(self.log_revealer)
+
+            # Card footer: Details toggle | Elapsed + Cancel
+            footer = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            footer.set_margin_top(4)
+            self.details_btn = Gtk.Button(label="⌄ Detalhes")
+            self.details_btn.add_css_class("btn-ghost")
+            self.details_btn.connect("clicked", self._toggle_details)
+
+            spacer = Gtk.Box()
+            spacer.set_hexpand(True)
+
+            self.elapsed_lbl = Gtk.Label(label="0 s decorridos")
+            self.elapsed_lbl.add_css_class("stats-mono")
+
+            self.cancel_btn = Gtk.Button(label="Cancelar")
+            self.cancel_btn.add_css_class("btn-ghost")
+            self.cancel_btn.connect("clicked", self._on_cancel)
+
+            footer.append(self.details_btn)
+            footer.append(spacer)
+            footer.append(self.elapsed_lbl)
+            footer.append(self.cancel_btn)
+            card.append(footer)
+
+            col.append(card)
+            col.append(self._build_footer_links())
+            return outer
+
+        def _build_done_page(self) -> Gtk.Widget:
+            outer, col = self._centered_shell()
+
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            icon_box = Gtk.Label(label="✓")
+            icon_box.add_css_class("hero-icon-green")
+            icon_box.set_valign(Gtk.Align.START)
+
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            title = Gtk.Label(label="Custódia instalado!", xalign=0)
+            title.add_css_class("hero-title")
+            self.done_sub = Gtk.Label(
+                label="Tudo pronto. O arquivo do instalador foi removido automaticamente.",
+                xalign=0,
+            )
+            self.done_sub.set_wrap(True)
+            self.done_sub.add_css_class("hero-subtitle")
+            hero_text.append(title)
+            hero_text.append(self.done_sub)
+            hero.append(icon_box)
+            hero.append(hero_text)
+            col.append(hero)
+
+            card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+            card.add_css_class("installer-card")
+            self.done_summary = Gtk.Label(label="", xalign=0)
+            self.done_summary.set_wrap(True)
+            self.done_summary.add_css_class("fmt-sub")
+            card.append(self.done_summary)
 
             btn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-            btn_row.set_halign(Gtk.Align.END)
-            root.append(btn_row)
+            open_btn = Gtk.Button(label="Abrir Custódia")
+            open_btn.add_css_class("btn-primary")
+            open_btn.connect("clicked", self._on_open_and_close)
+            close_btn = Gtk.Button(label="Fechar")
+            close_btn.add_css_class("btn-secondary")
+            close_btn.connect("clicked", lambda *_: self.quit())
+            btn_row.append(open_btn)
+            btn_row.append(close_btn)
+            card.append(btn_row)
 
-            self.cancel_btn = Gtk.Button(label="Fechar")
-            self.cancel_btn.add_css_class("m3-secondary")
-            self.cancel_btn.connect("clicked", self.on_cancel_clicked)
-            btn_row.append(self.cancel_btn)
+            col.append(card)
+            return outer
 
-            self.action_btn = Gtk.Button(label="Instalar")
-            self.action_btn.add_css_class("m3-primary")
-            self.action_btn.set_sensitive(False)
-            self.action_btn.connect("clicked", self.on_action_clicked)
-            btn_row.append(self.action_btn)
+        def _toggle_details(self, *_args) -> None:
+            shown = not self.log_revealer.get_reveal_child()
+            self.log_revealer.set_reveal_child(shown)
+            self.details_btn.set_label("⌃ Detalhes" if shown else "⌄ Detalhes")
 
-            win.present()
-            threading.Thread(target=self.load_releases_bg, daemon=True).start()
+        def _select_format(self, fmt_key: str) -> None:
+            self.selected_fmt = fmt_key
+            for k, btn in self.fmt_buttons.items():
+                dot = self.fmt_dots[k]
+                if k == fmt_key:
+                    btn.add_css_class("selected")
+                    dot.add_css_class("selected")
+                else:
+                    btn.remove_css_class("selected")
+                    dot.remove_css_class("selected")
 
-        def append_log(self, msg: str) -> None:
-            def _do() -> bool:
-                end_iter = self.log_buf.get_end_iter()
-                self.log_buf.insert(end_iter, f"{msg}\n")
-                return False
-            GLib.idle_add(_do)
-
-        def set_status(self, msg: str, css_class: str | None = None) -> None:
-            def _do() -> bool:
-                self.status_lbl.set_text(msg)
-                self.status_lbl.remove_css_class("status-ok")
-                self.status_lbl.remove_css_class("status-err")
-                if css_class:
-                    self.status_lbl.add_css_class(css_class)
-                return False
-            GLib.idle_add(_do)
-
-        def load_releases_bg(self) -> None:
+        def _load_releases_bg(self) -> None:
             rels = fetch_releases()
+            GLib.idle_add(self._apply_releases, rels)
+
+        def _apply_releases(self, rels: list[dict]) -> bool:
             self.releases = rels
-            labels = [
-                f"{r['tag']} (Mais recente)" if idx == 0 else r["tag"]
-                for idx, r in enumerate(rels)
-            ]
+            labels = []
+            for idx, rel in enumerate(rels):
+                suffix = " (Mais recente)" if idx == 0 else ""
+                labels.append(f"{rel['tag']}{suffix}")
+            self.ver_model = Gtk.StringList.new(labels)
+            self.ver_dropdown.set_model(self.ver_model)
+            self.ver_dropdown.set_selected(0)
+            self._on_release_changed()
+            return False
 
-            def _apply() -> bool:
-                model = Gtk.StringList.new(labels)
-                self.ver_dropdown.set_model(model)
-                self.ver_dropdown.set_selected(0)
-                self.ver_dropdown.set_sensitive(True)
-                self.action_btn.set_sensitive(True)
-                self.append_log(f"{len(rels)} release(s) encontradas em {REPO_SLUG}.")
+        def _selected_release(self) -> dict:
+            idx = int(self.ver_dropdown.get_selected())
+            if 0 <= idx < len(self.releases):
+                return self.releases[idx]
+            return self.releases[0]
+
+        def _on_release_changed(self, *_args) -> None:
+            rel = self._selected_release()
+            self.topbar_ver.set_label(rel["tag"])
+            assets = rel.get("assets") or {}
+            for k, btn in self.fmt_buttons.items():
+                available = k in assets
+                btn.set_sensitive(available)
+            if self.selected_fmt not in assets:
+                for k in (self.recommended_fmt, "deb", "rpm", "appimage"):
+                    if k in assets:
+                        self._select_format(k)
+                        break
+
+        def _append_log(self, msg: str) -> None:
+            def _ui() -> bool:
+                end = self.log_buffer.get_end_iter()
+                self.log_buffer.insert(end, msg + "\n")
                 return False
+            GLib.idle_add(_ui)
 
-            GLib.idle_add(_apply)
+        def _set_step(self, active_idx: int, sub_text: str = "") -> None:
+            def _ui() -> bool:
+                for i, w in enumerate(self.step_widgets):
+                    row = w["row"]
+                    icon_stack = w["icon_stack"]
+                    spinner = w["spinner"]
+                    title = w["title"]
+                    sub = w["sub"]
 
-        def get_selected_format(self) -> str:
-            if self.rb_rpm.get_active():
-                return "rpm"
-            if self.rb_deb.get_active():
-                return "deb"
-            return "appimage"
+                    row.remove_css_class("active")
+                    title.remove_css_class("step-title-done")
+                    title.remove_css_class("step-title-active")
+                    title.remove_css_class("step-title-pending")
 
-        def on_cancel_clicked(self, _btn) -> None:
-            if self.is_running:
+                    if i < active_idx:
+                        icon_stack.set_visible_child_name("done")
+                        spinner.stop()
+                        title.add_css_class("step-title-done")
+                        sub.set_visible(False)
+                    elif i == active_idx:
+                        row.add_css_class("active")
+                        icon_stack.set_visible_child_name("active")
+                        spinner.start()
+                        title.add_css_class("step-title-active")
+                        if sub_text:
+                            sub.set_label(sub_text)
+                            sub.set_visible(True)
+                        else:
+                            sub.set_visible(False)
+                    else:
+                        icon_stack.set_visible_child_name("pending")
+                        spinner.stop()
+                        title.add_css_class("step-title-pending")
+                        sub.set_visible(False)
+                return False
+            GLib.idle_add(_ui)
+
+        def _set_progress(self, fraction: float, bytes_text: str = "", speed_text: str = "") -> None:
+            def _ui() -> bool:
+                clamped = max(0.0, min(1.0, fraction))
+                self.progress_bar.set_fraction(clamped)
+                self.stats_pct.set_label(f"{int(round(clamped * 100))}%")
+                if bytes_text:
+                    self.stats_bytes.set_label(f"•  {bytes_text}")
+                if speed_text is not None:
+                    self.stats_speed.set_label(speed_text)
+                return False
+            GLib.idle_add(_ui)
+
+        def _tick_elapsed(self) -> bool:
+            if not self.installing:
+                return False
+            secs = int(time.monotonic() - self.install_started_at)
+            self.elapsed_lbl.set_label(f"{secs} s decorridos")
+            return True
+
+        def _on_cancel(self, *_args) -> None:
+            if self.installing:
                 self.cancel_event.set()
-                self.set_status("Cancelando...", None)
+                self.cancel_btn.set_sensitive(False)
             else:
-                self.win.close()
+                self.stack.set_visible_child_name("select")
 
-        def on_action_clicked(self, _btn) -> None:
-            if self.installed_bin:
-                launch_custodia(self.installed_bin)
-                self.win.close()
+        def _on_start_install(self, *_args) -> None:
+            rel = self._selected_release()
+            fmt = self.selected_fmt
+            asset = (rel.get("assets") or {}).get(fmt)
+            if not asset:
                 return
-            if self.is_running or not self.releases:
-                return
 
-            idx = self.ver_dropdown.get_selected()
-            rel = self.releases[min(idx, len(self.releases) - 1)]
-            fmt = self.get_selected_format()
-
-            self.is_running = True
             self.cancel_event.clear()
-            self.action_btn.set_sensitive(False)
-            self.ver_dropdown.set_sensitive(False)
-            self.rb_deb.set_sensitive(False)
-            self.rb_rpm.set_sensitive(False)
-            self.rb_app.set_sensitive(False)
-            self.cancel_btn.set_label("Cancelar")
-            self.progress.set_visible(True)
-            self.progress.set_fraction(0.05)
+            self.installing = True
+            self.install_started_at = time.monotonic()
+            self.error_box.set_visible(False)
+            self.cancel_btn.set_sensitive(True)
+            self.log_buffer.set_text("")
+            self.stats_pct.set_label("0%")
+            self.stats_bytes.set_label("")
+            self.stats_speed.set_label("")
+            self.progress_bar.set_fraction(0.0)
+            self.elapsed_lbl.set_label("0 s decorridos")
+            self.step_widgets[1]["title"].set_label(f"Baixando Custódia {rel['tag']} (.{fmt if fmt != 'appimage' else 'AppImage'})")
+
+            self.stack.set_visible_child_name("install")
+            self.timer_source_id = GLib.timeout_add(1000, self._tick_elapsed)
 
             threading.Thread(
-                target=self.run_install_bg,
-                args=(rel, fmt),
+                target=self._install_worker,
+                args=(rel, fmt, asset),
                 daemon=True,
             ).start()
 
-        def run_install_bg(self, rel: dict, fmt: str) -> None:
-            tmp_dir = Path(tempfile.mkdtemp(prefix="custodia-dl-"))
+        def _install_worker(self, rel: dict, fmt: str, asset: dict) -> None:
+            tmp_dir = Path(tempfile.mkdtemp(prefix="custodia-install-"))
             try:
-                assets = rel["assets"]
-                if fmt not in assets:
-                    raise RuntimeError(
-                        f"A versão {rel['tag']} não possui pacote .{fmt}. Escolha outra versão ou formato."
-                    )
-                asset_name, url, _size = assets[fmt]
-                sums_url = assets["sums"][1] if "sums" in assets else None
-                dest = tmp_dir / asset_name
+                # Step 0: environment check
+                self._set_step(0, self.distro_label)
+                self._set_progress(0.05)
+                self._append_log(f"Sistema detectado: {self.distro_label}")
+                stop_running_custodia()
 
-                self.set_status(f"Baixando {asset_name}...")
-                self.append_log(f"Baixando {url}")
+                # Step 1: download
+                pkg_path = tmp_dir / asset["name"]
+                self._set_step(1, asset["name"])
+                self._append_log(f"Baixando {asset['url']}")
 
-                def on_prog(dl: int, tot: int, frac: float, mbps: float) -> None:
-                    dl_mb = dl / (1024 * 1024)
-                    tot_mb = tot / (1024 * 1024) if tot > 0 else dl_mb
-                    txt = f"Baixando {asset_name}... {int(frac * 100)}% ({dl_mb:.1f} / {tot_mb:.1f} MB • {mbps:.1f} MB/s)"
-                    GLib.idle_add(self.progress.set_fraction, min(0.8, frac * 0.8))
-                    GLib.idle_add(self.status_lbl.set_text, txt)
+                def on_dl(done: int, total: int, speed: float, eta: float) -> None:
+                    frac = 0.08 + 0.62 * (done / total) if total > 0 else 0.35
+                    b_txt = f"{format_bytes(done)} / {format_bytes(total)}" if total > 0 else format_bytes(done)
+                    spd = f"{speed / (1024 * 1024):.1f} MB/s".replace(".", ",")
+                    eta_s = format_eta(eta)
+                    s_txt = f"{spd}  •  {eta_s}" if eta_s else spd
+                    self._set_progress(frac, b_txt, s_txt)
 
-                download_file(url, dest, on_prog, self.cancel_event)
+                download_file(asset["url"], pkg_path, on_dl, self.cancel_event, int(asset.get("size") or 0))
 
-                self.set_status("Verificando integridade (SHA-256)...")
-                GLib.idle_add(self.progress.set_fraction, 0.85)
-                verified = verify_sha256(dest, asset_name, sums_url)
-                self.append_log("SHA-256 validado com sucesso." if verified else "SHA-256 não disponível nesta release.")
+                # Step 2: SHA-256
+                self._set_step(2, "Conferindo SHA256SUMS.txt")
+                self._set_progress(0.75, speed_text="Validando...")
+                sums_asset = (rel.get("assets") or {}).get("sums")
+                verify_sha256(pkg_path, sums_asset["url"] if sums_asset else None, asset["name"], self._append_log)
 
-                self.set_status(f"Instalando {asset_name}...")
-                GLib.idle_add(self.progress.set_fraction, 0.92)
-                bin_path = install_package(dest, fmt, self.append_log)
-                self_delete_installer(self.append_log)
+                # Step 3: install
+                self._set_step(3, "Aplicando pacote no sistema")
+                self._set_progress(0.86, speed_text="Instalando...")
+                if fmt == "deb":
+                    install_deb(pkg_path, self._append_log)
+                elif fmt == "rpm":
+                    install_rpm(pkg_path, self._append_log)
+                else:
+                    install_appimage(pkg_path, self._append_log)
 
-                self.installed_bin = bin_path
-                GLib.idle_add(self.progress.set_fraction, 1.0)
-                self.set_status(f"Custódia {rel['tag']} instalado com sucesso!", "status-ok")
+                # Step 4: finalize + auto-delete
+                self._set_step(4, "Removendo arquivo instalador")
+                self._set_progress(0.96, speed_text="Finalizando...")
+                deleted = self_delete_installer(self._append_log)
+                self.self_deleted = deleted
 
-                def _done() -> bool:
-                    self.is_running = False
-                    self.action_btn.set_label("Abrir Custódia")
-                    self.action_btn.set_sensitive(True)
-                    self.cancel_btn.set_label("Fechar")
-                    return False
-
-                GLib.idle_add(_done)
-            except Exception as ex:
-                self.append_log(f"ERRO: {ex}")
-                self.set_status(f"Falha: {ex}", "status-err")
-
-                def _fail() -> bool:
-                    self.is_running = False
-                    self.action_btn.set_sensitive(True)
-                    self.ver_dropdown.set_sensitive(True)
-                    self.rb_deb.set_sensitive(True)
-                    self.rb_rpm.set_sensitive(True)
-                    self.rb_app.set_sensitive(True)
-                    self.cancel_btn.set_label("Fechar")
-                    return False
-
-                GLib.idle_add(_fail)
+                self._set_step(5)
+                self._set_progress(1.0, speed_text="Concluído")
+                self.installing = False
+                GLib.idle_add(self._show_done, rel["tag"], fmt, deleted)
+            except Exception as exc:
+                self.installing = False
+                self._append_log(f"ERRO: {exc}")
+                GLib.idle_add(self._show_error, str(exc))
             finally:
                 shutil.rmtree(tmp_dir, ignore_errors=True)
 
-    app = CustodiaInstallerApp()
-    app.run(None)
-    return True
-
-
-def run_gtk3() -> bool:
-    try:
-        import gi
-        gi.require_version("Gtk", "3.0")
-        from gi.repository import Gdk, GLib, Gtk
-    except Exception:
-        return False
-
-    provider = Gtk.CssProvider()
-    provider.load_from_data(GTK_CSS)
-    Gtk.StyleContext.add_provider_for_screen(
-        Gdk.Screen.get_default(),
-        provider,
-        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-    )
-
-    win = Gtk.Window(title="Custódia — Instalador")
-    win.set_default_size(520, 450)
-    win.set_resizable(False)
-    win.connect("destroy", Gtk.main_quit)
-
-    state = {"releases": [], "running": False, "installed_bin": None, "cancel": threading.Event()}
-
-    root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-    root.set_border_width(20)
-    win.add(root)
-
-    title = Gtk.Label(label="Instalador do Custódia", xalign=0)
-    title.get_style_context().add_class("title-label")
-    sub = Gtk.Label(label="Escolha a versão e o formato para instalar no seu Linux.", xalign=0)
-    sub.get_style_context().add_class("subtitle-label")
-    root.pack_start(title, False, False, 0)
-    root.pack_start(sub, False, False, 0)
-
-    card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-    card.get_style_context().add_class("m3-card")
-    root.pack_start(card, True, True, 0)
-
-    combo = Gtk.ComboBoxText()
-    combo.append_text("Carregando versões...")
-    combo.set_active(0)
-    combo.set_sensitive(False)
-    card.pack_start(Gtk.Label(label="Versão (Release no GitHub)", xalign=0), False, False, 0)
-    card.pack_start(combo, False, False, 0)
-
-    default_fmt = detect_default_format()
-    rb_deb = Gtk.RadioButton.new_with_label(None, "Pacote nativo .deb (Ubuntu, Debian, Pop!_OS, Mint)")
-    rb_rpm = Gtk.RadioButton.new_with_label_from_widget(rb_deb, "Pacote nativo .rpm (Fedora, RHEL, openSUSE)")
-    rb_app = Gtk.RadioButton.new_with_label_from_widget(rb_deb, "Portátil .AppImage (Qualquer Linux, sem senha root)")
-    if default_fmt == "rpm":
-        rb_rpm.set_active(True)
-    elif default_fmt == "deb":
-        rb_deb.set_active(True)
-    else:
-        rb_app.set_active(True)
-
-    card.pack_start(Gtk.Label(label="Formato de instalação", xalign=0), False, False, 0)
-    card.pack_start(rb_deb, False, False, 0)
-    card.pack_start(rb_rpm, False, False, 0)
-    card.pack_start(rb_app, False, False, 0)
-
-    progress = Gtk.ProgressBar()
-    progress.set_no_show_all(True)
-    card.pack_start(progress, False, False, 0)
-
-    status_lbl = Gtk.Label(label="Pronto para instalar.", xalign=0)
-    status_lbl.set_line_wrap(True)
-    card.pack_start(status_lbl, False, False, 0)
-
-    btn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-    btn_row.set_halign(Gtk.Align.END)
-    root.pack_start(btn_row, False, False, 0)
-
-    cancel_btn = Gtk.Button(label="Fechar")
-    action_btn = Gtk.Button(label="Instalar")
-    action_btn.get_style_context().add_class("m3-primary")
-    action_btn.set_sensitive(False)
-    btn_row.pack_start(cancel_btn, False, False, 0)
-    btn_row.pack_start(action_btn, False, False, 0)
-
-    def load_rels():
-        rels = fetch_releases()
-        state["releases"] = rels
-
-        def _apply():
-            combo.remove_all()
-            for idx, r in enumerate(rels):
-                combo.append_text(f"{r['tag']} (Mais recente)" if idx == 0 else r["tag"])
-            combo.set_active(0)
-            combo.set_sensitive(True)
-            action_btn.set_sensitive(True)
+        def _show_done(self, tag: str, fmt: str, deleted: bool) -> bool:
+            fmt_name = ".AppImage" if fmt == "appimage" else f".{fmt}"
+            if deleted:
+                self.done_sub.set_label("Tudo pronto. O arquivo do instalador foi removido automaticamente.")
+            else:
+                self.done_sub.set_label("Tudo pronto. O Custódia já está disponível no menu de aplicativos.")
+            self.done_summary.set_label(f"Versão instalada: Custódia {tag} ({fmt_name}) no {self.distro_label}.")
+            self.stack.set_visible_child_name("done")
             return False
 
-        GLib.idle_add(_apply)
+        def _show_error(self, message: str) -> bool:
+            self.error_lbl.set_label(message)
+            self.error_box.set_visible(True)
+            self.cancel_btn.set_sensitive(True)
+            for w in self.step_widgets:
+                w["spinner"].stop()
+            return False
 
-    def on_cancel(_b):
-        if state["running"]:
-            state["cancel"].set()
-        else:
-            win.close()
+        def _on_open_and_close(self, *_args) -> None:
+            launch_custodia()
+            self.quit()
 
-    def on_action(_b):
-        if state["installed_bin"]:
-            launch_custodia(state["installed_bin"])
-            win.close()
-            return
-        if state["running"] or not state["releases"]:
-            return
-        idx = max(0, combo.get_active())
-        rel = state["releases"][min(idx, len(state["releases"]) - 1)]
-        fmt = "rpm" if rb_rpm.get_active() else ("deb" if rb_deb.get_active() else "appimage")
-        state["running"] = True
-        state["cancel"].clear()
-        action_btn.set_sensitive(False)
-        progress.show()
-        cancel_btn.set_label("Cancelar")
-
-        def worker():
-            tmp_dir = Path(tempfile.mkdtemp(prefix="custodia-dl-"))
-            try:
-                assets = rel["assets"]
-                if fmt not in assets:
-                    raise RuntimeError(f"A versão {rel['tag']} não possui pacote .{fmt}.")
-                asset_name, url, _ = assets[fmt]
-                sums_url = assets["sums"][1] if "sums" in assets else None
-                dest = tmp_dir / asset_name
-                download_file(
-                    url,
-                    dest,
-                    lambda dl, tot, frac, mbps: (
-                        GLib.idle_add(progress.set_fraction, min(0.8, frac * 0.8)),
-                        GLib.idle_add(status_lbl.set_text, f"Baixando {asset_name}... {int(frac * 100)}% ({mbps:.1f} MB/s)"),
-                    ),
-                    state["cancel"],
-                )
-                GLib.idle_add(progress.set_fraction, 0.85)
-                GLib.idle_add(status_lbl.set_text, "Verificando SHA-256...")
-                verify_sha256(dest, asset_name, sums_url)
-                GLib.idle_add(progress.set_fraction, 0.92)
-                GLib.idle_add(status_lbl.set_text, f"Instalando {asset_name}...")
-                bin_path = install_package(dest, fmt, lambda _m: None)
-                self_delete_installer(lambda _m: None)
-                state["installed_bin"] = bin_path
-
-                def _done():
-                    state["running"] = False
-                    progress.set_fraction(1.0)
-                    status_lbl.set_text(f"Custódia {rel['tag']} instalado com sucesso!")
-                    action_btn.set_label("Abrir Custódia")
-                    action_btn.set_sensitive(True)
-                    cancel_btn.set_label("Fechar")
-                    return False
-
-                GLib.idle_add(_done)
-            except Exception as ex:
-                def _fail():
-                    state["running"] = False
-                    status_lbl.set_text(f"Falha: {ex}")
-                    action_btn.set_sensitive(True)
-                    cancel_btn.set_label("Fechar")
-                    return False
-
-                GLib.idle_add(_fail)
-            finally:
-                shutil.rmtree(tmp_dir, ignore_errors=True)
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    cancel_btn.connect("clicked", on_cancel)
-    action_btn.connect("clicked", on_action)
-    win.show_all()
-    threading.Thread(target=load_rels, daemon=True).start()
-    Gtk.main()
+    app = CustodiaInstallerApp()
+    app.run([])
     return True
 
 
 def run_cli_fallback() -> None:
-    print("Custódia — Instalador Linux")
+    print("== Instalador do Custódia ==")
     rels = fetch_releases()
+    rec_fmt = detect_default_format()
+    print(f"Sistema detectado: {detect_distro_label()} (recomendado: .{rec_fmt})\n")
+
     for i, r in enumerate(rels[:5], 1):
         print(f"  {i}) {r['tag']}")
-    choice = input("Versão [1]: ").strip() or "1"
-    rel = rels[max(0, min(len(rels) - 1, int(choice) - 1))] if choice.isdigit() else rels[0]
-    default_fmt = detect_default_format()
-    fmt = input(f"Formato (deb/rpm/appimage) [{default_fmt}]: ").strip().lower() or default_fmt
+    choice = input(f"Versão [1]: ").strip()
+    rel = rels[int(choice) - 1] if choice.isdigit() and 1 <= int(choice) <= len(rels[:5]) else rels[0]
+
+    avail = [k for k, _, _ in FORMATS if k in rel["assets"]]
+    default_fmt = rec_fmt if rec_fmt in avail else avail[0]
+    fmt = input(f"Formato ({'/'.join(avail)}) [{default_fmt}]: ").strip().lower() or default_fmt
     if fmt not in rel["assets"]:
-        print(f"Formato .{fmt} indisponível em {rel['tag']}.")
-        sys.exit(1)
-    tmp_dir = Path(tempfile.mkdtemp(prefix="custodia-dl-"))
+        fmt = default_fmt
+
+    asset = rel["assets"][fmt]
+    tmp_dir = Path(tempfile.mkdtemp(prefix="custodia-install-"))
     try:
-        asset_name, url, _ = rel["assets"][fmt]
-        sums_url = rel["assets"]["sums"][1] if "sums" in rel["assets"] else None
-        dest = tmp_dir / asset_name
-        print(f"Baixando {asset_name}...")
-        download_file(url, dest, lambda *_: None, threading.Event())
-        verify_sha256(dest, asset_name, sums_url)
-        install_package(dest, fmt, print)
+        pkg = tmp_dir / asset["name"]
+        print(f"Baixando {asset['name']}...")
+        download_file(asset["url"], pkg, lambda *_: None, threading.Event(), int(asset.get("size") or 0))
+        sums = rel["assets"].get("sums")
+        verify_sha256(pkg, sums["url"] if sums else None, asset["name"], print)
+        stop_running_custodia()
+        if fmt == "deb":
+            install_deb(pkg, print)
+        elif fmt == "rpm":
+            install_rpm(pkg, print)
+        else:
+            install_appimage(pkg, print)
         self_delete_installer(print)
-        print(f"Custódia {rel['tag']} instalado com sucesso!")
+        print("Custódia instalado com sucesso!")
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
-def main() -> None:
-    if "--cli" not in sys.argv and (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+def main() -> int:
+    if os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"):
         if run_gtk4():
-            return
-        if run_gtk3():
-            return
+            return 0
     run_cli_fallback()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
