@@ -335,15 +335,22 @@ def install_appimage(pkg_path: Path, log: Callable[[str], None]) -> None:
 
 def self_delete_installer(log: Callable[[str], None]) -> bool:
     try:
-        script_path = Path(os.path.realpath(__file__))
-        if not script_path.exists():
+        appimage_env = os.environ.get("APPIMAGE")
+        if appimage_env:
+            target_path = Path(os.path.realpath(appimage_env))
+        else:
+            target_path = Path(os.path.realpath(__file__))
+        if not target_path.exists():
             return False
         # Never delete the source file inside the repository during development.
-        if script_path.name.endswith(".py") or (script_path.parent.name == "linux" and script_path.parent.parent.name == "packaging"):
+        if not appimage_env and (
+            target_path.name.endswith(".py")
+            or (target_path.parent.name == "linux" and target_path.parent.parent.name == "packaging")
+        ):
             log("Modo desenvolvimento: arquivo fonte preservado.")
             return False
-        script_path.unlink(missing_ok=True)
-        log(f"Instalador removido: {script_path.name}")
+        target_path.unlink(missing_ok=True)
+        log(f"Instalador removido: {target_path.name}")
         return True
     except Exception as exc:
         log(f"Aviso: não foi possível remover o instalador ({exc}).")

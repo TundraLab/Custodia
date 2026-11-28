@@ -131,8 +131,8 @@ Each mapped folder can operate in **Two-Way Mirror (`PC <-> Drive`)** or **One-W
 
 A lightweight graphical installer (~30 KB, no AppImage or FUSE required) where you pick the release version and package format (`.deb`, `.rpm`, or `.AppImage`):
 
-1. Download the official installer: **[Custodia-Installer-x86_64.run](https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-Installer-x86_64.run)**
-2. Right-click the file → **Properties** → allow executing as a program *(or `chmod +x Custodia-Installer-x86_64.run`)*, then open it.
+1. Download the official installer: **[Custodia-Installer-x86_64.AppImage](https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-Installer-x86_64.AppImage)**
+2. Right-click the file → **Properties** → allow executing as a program *(or `chmod +x Custodia-Installer-x86_64.AppImage`)*, then open it.
 3. Choose the version and format (`.deb`, `.rpm`, or `.AppImage`). The installer downloads the package, verifies **SHA-256**, installs in the background, creates shortcuts, and **auto-deletes itself once finished**.
 
 <details>

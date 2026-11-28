@@ -5,7 +5,7 @@ Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJ
 ## [4.0.0] - 2026-11-27
 
 ### Novidades
-- **Instalador leve para Linux (`Custodia-Installer-x86_64.run`):** interface gráfica leve (~30 KB, sem AppImage nem FUSE) onde você escolhe a versão e o formato (`.deb`, `.rpm` ou `.AppImage`). Ele baixa o pacote, valida a integridade, instala e se apaga sozinho ao terminar.
+- **Instalador leve para Linux (`Custodia-Installer-x86_64.AppImage`):** interface gráfica leve (~1 MB) onde você escolhe a versão e o formato (`.deb`, `.rpm` ou `.AppImage`, com o recomendado para sua distro). Ele baixa o pacote, valida a integridade, instala e se apaga sozinho ao terminar.
 - **Pacote `.deb` nativo:** suporte oficial em `.deb` para Ubuntu, Debian, Pop!_OS e Linux Mint, além de `.rpm` e `.AppImage`.
 - **Compartilhamento e aba "Compartilhados comigo":** navegue e baixe arquivos compartilhados com sua conta, gere ou remova links públicos (leitura ou edição) e convide pessoas por e-mail direto pelo app.
 - **Meus Arquivos renovado:** visual mais limpo em linha única, miniaturas carregando rápido na grade, ícones próprios da TundraLab, suporte a Google Vids e opção **Salvar como...** para escolher a pasta ao baixar.

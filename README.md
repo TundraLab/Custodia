@@ -130,8 +130,8 @@ Cada pasta mapeada pode operar em **Espelho Bidirecional (`PC <-> Drive`)** ou *
 
 Um instalador gráfico leve (~30 KB, sem AppImage nem FUSE) onde você escolhe a versão do lançamento e o formato de instalação (`.deb`, `.rpm` ou `.AppImage`):
 
-1. Baixe o instalador oficial: **[Custodia-Installer-x86_64.run](https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-Installer-x86_64.run)**
-2. Clique com o botão direito no arquivo → **Propriedades** → marque **Permitir execução** *(ou `chmod +x Custodia-Installer-x86_64.run`)* e abra o arquivo.
+1. Baixe o instalador oficial: **[Custodia-Installer-x86_64.AppImage](https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-Installer-x86_64.AppImage)**
+2. Clique com o botão direito no arquivo → **Propriedades** → marque **Permitir execução** *(ou `chmod +x Custodia-Installer-x86_64.AppImage`)* e abra o arquivo.
 3. Escolha a versão e o formato (`.deb` para Ubuntu/Pop!_OS/Mint/Debian, `.rpm` para Fedora/RHEL/openSUSE ou `.AppImage` portátil). O instalador baixa o pacote escolhido, valida via **SHA-256**, instala em segundo plano, cria os atalhos e **se apaga automaticamente ao concluir**.
 
 <details>
