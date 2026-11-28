@@ -852,7 +852,7 @@ button.topbar-close-btn:hover {
     border-radius: 14px;
     min-width: 52px;
     min-height: 52px;
-    padding: 13px;
+    padding: 0;
 }
 
 .hero-icon-green {
@@ -860,7 +860,7 @@ button.topbar-close-btn:hover {
     border-radius: 14px;
     min-width: 52px;
     min-height: 52px;
-    padding: 13px;
+    padding: 0;
 }
 
 .installer-card {
@@ -1100,7 +1100,7 @@ progressbar.slim-progress progress {
     border-radius: 999px;
     min-width: 24px;
     min-height: 24px;
-    padding: 5px;
+    padding: 0;
 }
 
 .step-dot-pending {
@@ -1252,7 +1252,7 @@ def _load_css(provider, css_text: str) -> None:
         provider.load_from_data(css_text.encode("utf-8"))
 
 
-def _svg_gtk4_image(svg_markup: str, size: int, centered: bool = False):
+def _svg_gtk4_image(svg_markup: str, size: int):
     from gi.repository import Gdk, GLib, Gtk  # type: ignore
 
     widget = None
@@ -1270,12 +1270,26 @@ def _svg_gtk4_image(svg_markup: str, size: int, centered: bool = False):
         except Exception:
             widget = Gtk.Label(label="•")
 
-    if centered:
-        widget.set_halign(Gtk.Align.CENTER)
-        widget.set_valign(Gtk.Align.CENTER)
-        widget.set_hexpand(True)
-        widget.set_vexpand(True)
+    widget.set_hexpand(False)
+    widget.set_vexpand(False)
+    widget.set_halign(Gtk.Align.CENTER)
+    widget.set_valign(Gtk.Align.CENTER)
     return widget
+
+
+def _fixed_badge_gtk4(svg_markup: str, svg_size: int, box_size: int, css_class: str):
+    from gi.repository import Gtk  # type: ignore
+
+    cb = Gtk.CenterBox()
+    if css_class:
+        cb.add_css_class(css_class)
+    cb.set_size_request(box_size, box_size)
+    cb.set_hexpand(False)
+    cb.set_vexpand(False)
+    cb.set_halign(Gtk.Align.START)
+    cb.set_valign(Gtk.Align.CENTER)
+    cb.set_center_widget(_svg_gtk4_image(svg_markup, svg_size))
+    return cb
 
 
 def _hero_backdrop_gtk4():
@@ -1291,6 +1305,8 @@ def _hero_backdrop_gtk4():
     pic = Gtk.Picture.new_for_paintable(tex)
     if hasattr(Gtk, "ContentFit") and hasattr(pic, "set_content_fit"):
         pic.set_content_fit(Gtk.ContentFit.COVER)
+    if hasattr(pic, "set_can_shrink"):
+        pic.set_can_shrink(True)
     pic.set_hexpand(True)
     pic.set_vexpand(True)
     pic.set_can_target(False)
@@ -1386,7 +1402,7 @@ def run_gtk4() -> bool:
             self.win = Gtk.ApplicationWindow(application=self)
             self.win.set_title("Custódia")
             self.win.set_icon_name("custodia-installer")
-            self.win.set_default_size(940, 680)
+            self.win.set_default_size(880, 640)
             self.win.set_resizable(True)
             self.win.add_css_class("installer-root")
             self.win.connect("close-request", self._on_window_close_request)
@@ -1706,12 +1722,15 @@ def run_gtk4() -> bool:
                 row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
                 row.set_valign(Gtk.Align.CENTER)
 
-                dot = Gtk.Box()
+                dot = Gtk.CenterBox()
                 dot.add_css_class("fmt-dot")
+                dot.set_size_request(20, 20)
+                dot.set_hexpand(False)
+                dot.set_vexpand(False)
+                dot.set_halign(Gtk.Align.START)
                 dot.set_valign(Gtk.Align.CENTER)
-                dot.set_halign(Gtk.Align.CENTER)
-                chk = _svg_gtk4_image(SVG_CHECK_ON_PRIMARY, 11, centered=True)
-                dot.append(chk)
+                chk = _svg_gtk4_image(SVG_CHECK_ON_PRIMARY, 11)
+                dot.set_center_widget(chk)
 
                 text_col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
                 text_col.set_hexpand(True)
@@ -1762,10 +1781,7 @@ def run_gtk4() -> bool:
 
             hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
             hero.set_hexpand(True)
-            icon_tile = Gtk.Box()
-            icon_tile.add_css_class("hero-icon-blue")
-            icon_tile.set_valign(Gtk.Align.CENTER)
-            icon_tile.append(_svg_gtk4_image(SVG_DOWNLOAD, 22, centered=True))
+            icon_tile = _fixed_badge_gtk4(SVG_DOWNLOAD, 22, 52, "hero-icon-blue")
 
             hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
             hero_text.set_hexpand(True)
@@ -1778,8 +1794,15 @@ def run_gtk4() -> bool:
             )
             hero_text.append(self.inst_title)
             hero_text.append(self.inst_subtitle)
+
+            self.inst_target_pill = Gtk.Label(label=f"v{FALLBACK_VERSION}")
+            self.inst_target_pill.add_css_class("badge-rec")
+            self.inst_target_pill.set_valign(Gtk.Align.CENTER)
+            self.inst_target_pill.set_hexpand(False)
+
             hero.append(icon_tile)
             hero.append(hero_text)
+            hero.append(self.inst_target_pill)
             col.append(hero)
 
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
@@ -1821,27 +1844,35 @@ def run_gtk4() -> bool:
 
                 icon_stack = Gtk.Stack()
                 icon_stack.set_valign(Gtk.Align.CENTER)
+                icon_stack.set_halign(Gtk.Align.START)
+                icon_stack.set_hexpand(False)
+                icon_stack.set_vexpand(False)
                 icon_stack.set_size_request(24, 24)
 
-                pending_wrap = Gtk.Box()
-                pending_wrap.set_halign(Gtk.Align.CENTER)
-                pending_wrap.set_valign(Gtk.Align.CENTER)
+                pending_wrap = Gtk.CenterBox()
+                pending_wrap.set_size_request(24, 24)
+                pending_wrap.set_hexpand(False)
+                pending_wrap.set_vexpand(False)
                 dot_p = Gtk.Box()
                 dot_p.add_css_class("step-dot-pending")
-                pending_wrap.append(dot_p)
+                dot_p.set_size_request(6, 6)
+                dot_p.set_halign(Gtk.Align.CENTER)
+                dot_p.set_valign(Gtk.Align.CENTER)
+                pending_wrap.set_center_widget(dot_p)
 
+                spinner_wrap = Gtk.CenterBox()
+                spinner_wrap.set_size_request(24, 24)
+                spinner_wrap.set_hexpand(False)
+                spinner_wrap.set_vexpand(False)
                 spinner = Gtk.Spinner()
                 spinner.add_css_class("step-spinner")
-                spinner.set_size_request(20, 20)
+                spinner.set_size_request(18, 18)
+                spinner_wrap.set_center_widget(spinner)
 
-                done_wrap = Gtk.Box()
-                done_wrap.add_css_class("step-circle-done")
-                done_wrap.set_halign(Gtk.Align.CENTER)
-                done_wrap.set_valign(Gtk.Align.CENTER)
-                done_wrap.append(_svg_gtk4_image(SVG_CHECK_SUCCESS, 12, centered=True))
+                done_wrap = _fixed_badge_gtk4(SVG_CHECK_SUCCESS, 12, 24, "step-circle-done")
 
                 icon_stack.add_named(pending_wrap, "pending")
-                icon_stack.add_named(spinner, "active")
+                icon_stack.add_named(spinner_wrap, "active")
                 icon_stack.add_named(done_wrap, "done")
                 icon_stack.set_visible_child_name("pending")
 
@@ -1952,10 +1983,7 @@ def run_gtk4() -> bool:
 
             hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
             hero.set_hexpand(True)
-            icon_tile = Gtk.Box()
-            icon_tile.add_css_class("hero-icon-green")
-            icon_tile.set_valign(Gtk.Align.CENTER)
-            icon_tile.append(_svg_gtk4_image(SVG_CHECK_GREEN_LG, 24, centered=True))
+            icon_tile = _fixed_badge_gtk4(SVG_CHECK_GREEN_LG, 24, 52, "hero-icon-green")
 
             hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
             hero_text.set_hexpand(True)
@@ -1973,8 +2001,14 @@ def run_gtk4() -> bool:
                 wrap=True,
             )
             hero_text.append(self.done_sub)
+
+            done_logo = _app_icon_gtk4_image(52)
+            done_logo.set_valign(Gtk.Align.CENTER)
+            done_logo.set_hexpand(False)
+
             hero.append(icon_tile)
             hero.append(hero_text)
+            hero.append(done_logo)
             col.append(hero)
 
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
@@ -2025,11 +2059,7 @@ def run_gtk4() -> bool:
             row.add_css_class("done-item-row")
             row.set_hexpand(True)
 
-            badge = Gtk.Box()
-            badge.add_css_class("step-circle-done")
-            badge.set_halign(Gtk.Align.CENTER)
-            badge.set_valign(Gtk.Align.CENTER)
-            badge.append(_svg_gtk4_image(SVG_CHECK_SUCCESS, 12, centered=True))
+            badge = _fixed_badge_gtk4(SVG_CHECK_SUCCESS, 12, 24, "step-circle-done")
 
             txt = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
             txt.set_hexpand(True)
@@ -2240,6 +2270,8 @@ def run_gtk4() -> bool:
             self.stats_speed.set_label("")
             self.progress_bar.set_fraction(0.0)
             self.elapsed_lbl.set_label("0 s decorridos")
+            fmt_label = ".AppImage" if fmt == "appimage" else f".{fmt}"
+            self.inst_target_pill.set_label(f"{rel['tag']}  •  {fmt_label}")
             self.step_widgets[1]["title"].set_label(f"Baixando o Custódia {rel['tag']}")
 
             self.stack.set_visible_child_name("install")
@@ -2416,7 +2448,7 @@ def run_gtk3() -> bool:
             self.save_log_buttons: list[Gtk.Button] = []
 
             self.win = Gtk.Window(title="Custódia")
-            self.win.set_default_size(940, 680)
+            self.win.set_default_size(880, 640)
             icon_path = _resolve_app_icon_path()
             if icon_path is not None:
                 try:
@@ -2691,6 +2723,8 @@ def run_gtk3() -> bool:
                 row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
                 dot = Gtk.Box()
                 dot.get_style_context().add_class("fmt-dot")
+                dot.set_size_request(20, 20)
+                dot.set_valign(Gtk.Align.CENTER)
                 chk = _svg_gtk3_image(SVG_CHECK_ON_PRIMARY, 11)
                 dot.pack_start(chk, True, True, 0)
                 text_col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
@@ -2736,6 +2770,8 @@ def run_gtk3() -> bool:
             hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
             icon_tile = Gtk.Box()
             icon_tile.get_style_context().add_class("hero-icon-blue")
+            icon_tile.set_size_request(52, 52)
+            icon_tile.set_valign(Gtk.Align.CENTER)
             icon_tile.pack_start(_svg_gtk3_image(SVG_DOWNLOAD, 22), True, True, 0)
             hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
             hero_text.pack_start(_left_label_gtk3("Instalando o Custódia...", "hero-title"), False, False, 0)
@@ -2788,7 +2824,9 @@ def run_gtk3() -> bool:
                 spinner.get_style_context().add_class("step-spinner")
                 done_wrap = Gtk.Box()
                 done_wrap.get_style_context().add_class("step-circle-done")
-                done_wrap.add(_svg_gtk3_image(SVG_CHECK_SUCCESS, 12))
+                done_wrap.set_size_request(24, 24)
+                done_wrap.set_valign(Gtk.Align.CENTER)
+                done_wrap.pack_start(_svg_gtk3_image(SVG_CHECK_SUCCESS, 12), True, True, 0)
                 icon_stack.add_named(pending_wrap, "pending")
                 icon_stack.add_named(spinner, "active")
                 icon_stack.add_named(done_wrap, "done")
@@ -2887,6 +2925,8 @@ def run_gtk3() -> bool:
             row.get_style_context().add_class("done-item-row")
             badge = Gtk.Box()
             badge.get_style_context().add_class("step-circle-done")
+            badge.set_size_request(24, 24)
+            badge.set_valign(Gtk.Align.CENTER)
             badge.pack_start(_svg_gtk3_image(SVG_CHECK_SUCCESS, 12), True, True, 0)
             txt = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
             t_lbl = _left_label_gtk3(title, "done-item-title")
@@ -2902,6 +2942,8 @@ def run_gtk3() -> bool:
             hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
             icon_tile = Gtk.Box()
             icon_tile.get_style_context().add_class("hero-icon-green")
+            icon_tile.set_size_request(52, 52)
+            icon_tile.set_valign(Gtk.Align.CENTER)
             icon_tile.pack_start(_svg_gtk3_image(SVG_CHECK_GREEN_LG, 24), True, True, 0)
             hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
             self.done_pill = Gtk.Label(label="Instalação concluída")
