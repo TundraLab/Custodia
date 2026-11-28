@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
 Lightweight native graphical installer for Custodia by TundraLab.
-Lets users choose a GitHub release version and package format (.deb, .rpm, or
-.AppImage) with the distro's recommended option highlighted, verifies SHA-256,
-installs packages cleanly, and auto-deletes itself upon completion.
+Provides a full-window Material Design 3 interface with the site's hero
+backdrop, live GitHub releases and changelog viewer, distro-recommended package
+selection (.deb, .rpm, or .AppImage), upfront admin authentication, smooth
+progress feedback, and automatic self-deletion upon completion.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -34,45 +36,83 @@ FALLBACK_VERSION = "4.0.0"
 USER_AGENT = "Custodia-Installer/4.0"
 
 FORMATS = [
-    ("deb", ".deb", "Ubuntu, Debian, Pop!_OS e Linux Mint"),
-    ("rpm", ".rpm", "Fedora, RHEL e openSUSE"),
-    ("appimage", ".AppImage", "Portátil para qualquer distribuição Linux"),
+    ("deb", "Ubuntu, Debian e Mint", "Pacote nativo (.deb) integrado ao sistema"),
+    ("rpm", "Fedora, RHEL e openSUSE", "Pacote nativo (.rpm) integrado ao sistema"),
+    ("appimage", "Qualquer outro Linux", "Versão portátil em arquivo único"),
 ]
 
 STEPS = [
-    "Preparando o ambiente",
-    "Baixando pacote do Custódia",
-    "Verificando assinatura (SHA-256)",
-    "Instalando no sistema",
-    "Removendo arquivo do instalador",
+    "Preparando a instalação",
+    "Baixando o Custódia",
+    "Conferindo segurança do arquivo",
+    "Instalando no computador",
+    "Finalizando e limpando",
 ]
 
-# Crisp inline SVG icons matching Material Design 3 Dark Blue tokens.
+# Full-bleed hero backdrop echoing the official website hero section.
+SVG_HERO_BACKDROP = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">'
+    '<defs>'
+    '<radialGradient id="g1" cx="15%" cy="15%" r="60%">'
+    '<stop offset="0%" stop-color="#A8C7FA" stop-opacity="0.16"/>'
+    '<stop offset="100%" stop-color="#111318" stop-opacity="0"/>'
+    '</radialGradient>'
+    '<radialGradient id="g2" cx="88%" cy="35%" r="65%">'
+    '<stop offset="0%" stop-color="#374955" stop-opacity="0.48"/>'
+    '<stop offset="100%" stop-color="#111318" stop-opacity="0"/>'
+    '</radialGradient>'
+    '<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">'
+    '<stop offset="0%" stop-color="#171A1F"/>'
+    '<stop offset="100%" stop-color="#111318"/>'
+    '</linearGradient>'
+    '</defs>'
+    '<rect width="1200" height="800" fill="url(#bg)"/>'
+    '<rect width="1200" height="800" fill="url(#g1)"/>'
+    '<rect width="1200" height="800" fill="url(#g2)"/>'
+    '<g transform="translate(760,-60) rotate(-8 260 260)">'
+    '<path fill="#A8C7FA" fill-opacity="0.045" d="M260 56L420 132V286L260 464L100 286V132Z"/>'
+    '<path fill="none" stroke="#A8C7FA" stroke-opacity="0.13" stroke-width="5" stroke-linejoin="round" d="M260 56L420 132V286L260 464L100 286V132Z"/>'
+    '<path fill="none" stroke="#A8C7FA" stroke-opacity="0.11" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" d="M234 247A43 43 0 1 1 286 247L304 342H216Z"/>'
+    '</g>'
+    '<g transform="translate(-70,410)">'
+    '<path fill="#A8C7FA" fill-opacity="0.04" d="M220 55L55 220L220 385L257 348L128 220L257 92Z"/>'
+    '<path fill="#A8C7FA" fill-opacity="0.065" d="M385 150L308 73L161 220L308 367L385 290L348 253L308 293L235 220L308 147L348 187Z"/>'
+    '</g>'
+    '</svg>'
+)
+
 SVG_DOWNLOAD = (
-    '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none">'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none">'
     '<path d="M12 4v11m0 0-4-4m4 4 4-4M4.5 16.5v2a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-2" '
     'stroke="#A8C7FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
     '</svg>'
 )
 
-SVG_CHECK_BLUE = (
+SVG_CHECK_SUCCESS = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none">'
     '<path d="M5 13l4 4L19 7" stroke="#6DD58C" stroke-width="2.6" '
     'stroke-linecap="round" stroke-linejoin="round"/>'
     '</svg>'
 )
 
-SVG_CHECK_WHITE = (
+SVG_CHECK_ON_PRIMARY = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none">'
     '<path d="M5 13l4 4L19 7" stroke="#062E6F" stroke-width="3" '
     'stroke-linecap="round" stroke-linejoin="round"/>'
     '</svg>'
 )
 
-SVG_CHECK_GREEN = (
-    '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none">'
+SVG_CHECK_GREEN_LG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">'
     '<path d="M5 13l4 4L19 7" stroke="#6DD58C" stroke-width="2.4" '
     'stroke-linecap="round" stroke-linejoin="round"/>'
+    '</svg>'
+)
+
+SVG_WARNING = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none">'
+    '<path d="M12 9v4m0 4h.01M10.3 3.9 2.7 17.1A1.9 1.9 0 0 0 4.4 20h15.2a1.9 1.9 0 0 0 1.7-2.9L13.7 3.9a1.9 1.9 0 0 0-3.4 0Z" '
+    'stroke="#F5C26B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
     '</svg>'
 )
 
@@ -102,12 +142,93 @@ SVG_CHEVRON_UP = (
 )
 
 SVG_BRAND_FALLBACK = (
-    '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 256">'
-    '<rect width="256" height="256" rx="56" fill="#182942"/>'
-    '<path fill="#60A5FA" d="M128 38 L200 162 L176 144 L128 76 L80 144 L56 162 Z"/>'
-    '<path fill="#93C5FD" d="M128 118 L216 212 L184 198 L128 148 L72 198 L40 212 Z"/>'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 256 256">'
+    '<rect width="256" height="256" rx="56" fill="#0B1933"/>'
+    '<path fill="#A8C7FA" d="M128 38 L200 162 L176 144 L128 76 L80 144 L56 162 Z"/>'
+    '<path fill="#7FCFFF" d="M128 118 L216 212 L184 198 L128 148 L72 198 L40 212 Z"/>'
     '</svg>'
 )
+
+# Privileged helper loop executed once via pkexec to avoid prompting twice.
+PRIVILEGED_HELPER_CODE = r"""
+import json, os, shutil, subprocess, sys
+
+def emit(line):
+    sys.stdout.write(line + "\n")
+    sys.stdout.flush()
+
+def run_cmd(cmd):
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
+    for line in p.stdout:
+        s = line.strip()
+        if s:
+            emit("OUT:" + s)
+    return p.wait()
+
+def ver_rpm(args):
+    r = subprocess.run(["rpm"] + args, capture_output=True, text=True, check=False)
+    return r.stdout.strip().splitlines()[0].strip() if r.returncode == 0 and r.stdout.strip() else ""
+
+def parse_evr(s):
+    out, cur = [], ""
+    for ch in s:
+        if ch.isdigit():
+            cur += ch
+        elif cur:
+            out.append(int(cur))
+            cur = ""
+    if cur:
+        out.append(int(cur))
+    return tuple(out)
+
+emit("READY")
+for raw in sys.stdin:
+    raw = raw.strip()
+    if not raw:
+        continue
+    try:
+        req = json.loads(raw)
+        action = req.get("action")
+        path = req.get("path", "")
+        if not os.path.isfile(path):
+            emit("ERR:Arquivo do pacote não encontrado.")
+            emit("DONE:1")
+            continue
+        if action == "install_deb":
+            if shutil.which("apt-get"):
+                rc = run_cmd(["apt-get", "install", "-y", "--reinstall", "--allow-downgrades", path])
+            elif shutil.which("dpkg"):
+                rc = run_cmd(["dpkg", "-i", path])
+            else:
+                emit("ERR:Gerenciador de pacotes não encontrado.")
+                rc = 1
+            emit(f"DONE:{rc}")
+        elif action == "install_rpm":
+            if shutil.which("dnf"):
+                inst = ver_rpm(["-q", "--qf", "%{VERSION}-%{RELEASE}\n", "custodia"])
+                tgt = ver_rpm(["-qp", "--qf", "%{VERSION}-%{RELEASE}\n", path])
+                if inst and tgt and parse_evr(tgt) == parse_evr(inst):
+                    rc = run_cmd(["dnf", "reinstall", "-y", "--nogpgcheck", path])
+                elif inst and tgt and parse_evr(tgt) < parse_evr(inst):
+                    rc = run_cmd(["dnf", "install", "-y", "--nogpgcheck", "--allow-downgrade", path])
+                    if rc != 0:
+                        rc = run_cmd(["dnf", "downgrade", "-y", "--nogpgcheck", path])
+                else:
+                    rc = run_cmd(["dnf", "install", "-y", "--nogpgcheck", path])
+            elif shutil.which("zypper"):
+                rc = run_cmd(["zypper", "--non-interactive", "--no-gpg-checks", "install", "--force", path])
+            elif shutil.which("rpm"):
+                rc = run_cmd(["rpm", "-Uvh", "--replacepkgs", "--oldpackage", "--nosignature", path])
+            else:
+                emit("ERR:Gerenciador de pacotes não encontrado.")
+                rc = 1
+            emit(f"DONE:{rc}")
+        else:
+            emit("DONE:1")
+    except Exception as exc:
+        emit("ERR:" + str(exc))
+        emit("DONE:1")
+"""
 
 
 def read_os_release() -> dict[str, str]:
@@ -130,7 +251,7 @@ def read_os_release() -> dict[str, str]:
 
 def detect_distro_label() -> str:
     info = read_os_release()
-    return info.get("PRETTY_NAME") or info.get("NAME") or "Linux x86_64"
+    return info.get("PRETTY_NAME") or info.get("NAME") or "Linux"
 
 
 def detect_default_format() -> str:
@@ -155,7 +276,16 @@ def build_fallback_release() -> dict:
     return {
         "tag": f"v{v}",
         "version": v,
-        "name": f"v{v}",
+        "title": f"Custódia v{v}",
+        "published_at": "",
+        "url": f"https://github.com/{REPO}/releases/tag/v{v}",
+        "body": (
+            "### Novidades da versão\n"
+            "- Novo instalador gráfico leve com escolha de versão e formato.\n"
+            "- Suporte nativo para Ubuntu, Debian, Pop!_OS e Mint (.deb), além de Fedora (.rpm) e portátil.\n"
+            "- Aba Compartilhados comigo, criação de links e convites por e-mail.\n"
+            "- Retomada de transferências grandes, filtros na fila e salvamento automático nas Configurações."
+        ),
         "assets": {
             "deb": {"name": f"Custodia-{v}_amd64.deb", "url": f"{base}/Custodia-{v}_amd64.deb", "size": 0},
             "rpm": {"name": f"Custodia-{v}-1.x86_64.rpm", "url": f"{base}/Custodia-{v}-1.x86_64.rpm", "size": 0},
@@ -203,11 +333,41 @@ def fetch_releases() -> list[dict]:
             parsed.append({
                 "tag": tag,
                 "version": tag.lstrip("v"),
-                "name": tag,
+                "title": str(rel.get("name") or tag).strip(),
+                "published_at": str(rel.get("published_at") or "")[:10],
+                "url": str(rel.get("html_url") or RELEASES_URL),
+                "body": str(rel.get("body") or "").strip(),
                 "assets": assets_map,
             })
 
     return parsed if parsed else [build_fallback_release()]
+
+
+def format_release_notes_plain(body: str) -> str:
+    if not body:
+        return "Nenhuma nota de lançamento disponível para esta versão."
+    lines: list[str] = []
+    for raw_line in body.splitlines():
+        line = raw_line.strip()
+        if not line:
+            if lines and lines[-1] != "":
+                lines.append("")
+            continue
+        line = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", line)
+        line = line.replace("**", "").replace("`", "")
+        if line.startswith("### "):
+            if lines and lines[-1] != "":
+                lines.append("")
+            lines.append(line[4:].upper())
+        elif line.startswith("## "):
+            if lines and lines[-1] != "":
+                lines.append("")
+            lines.append(line[3:].upper())
+        elif line.startswith("- ") or line.startswith("* "):
+            lines.append("• " + line[2:])
+        else:
+            lines.append(line)
+    return "\n".join(lines).strip()
 
 
 def format_bytes(num_bytes: int) -> str:
@@ -228,17 +388,29 @@ def format_eta(seconds: float) -> str:
     return f"~{mins}:{secs:02d} restantes"
 
 
+def _humanize_pkg_status(raw_line: str) -> str | None:
+    low = raw_line.lower()
+    if any(k in low for k in ("preparando", "preparing", "transação", "transaction", "reading database")):
+        return "Preparando arquivos do aplicativo..."
+    if any(k in low for k in ("unpacking", "desempacotando", "installing", "instalando", "reinstalling", "upgrading", "atualizando")):
+        return "Copiando arquivos para o sistema..."
+    if any(k in low for k in ("setting up", "configurando", "verificando", "verifying", "running scriptlet", "triggers")):
+        return "Configurando atalhos e integração..."
+    if any(k in low for k in ("complete", "concluído", "done")):
+        return "Finalizando instalação..."
+    return None
+
+
 def save_install_log(log_text: str) -> Path:
     downloads_dir = Path.home() / "Downloads"
     target_dir = downloads_dir if downloads_dir.is_dir() else Path.home()
     out_path = target_dir / "custodia-instalacao-log.txt"
     header = (
-        f"Custodia Installer Log\n"
-        f"System: {detect_distro_label()}\n"
-        f"Recommended format: .{detect_default_format()}\n"
+        f"Registro de Instalação - Custódia\n"
+        f"Sistema: {detect_distro_label()}\n"
         f"{'-' * 48}\n"
     )
-    body = log_text.strip() or "(nenhuma linha registrada até o momento)"
+    body = log_text.strip() or "(nenhum registro gravado até o momento)"
     out_path.write_text(header + body + "\n", encoding="utf-8")
     return out_path
 
@@ -281,7 +453,7 @@ def download_file(
 
 def verify_sha256(file_path: Path, sums_url: str | None, asset_name: str, log: Callable[[str], None]) -> None:
     if not sums_url:
-        log("SHA256SUMS.txt não publicado para esta versão; prosseguindo.")
+        log("Lista de verificação não disponível para esta versão; prosseguindo.")
         return
 
     req = urllib.request.Request(sums_url, headers={"User-Agent": USER_AGENT})
@@ -289,7 +461,7 @@ def verify_sha256(file_path: Path, sums_url: str | None, asset_name: str, log: C
         with urllib.request.urlopen(req, timeout=15) as resp:
             content = resp.read().decode("utf-8", errors="replace")
     except Exception as exc:
-        log(f"Aviso: não foi possível baixar SHA256SUMS.txt ({exc}).")
+        log(f"Aviso: não foi possível baixar a verificação de segurança ({exc}).")
         return
 
     expected = ""
@@ -300,7 +472,7 @@ def verify_sha256(file_path: Path, sums_url: str | None, asset_name: str, log: C
             break
 
     if not expected:
-        log(f"Aviso: hash de {asset_name} não encontrado em SHA256SUMS.txt.")
+        log(f"Aviso: código de segurança de {asset_name} não encontrado.")
         return
 
     h = hashlib.sha256()
@@ -312,137 +484,127 @@ def verify_sha256(file_path: Path, sums_url: str | None, asset_name: str, log: C
             h.update(buf)
     actual = h.hexdigest().lower()
     if actual != expected:
-        raise RuntimeError("Falha na verificação SHA-256. O arquivo baixado está corrompido.")
-    log(f"SHA-256 conferido ({actual[:12]}...).")
+        raise RuntimeError("O arquivo baixado parece corrompido. Tente baixar novamente.")
+    log(f"Arquivo íntegro e verificado ({actual[:12]}...).")
 
 
-def run_privileged(
-    cmd: list[str],
-    log: Callable[[str], None],
-    on_status: Callable[[str], None] | None = None,
-) -> None:
-    if os.geteuid() == 0:
-        full_cmd = cmd
-    elif shutil.which("pkexec"):
-        full_cmd = ["pkexec"] + cmd
-    else:
-        raise RuntimeError("pkexec não encontrado. Instale o pacote manualmente pelo terminal.")
+class PrivilegedSession:
+    """Keeps a single pkexec root worker alive so the password is only asked once."""
 
-    log(f"Executando: {' '.join(full_cmd)}")
-    proc = subprocess.Popen(
-        full_cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        errors="replace",
-    )
-    assert proc.stdout is not None
-    tail_lines: list[str] = []
-    for line in proc.stdout:
-        clean = line.strip()
-        if clean:
-            tail_lines.append(clean)
-            if len(tail_lines) > 12:
-                tail_lines.pop(0)
-            log(clean)
-            if on_status is not None:
-                on_status(clean[:76])
-    rc = proc.wait()
-    if rc != 0:
-        if rc in (126, 127):
-            raise RuntimeError("Autenticação administrativa cancelada.")
-        detail = tail_lines[-1] if tail_lines else f"código {rc}"
-        raise RuntimeError(f"Falha ao instalar o pacote ({detail}).")
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._proc: subprocess.Popen[str] | None = None
+        self._ready = False
+        self._cancelled = False
 
+    def start_upfront(self) -> bool:
+        with self._lock:
+            if self._proc is not None and self._proc.poll() is None:
+                return True
+            if os.geteuid() == 0:
+                self._proc = subprocess.Popen(
+                    ["/usr/bin/env", "python3", "-u", "-c", PRIVILEGED_HELPER_CODE],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    errors="replace",
+                )
+            elif shutil.which("pkexec"):
+                self._proc = subprocess.Popen(
+                    ["pkexec", "/usr/bin/env", "python3", "-u", "-c", PRIVILEGED_HELPER_CODE],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    errors="replace",
+                )
+            else:
+                return False
 
-def install_deb(
-    pkg_path: Path,
-    log: Callable[[str], None],
-    on_status: Callable[[str], None] | None = None,
-) -> None:
-    if shutil.which("apt-get"):
-        run_privileged(["apt-get", "install", "-y", "--reinstall", "--allow-downgrades", str(pkg_path)], log, on_status)
-    elif shutil.which("dpkg"):
-        run_privileged(["dpkg", "-i", str(pkg_path)], log, on_status)
-    else:
-        raise RuntimeError("Nem apt-get nem dpkg estão disponíveis neste sistema.")
+            assert self._proc.stdout is not None
+            first = self._proc.stdout.readline().strip()
+            if first == "READY":
+                self._ready = True
+                self._cancelled = False
+                return True
 
+            self.close()
+            self._cancelled = True
+            return False
 
-def _rpm_query_version(args: list[str]) -> str:
-    try:
-        res = subprocess.run(
-            ["rpm"] + args,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if res.returncode == 0:
-            return res.stdout.strip().splitlines()[0].strip()
-    except Exception:
-        pass
-    return ""
+    @property
+    def is_ready(self) -> bool:
+        return self._ready and self._proc is not None and self._proc.poll() is None
 
+    def run_package_install(
+        self,
+        action: str,
+        pkg_path: Path,
+        log: Callable[[str], None],
+        on_human_status: Callable[[str], None] | None = None,
+    ) -> None:
+        if not self.is_ready:
+            ok = self.start_upfront()
+            if not ok:
+                raise RuntimeError("Permissão administrativa não concedida.")
 
-def _parse_evr(ver_str: str) -> tuple[int, ...]:
-    nums: list[int] = []
-    cur = ""
-    for ch in ver_str:
-        if ch.isdigit():
-            cur += ch
-        elif cur:
-            nums.append(int(cur))
-            cur = ""
-    if cur:
-        nums.append(int(cur))
-    return tuple(nums)
+        assert self._proc is not None and self._proc.stdin is not None and self._proc.stdout is not None
+        payload = json.dumps({"action": action, "path": str(pkg_path)}) + "\n"
+        self._proc.stdin.write(payload)
+        self._proc.stdin.flush()
 
-
-def _compare_rpm_versions(target: str, installed: str) -> int:
-    if shutil.which("rpmdev-vercmp"):
-        res = subprocess.run(["rpmdev-vercmp", target, installed], capture_output=True, check=False)
-        if res.returncode == 0:
-            return 0
-        if res.returncode == 11:
-            return 1
-        if res.returncode == 12:
-            return -1
-    t_tuple = _parse_evr(target)
-    i_tuple = _parse_evr(installed)
-    return (t_tuple > i_tuple) - (t_tuple < i_tuple)
-
-
-def install_rpm(
-    pkg_path: Path,
-    log: Callable[[str], None],
-    on_status: Callable[[str], None] | None = None,
-) -> None:
-    if shutil.which("dnf"):
-        installed = _rpm_query_version(["-q", "--qf", "%{VERSION}-%{RELEASE}\n", "custodia"])
-        target = _rpm_query_version(["-qp", "--qf", "%{VERSION}-%{RELEASE}\n", str(pkg_path)])
-        if installed and target:
-            cmp = _compare_rpm_versions(target, installed)
-            if cmp == 0:
-                run_privileged(["dnf", "reinstall", "-y", "--nogpgcheck", str(pkg_path)], log, on_status)
-                return
-            if cmp < 0:
+        tail_errors: list[str] = []
+        rc = 1
+        while True:
+            line = self._proc.stdout.readline()
+            if not line:
+                break
+            clean = line.strip()
+            if clean.startswith("DONE:"):
                 try:
-                    run_privileged(["dnf", "install", "-y", "--nogpgcheck", "--allow-downgrade", str(pkg_path)], log, on_status)
-                except RuntimeError:
-                    run_privileged(["dnf", "downgrade", "-y", "--nogpgcheck", str(pkg_path)], log, on_status)
-                return
-        run_privileged(["dnf", "install", "-y", "--nogpgcheck", str(pkg_path)], log, on_status)
-    elif shutil.which("zypper"):
-        run_privileged(["zypper", "--non-interactive", "--no-gpg-checks", "install", "--force", str(pkg_path)], log, on_status)
-    elif shutil.which("rpm"):
-        run_privileged(["rpm", "-Uvh", "--replacepkgs", "--oldpackage", "--nosignature", str(pkg_path)], log, on_status)
-    else:
-        raise RuntimeError("Nem dnf, zypper nem rpm estão disponíveis neste sistema.")
+                    rc = int(clean.split(":", 1)[1])
+                except ValueError:
+                    rc = 1
+                break
+            if clean.startswith("ERR:"):
+                msg = clean[4:]
+                tail_errors.append(msg)
+                log(msg)
+            elif clean.startswith("OUT:"):
+                raw_out = clean[4:]
+                log(raw_out)
+                tail_errors.append(raw_out)
+                if len(tail_errors) > 10:
+                    tail_errors.pop(0)
+                human = _humanize_pkg_status(raw_out)
+                if human and on_human_status is not None:
+                    on_human_status(human)
+
+        if rc != 0:
+            detail = tail_errors[-1] if tail_errors else "erro na instalação"
+            raise RuntimeError(f"Não foi possível concluir a instalação ({detail}).")
+
+    def close(self) -> None:
+        with self._lock:
+            self._ready = False
+            if self._proc is not None:
+                try:
+                    if self._proc.stdin:
+                        self._proc.stdin.close()
+                except Exception:
+                    pass
+                try:
+                    self._proc.terminate()
+                except Exception:
+                    pass
+                self._proc = None
 
 
 def install_appimage(
     pkg_path: Path,
     log: Callable[[str], None],
-    on_status: Callable[[str], None] | None = None,
+    on_human_status: Callable[[str], None] | None = None,
 ) -> None:
     home = Path.home()
     install_dir = home / ".local" / "opt" / "custodia"
@@ -454,8 +616,8 @@ def install_appimage(
         d.mkdir(parents=True, exist_ok=True)
 
     target_app = install_dir / "Custodia.AppImage"
-    if on_status is not None:
-        on_status("Copiando Custodia.AppImage")
+    if on_human_status is not None:
+        on_human_status("Copiando aplicativo para a pasta do usuário...")
     shutil.copy2(pkg_path, target_app)
     target_app.chmod(target_app.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
@@ -466,8 +628,8 @@ def install_appimage(
     )
     wrapper.chmod(wrapper.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
-    if on_status is not None:
-        on_status("Registrando atalhos no menu")
+    if on_human_status is not None:
+        on_human_status("Configurando atalhos e inicialização...")
     desktop_content = (
         "[Desktop Entry]\n"
         "Type=Application\n"
@@ -486,7 +648,7 @@ def install_appimage(
     )
     if shutil.which("update-desktop-database"):
         subprocess.run(["update-desktop-database", str(apps_dir)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    log(f"AppImage instalado em {target_app}")
+    log(f"Aplicativo instalado em {target_app}")
 
 
 def self_delete_installer(log: Callable[[str], None]) -> bool:
@@ -506,7 +668,7 @@ def self_delete_installer(log: Callable[[str], None]) -> bool:
             log("Modo desenvolvimento: arquivo fonte preservado.")
             return False
         target_path.unlink(missing_ok=True)
-        log(f"Instalador removido: {target_path.name}")
+        log(f"Arquivo do instalador removido: {target_path.name}")
         return True
     except Exception as exc:
         log(f"Aviso: não foi possível remover o instalador ({exc}).")
@@ -560,21 +722,11 @@ def _resolve_app_icon_path() -> Path | None:
     return None
 
 
-def _resolve_banner_path() -> Path | None:
-    env_banner = os.environ.get("CUSTODIA_INSTALLER_BANNER")
-    candidates: list[Path] = []
-    if env_banner:
-        candidates.append(Path(env_banner))
+def _resolve_icon_search_dir() -> Path | None:
     here = Path(__file__).resolve()
-    candidates.extend([
-        here.parent.parent / "custodia-banner.jpg",
-        here.parent.parent.parent / "custodia-banner.jpg",
-        here.parents[2] / "site" / "wwwroot" / "assets" / "custodia-promo.jpg"
-        if len(here.parents) > 2 else here,
-    ])
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
+    appdir_icons = here.parent.parent / "share" / "icons"
+    if appdir_icons.is_dir():
+        return appdir_icons
     return None
 
 
@@ -596,13 +748,20 @@ window, .installer-root {
     font-family: Inter, "Cantarell", "Noto Sans", system-ui, sans-serif;
 }
 
+.hero-bg {
+    background-image:
+        radial-gradient(ellipse at 15% 15%, rgba(168, 199, 250, 0.14), rgba(168, 199, 250, 0) 60%),
+        radial-gradient(ellipse at 85% 35%, rgba(55, 73, 85, 0.45), rgba(55, 73, 85, 0) 65%),
+        linear-gradient(to bottom, #171A1F, #111318);
+}
+
 headerbar.installer-topbar {
-    background-color: #111318;
+    background-color: rgba(17, 19, 24, 0.92);
     background-image: none;
     border: none;
-    border-bottom: 1px solid #23262E;
+    border-bottom: 1px solid rgba(68, 71, 79, 0.45);
     box-shadow: none;
-    padding: 0 18px;
+    padding: 0 20px;
     min-height: 48px;
 }
 
@@ -619,7 +778,7 @@ headerbar.installer-topbar {
     background-color: #282A2F;
     color: #C4C6D0;
     border-radius: 999px;
-    padding: 2px 9px;
+    padding: 2px 10px;
     margin-left: 4px;
 }
 
@@ -632,12 +791,12 @@ button.topbar-link {
     font-size: 12.5px;
     font-weight: 500;
     border-radius: 999px;
-    padding: 4px 10px;
+    padding: 5px 12px;
     margin-left: 4px;
 }
 
 button.topbar-link:hover {
-    background-color: #1D2024;
+    background-color: #282A2F;
     color: #A8C7FA;
 }
 
@@ -671,92 +830,83 @@ button.topbar-close-btn:hover {
     background-color: #33363D;
 }
 
-.m3-banner-card {
-    background-color: #020A1D;
-    border: 1px solid #1C3156;
-    border-radius: 16px;
-    padding: 12px 20px;
-}
-
-.banner-fallback-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #E2E2E9;
-}
-
-.banner-fallback-sub {
-    font-size: 12.5px;
+.hero-brand-sub {
+    font-size: 12px;
+    font-weight: 600;
     color: #A8C7FA;
 }
 
-.hero-icon-blue {
-    background-color: #374955;
-    border: none;
-    border-radius: 12px;
-    min-width: 42px;
-    min-height: 42px;
-    padding: 10px;
-}
-
-.hero-icon-green {
-    background-color: #1B3927;
-    border: none;
-    border-radius: 12px;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 11px;
-}
-
 .hero-title {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
     color: #E2E2E9;
 }
 
 .hero-subtitle {
-    font-size: 13px;
+    font-size: 13.5px;
     color: #C4C6D0;
 }
 
-.source-mono {
-    font-family: "JetBrains Mono", monospace;
-    font-size: 11.5px;
-    color: #9296A4;
+.hero-icon-blue {
+    background-color: #374955;
+    border-radius: 14px;
+    min-width: 52px;
+    min-height: 52px;
+    padding: 13px;
+}
+
+.hero-icon-green {
+    background-color: #1B3927;
+    border-radius: 14px;
+    min-width: 52px;
+    min-height: 52px;
+    padding: 13px;
 }
 
 .installer-card {
-    background-color: #1D2024;
-    border: none;
+    background-color: rgba(29, 32, 36, 0.92);
+    border: 1px solid rgba(68, 71, 79, 0.35);
     border-radius: 16px;
 }
 
 .card-section {
-    padding: 18px 20px;
+    padding: 20px 24px;
 }
 
 .card-section-tight {
-    padding: 10px 16px 16px 16px;
+    padding: 10px 18px 18px 18px;
 }
 
 .card-footer-row {
-    padding: 12px 20px;
+    padding: 14px 24px;
 }
 
 .h-divider {
-    background-color: #2E3138;
+    background-color: rgba(68, 71, 79, 0.45);
     min-height: 1px;
 }
 
 .support-divider {
-    background-color: #23262E;
+    background-color: rgba(68, 71, 79, 0.35);
     min-height: 1px;
-    margin-top: 2px;
 }
 
 .field-label {
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 600;
     color: #C4C6D0;
+}
+
+.warning-banner {
+    background-color: #3B2E14;
+    border: 1px solid rgba(245, 194, 107, 0.35);
+    border-radius: 12px;
+    padding: 11px 14px;
+}
+
+.warning-text {
+    font-size: 12.5px;
+    color: #FFE0A3;
 }
 
 button.fmt-row {
@@ -764,7 +914,7 @@ button.fmt-row {
     background-image: none;
     border: 1.5px solid transparent;
     border-radius: 12px;
-    padding: 11px 14px;
+    padding: 13px 16px;
     box-shadow: none;
 }
 
@@ -773,13 +923,12 @@ button.fmt-row:hover {
 }
 
 button.fmt-row.selected {
-    background-color: #213147;
+    background-color: #203149;
     border-color: #A8C7FA;
 }
 
 .fmt-title {
-    font-family: "JetBrains Mono", monospace;
-    font-size: 13.5px;
+    font-size: 14px;
     font-weight: 700;
     color: #E2E2E9;
 }
@@ -798,9 +947,18 @@ button.fmt-row.selected {
     font-weight: 600;
 }
 
+.badge-success-pill {
+    background-color: #1B3927;
+    color: #6DD58C;
+    border-radius: 999px;
+    padding: 3px 11px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
 .fmt-dot {
-    min-width: 18px;
-    min-height: 18px;
+    min-width: 20px;
+    min-height: 20px;
     border-radius: 999px;
     border: 1.5px solid #8E9099;
     background-color: transparent;
@@ -812,8 +970,8 @@ button.fmt-row.selected {
 }
 
 .distro-hint {
-    font-size: 12px;
-    color: #9296A4;
+    font-size: 12.5px;
+    color: #C4C6D0;
 }
 
 button.btn-primary {
@@ -822,9 +980,9 @@ button.btn-primary {
     color: #062E6F;
     border: none;
     border-radius: 20px;
-    padding: 9px 22px;
+    padding: 10px 24px;
     font-weight: 700;
-    font-size: 13px;
+    font-size: 13.5px;
     box-shadow: none;
 }
 
@@ -838,7 +996,7 @@ button.btn-secondary {
     color: #D3E4F3;
     border: none;
     border-radius: 20px;
-    padding: 8px 18px;
+    padding: 9px 20px;
     font-weight: 600;
     font-size: 13px;
     box-shadow: none;
@@ -854,7 +1012,7 @@ button.btn-danger {
     color: #FFB4AB;
     border: none;
     border-radius: 20px;
-    padding: 8px 18px;
+    padding: 9px 20px;
     font-weight: 600;
     font-size: 13px;
     box-shadow: none;
@@ -890,7 +1048,7 @@ button.btn-cancel {
     color: #FFB4AB;
     font-size: 13px;
     font-weight: 600;
-    padding: 6px 12px;
+    padding: 6px 14px;
 }
 
 button.btn-cancel:hover {
@@ -916,32 +1074,32 @@ progressbar.slim-progress progress {
 .stats-mono {
     font-family: "JetBrains Mono", monospace;
     font-size: 12px;
-    color: #9296A4;
+    color: #C4C6D0;
 }
 
 .stats-pct {
     font-family: "JetBrains Mono", monospace;
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 700;
     color: #A8C7FA;
 }
 
 .step-row {
-    padding: 8px 12px;
+    padding: 10px 14px;
     border-radius: 12px;
 }
 
 .step-row.active {
     background-color: #282A2F;
-    border: none;
-    padding: 10px 13px;
+    border-left: 3px solid #A8C7FA;
+    padding: 12px 14px;
 }
 
 .step-circle-done {
     background-color: #1B3927;
     border-radius: 999px;
-    min-width: 22px;
-    min-height: 22px;
+    min-width: 24px;
+    min-height: 24px;
     padding: 5px;
 }
 
@@ -957,25 +1115,41 @@ spinner.step-spinner {
 }
 
 .step-title-done {
-    font-size: 13px;
+    font-size: 13.5px;
     color: #C4C6D0;
 }
 
 .step-title-active {
-    font-size: 13.5px;
+    font-size: 14px;
     font-weight: 600;
     color: #E2E2E9;
 }
 
 .step-title-pending {
-    font-size: 13px;
+    font-size: 13.5px;
     color: #9296A4;
 }
 
 .step-sub {
-    font-family: "JetBrains Mono", monospace;
-    font-size: 11.5px;
+    font-size: 12px;
     color: #9296A4;
+}
+
+.done-item-row {
+    background-color: #282A2F;
+    border-radius: 12px;
+    padding: 12px 16px;
+}
+
+.done-item-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #E2E2E9;
+}
+
+.done-item-sub {
+    font-size: 12px;
+    color: #C4C6D0;
 }
 
 .log-box {
@@ -986,6 +1160,14 @@ spinner.step-spinner {
     font-family: "JetBrains Mono", monospace;
     font-size: 11px;
     color: #C4C6D0;
+}
+
+.notes-view {
+    background-color: #111318;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #E2E2E9;
 }
 
 .error-box {
@@ -1005,7 +1187,7 @@ button.footer-link {
     color: #9296A4;
     font-size: 12px;
     border-radius: 20px;
-    padding: 2px 6px;
+    padding: 3px 8px;
 }
 
 button.footer-link:hover {
@@ -1013,14 +1195,14 @@ button.footer-link:hover {
 }
 
 .dialog-card {
-    background-color: #282A2F;
+    background-color: #1D2024;
     color: #E2E2E9;
-    border-radius: 24px;
+    border-radius: 20px;
     padding: 22px;
 }
 
 .dialog-title {
-    font-size: 16.5px;
+    font-size: 17px;
     font-weight: 700;
     color: #E2E2E9;
 }
@@ -1047,7 +1229,7 @@ dropdown > button {
     border: 1px solid #44474F;
     border-radius: 12px;
     color: #E2E2E9;
-    padding: 7px 14px;
+    padding: 8px 14px;
 }
 """
 
@@ -1096,6 +1278,25 @@ def _svg_gtk4_image(svg_markup: str, size: int, centered: bool = False):
     return widget
 
 
+def _hero_backdrop_gtk4():
+    from gi.repository import Gdk, GLib, Gtk  # type: ignore
+
+    try:
+        tex = Gdk.Texture.new_from_bytes(GLib.Bytes.new(SVG_HERO_BACKDROP.encode("utf-8")))
+    except Exception:
+        pb = _svg_to_pixbuf(SVG_HERO_BACKDROP, 1200, 800)
+        _, png_bytes = pb.save_to_bufferv("png", [], [])
+        tex = Gdk.Texture.new_from_bytes(GLib.Bytes.new(png_bytes))
+
+    pic = Gtk.Picture.new_for_paintable(tex)
+    if hasattr(Gtk, "ContentFit") and hasattr(pic, "set_content_fit"):
+        pic.set_content_fit(Gtk.ContentFit.COVER)
+    pic.set_hexpand(True)
+    pic.set_vexpand(True)
+    pic.set_can_target(False)
+    return pic
+
+
 def _app_icon_gtk4_image(size: int):
     from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # type: ignore
 
@@ -1113,31 +1314,16 @@ def _app_icon_gtk4_image(size: int):
     return _svg_gtk4_image(SVG_BRAND_FALLBACK, size)
 
 
-def _banner_gtk4_picture(max_width: int, max_height: int):
-    from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # type: ignore
+def _left_label_gtk4(text: str, css_class: str, wrap: bool = False):
+    from gi.repository import Gtk  # type: ignore
 
-    banner_path = _resolve_banner_path()
-    if banner_path is not None:
-        try:
-            pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(banner_path), max_width, max_height, True)
-            _, png_bytes = pb.save_to_bufferv("png", [], [])
-            tex = Gdk.Texture.new_from_bytes(GLib.Bytes.new(png_bytes))
-            pic = Gtk.Picture.new_for_paintable(tex)
-            pic.set_size_request(pb.get_width(), pb.get_height())
-            if hasattr(pic, "set_can_shrink"):
-                pic.set_can_shrink(False)
-            return pic
-        except Exception:
-            pass
-    fallback = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-    fallback.set_valign(Gtk.Align.CENTER)
-    t = Gtk.Label(label="Custódia by TundraLab", xalign=0)
-    t.add_css_class("banner-fallback-title")
-    s = Gtk.Label(label="Seus arquivos. Sempre seguros.", xalign=0)
-    s.add_css_class("banner-fallback-sub")
-    fallback.append(t)
-    fallback.append(s)
-    return fallback
+    lbl = Gtk.Label(label=text)
+    lbl.set_xalign(0.0)
+    lbl.set_halign(Gtk.Align.START)
+    if wrap:
+        lbl.set_wrap(True)
+    lbl.add_css_class(css_class)
+    return lbl
 
 
 def run_gtk4() -> bool:
@@ -1163,8 +1349,12 @@ def run_gtk4() -> bool:
             self.cancel_event = threading.Event()
             self.install_started_at = 0.0
             self.timer_source_id: int | None = None
+            self.anim_source_id: int | None = None
             self.installing = False
             self.all_log_lines: list[str] = []
+            self.target_fraction = 0.0
+            self.display_fraction = 0.0
+            self.priv_session = PrivilegedSession()
 
             self.fmt_buttons: dict[str, Gtk.Button] = {}
             self.fmt_dots: dict[str, Gtk.Box] = {}
@@ -1173,6 +1363,7 @@ def run_gtk4() -> bool:
             self.save_log_buttons: list[Gtk.Button] = []
 
         def do_activate(self) -> None:
+            display = Gdk.Display.get_default()
             settings = Gtk.Settings.get_default()
             if settings is not None:
                 if hasattr(Gtk, "InterfaceColorScheme") and settings.find_property("gtk-interface-color-scheme"):
@@ -1180,22 +1371,26 @@ def run_gtk4() -> bool:
                 else:
                     settings.set_property("gtk-application-prefer-dark-theme", True)
 
+            search_dir = _resolve_icon_search_dir()
+            if search_dir is not None and display is not None:
+                Gtk.IconTheme.get_for_display(display).add_search_path(str(search_dir))
+            Gtk.Window.set_default_icon_name("custodia-installer")
+
             provider = Gtk.CssProvider()
             _load_css(provider, SHARED_CSS + GTK4_EXTRA_CSS)
-            Gtk.StyleContext.add_provider_for_display(
-                Gdk.Display.get_default(),
-                provider,
-                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-            )
+            if display is not None:
+                Gtk.StyleContext.add_provider_for_display(
+                    display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                )
 
             self.win = Gtk.ApplicationWindow(application=self)
             self.win.set_title("Custódia")
-            self.win.set_default_size(840, 710)
+            self.win.set_icon_name("custodia-installer")
+            self.win.set_default_size(940, 680)
             self.win.set_resizable(True)
             self.win.add_css_class("installer-root")
             self.win.connect("close-request", self._on_window_close_request)
 
-            # Custom 48px M3 dark top bar.
             header = Gtk.HeaderBar()
             header.add_css_class("installer-topbar")
             header.set_show_title_buttons(False)
@@ -1209,9 +1404,9 @@ def run_gtk4() -> bool:
             brand_lbl.add_css_class("topbar-brand")
             self.topbar_ver = Gtk.Label(label=f"v{FALLBACK_VERSION}")
             self.topbar_ver.add_css_class("topbar-version")
-            whats_new = Gtk.Button(label="Novidades")
+            whats_new = Gtk.Button(label="O que há de novo")
             whats_new.add_css_class("topbar-link")
-            whats_new.connect("clicked", lambda *_: webbrowser.open(RELEASES_URL))
+            whats_new.connect("clicked", self._show_whats_new_dialog)
             brand_box.append(brand_lbl)
             brand_box.append(self.topbar_ver)
             brand_box.append(whats_new)
@@ -1226,15 +1421,13 @@ def run_gtk4() -> bool:
             bell_pop = Gtk.Popover()
             bell_pop.add_css_class("info-popover")
             pop_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-            self.bell_title_lbl = Gtk.Label(label="Instalador oficial Custódia", xalign=0)
-            self.bell_title_lbl.add_css_class("field-label")
-            self.bell_body_lbl = Gtk.Label(
-                label=f"Sistema: {self.distro_label}\nFormato indicado: .{self.recommended_fmt}\nVerificação SHA-256 ativa",
-                xalign=0,
+            pop_box.append(_left_label_gtk4("Instalador oficial Custódia", "field-label"))
+            pop_box.append(
+                _left_label_gtk4(
+                    f"Sistema: {self.distro_label}\nPacote indicado: .{self.recommended_fmt}\nVerificação automática de integridade",
+                    "fmt-sub",
+                )
             )
-            self.bell_body_lbl.add_css_class("fmt-sub")
-            pop_box.append(self.bell_title_lbl)
-            pop_box.append(self.bell_body_lbl)
             bell_pop.set_child(pop_box)
             bell_btn.set_popover(bell_pop)
 
@@ -1249,8 +1442,8 @@ def run_gtk4() -> bool:
             self.win.set_titlebar(header)
 
             self.stack = Gtk.Stack()
-            self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-            self.stack.set_transition_duration(180)
+            self.stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+            self.stack.set_transition_duration(240)
             self.stack.set_vexpand(True)
             self.stack.set_hexpand(True)
 
@@ -1259,44 +1452,101 @@ def run_gtk4() -> bool:
             self.stack.add_named(self._build_done_page(), "done")
             self.stack.set_visible_child_name("select")
 
-            self.win.set_child(self.stack)
+            # Overlay puts the full-bleed website hero backdrop behind every screen.
+            overlay = Gtk.Overlay()
+            overlay.add_css_class("hero-bg")
+            overlay.set_child(_hero_backdrop_gtk4())
+            overlay.add_overlay(self.stack)
+
+            self.win.set_child(overlay)
             self.win.present()
 
             threading.Thread(target=self._load_releases_bg, daemon=True).start()
+            if not os.environ.get("CUSTODIA_NO_EARLY_AUTH"):
+                GLib.timeout_add(220, self._trigger_upfront_auth)
+
+        def _trigger_upfront_auth(self) -> bool:
+            threading.Thread(target=self.priv_session.start_upfront, daemon=True).start()
+            return False
 
         def _on_window_close_request(self, *_args) -> bool:
             if self.installing:
                 self._confirm_cancel(quit_after=True)
                 return True
+            self.priv_session.close()
             return False
 
         def _request_quit(self) -> None:
             if self.installing:
                 self._confirm_cancel(quit_after=True)
             else:
+                self.priv_session.close()
                 self.quit()
 
-        def _confirm_cancel(self, quit_after: bool = False) -> None:
-            dlg = Gtk.Window(transient_for=self.win, modal=True, title="Cancelar instalação")
-            dlg.set_resizable(False)
-            dlg.set_default_size(380, -1)
+        def _show_whats_new_dialog(self, *_args) -> None:
+            rel = self._selected_release()
+            dlg = Gtk.Window(transient_for=self.win, modal=True, title=f"Novidades — {rel['tag']}")
+            dlg.set_default_size(580, 470)
             dlg.add_css_class("installer-root")
 
             box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
             box.add_css_class("dialog-card")
 
-            t_lbl = Gtk.Label(label="Cancelar instalação em andamento?", xalign=0)
-            t_lbl.add_css_class("dialog-title")
-            b_lbl = Gtk.Label(
-                label="O processo atual será interrompido e os arquivos temporários serão removidos.",
-                xalign=0,
-            )
-            b_lbl.set_wrap(True)
-            b_lbl.add_css_class("dialog-body")
+            hdr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            hdr.append(_app_icon_gtk4_image(36))
+            hdr_txt = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            hdr_txt.set_hexpand(True)
+            title_lbl = _left_label_gtk4(rel.get("title") or f"Custódia {rel['tag']}", "dialog-title")
+            date_txt = f"Publicado em {rel['published_at']}" if rel.get("published_at") else "Lançamento oficial no GitHub"
+            sub_lbl = _left_label_gtk4(date_txt, "distro-hint")
+            hdr_txt.append(title_lbl)
+            hdr_txt.append(sub_lbl)
+            hdr.append(hdr_txt)
+            box.append(hdr)
+
+            scroll = Gtk.ScrolledWindow()
+            scroll.set_vexpand(True)
+            scroll.set_min_content_height(260)
+            tv = Gtk.TextView()
+            tv.set_editable(False)
+            tv.set_cursor_visible(False)
+            tv.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+            tv.add_css_class("notes-view")
+            tv.get_buffer().set_text(format_release_notes_plain(rel.get("body", "")))
+            scroll.set_child(tv)
+            box.append(scroll)
+
+            btn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            gh_btn = Gtk.Button(label="Abrir no GitHub")
+            gh_btn.add_css_class("btn-ghost")
+            gh_btn.connect("clicked", lambda *_: webbrowser.open(rel.get("url") or RELEASES_URL))
+            spacer = Gtk.Box()
+            spacer.set_hexpand(True)
+            close_btn = Gtk.Button(label="Fechar")
+            close_btn.add_css_class("btn-primary")
+            close_btn.connect("clicked", lambda *_: dlg.close())
+            btn_row.append(gh_btn)
+            btn_row.append(spacer)
+            btn_row.append(close_btn)
+            box.append(btn_row)
+
+            dlg.set_child(box)
+            dlg.present()
+
+        def _confirm_cancel(self, quit_after: bool = False) -> None:
+            dlg = Gtk.Window(transient_for=self.win, modal=True, title="Cancelar instalação")
+            dlg.set_resizable(False)
+            dlg.set_default_size(400, -1)
+            dlg.add_css_class("installer-root")
+
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+            box.add_css_class("dialog-card")
+            box.append(_left_label_gtk4("Cancelar a instalação agora?", "dialog-title"))
+            box.append(_left_label_gtk4("O envio será interrompido e nada parcial ficará salvo.", "dialog-body", wrap=True))
 
             btn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
             btn_row.set_halign(Gtk.Align.END)
-            btn_row.set_margin_top(6)
+            btn_row.set_margin_top(8)
 
             keep_btn = Gtk.Button(label="Continuar")
             keep_btn.add_css_class("btn-secondary")
@@ -1311,38 +1561,33 @@ def run_gtk4() -> bool:
                 dlg.close()
                 if quit_after:
                     self.installing = False
+                    self.priv_session.close()
                     self.quit()
 
             confirm_btn.connect("clicked", _do_abort)
             btn_row.append(keep_btn)
             btn_row.append(confirm_btn)
-
-            box.append(t_lbl)
-            box.append(b_lbl)
             box.append(btn_row)
             dlg.set_child(box)
             dlg.present()
 
-        def _centered_shell(self) -> tuple[Gtk.ScrolledWindow, Gtk.Box]:
+        def _full_shell(self) -> tuple[Gtk.ScrolledWindow, Gtk.Box]:
             scroll = Gtk.ScrolledWindow()
             scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
             scroll.set_hexpand(True)
             scroll.set_vexpand(True)
 
-            outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            outer.set_halign(Gtk.Align.CENTER)
-            outer.set_valign(Gtk.Align.CENTER)
-            outer.set_hexpand(True)
-            outer.set_vexpand(True)
-            outer.set_margin_top(18)
-            outer.set_margin_bottom(18)
-            outer.set_margin_start(28)
-            outer.set_margin_end(28)
+            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+            col.set_hexpand(True)
+            col.set_vexpand(True)
+            col.set_valign(Gtk.Align.CENTER)
+            col.set_halign(Gtk.Align.FILL)
+            col.set_margin_top(24)
+            col.set_margin_bottom(22)
+            col.set_margin_start(38)
+            col.set_margin_end(38)
 
-            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
-            col.set_size_request(580, -1)
-            outer.append(col)
-            scroll.set_child(outer)
+            scroll.set_child(col)
             return scroll, col
 
         def _make_divider(self, css_class: str = "h-divider") -> Gtk.Box:
@@ -1369,10 +1614,11 @@ def run_gtk4() -> bool:
 
         def _build_support_links(self) -> Gtk.Box:
             wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+            wrap.set_hexpand(True)
             wrap.append(self._make_divider("support-divider"))
 
-            row1 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
-            row1.set_margin_top(6)
+            row1 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            row1.set_margin_top(4)
 
             save_btn = Gtk.Button(label="Baixar registro da instalação")
             save_btn.add_css_class("footer-link")
@@ -1384,79 +1630,51 @@ def run_gtk4() -> bool:
                 ("Guia de instalação", GUIDE_URL),
                 ("Solução de problemas", TROUBLESHOOTING_URL),
                 ("Relatar um problema", ISSUES_URL),
+                ("Comunidade", DISCUSSIONS_URL),
             ):
                 btn = Gtk.Button(label=label)
                 btn.add_css_class("footer-link")
                 btn.connect("clicked", lambda _b, u=url: webbrowser.open(u))
                 row1.append(btn)
 
-            row2 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
-            comm_btn = Gtk.Button(label="Obter ajuda na comunidade")
-            comm_btn.add_css_class("footer-link")
-            comm_btn.connect("clicked", lambda *_: webbrowser.open(DISCUSSIONS_URL))
-            row2.append(comm_btn)
-
             wrap.append(row1)
-            wrap.append(row2)
             return wrap
 
-        def _make_banner_card(self) -> Gtk.Box:
-            card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
-            card.add_css_class("m3-banner-card")
-            card.set_hexpand(True)
-
-            inner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
-            inner.set_halign(Gtk.Align.CENTER)
-            inner.set_valign(Gtk.Align.CENTER)
-            inner.set_hexpand(True)
-
-            app_icon = _app_icon_gtk4_image(64)
-            app_icon.set_valign(Gtk.Align.CENTER)
-            banner_pic = _banner_gtk4_picture(296, 102)
-            banner_pic.set_valign(Gtk.Align.CENTER)
-
-            inner.append(app_icon)
-            inner.append(banner_pic)
-            card.append(inner)
-            return card
-
         def _build_select_page(self) -> Gtk.Widget:
-            shell, col = self._centered_shell()
-            col.append(self._make_banner_card())
+            shell, col = self._full_shell()
 
-            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
-            icon_tile = Gtk.Box()
-            icon_tile.add_css_class("hero-icon-blue")
-            icon_tile.set_valign(Gtk.Align.START)
-            icon_tile.set_halign(Gtk.Align.CENTER)
-            icon_tile.append(_svg_gtk4_image(SVG_DOWNLOAD, 20, centered=True))
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            hero.set_hexpand(True)
+            icon_img = _app_icon_gtk4_image(58)
+            icon_img.set_valign(Gtk.Align.CENTER)
 
-            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
-            title = Gtk.Label(label="Instalar no seu Linux", xalign=0)
-            title.add_css_class("hero-title")
-            sub = Gtk.Label(
-                label="Já escolhemos a opção ideal para o seu computador. Quando terminar, o instalador se apaga sozinho.",
-                xalign=0,
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            hero_text.set_hexpand(True)
+            hero_text.set_valign(Gtk.Align.CENTER)
+            hero_text.append(_left_label_gtk4("CUSTÓDIA BY TUNDRALAB  •  SEUS ARQUIVOS. SEMPRE SEGUROS.", "hero-brand-sub"))
+            hero_text.append(_left_label_gtk4("Instalar no seu Linux", "hero-title"))
+            hero_text.append(
+                _left_label_gtk4(
+                    "Já deixamos marcada a melhor opção para o seu computador. Ao terminar, o instalador se apaga sozinho.",
+                    "hero-subtitle",
+                    wrap=True,
+                )
             )
-            sub.set_wrap(True)
-            sub.set_max_width_chars(56)
-            sub.add_css_class("hero-subtitle")
-            hero_text.append(title)
-            hero_text.append(sub)
-            hero.append(icon_tile)
+            hero.append(icon_img)
             hero.append(hero_text)
             col.append(hero)
 
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
             card.add_css_class("installer-card")
+            card.set_hexpand(True)
 
             top_block = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
             top_block.add_css_class("card-section")
 
             ver_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-            ver_lbl = Gtk.Label(label="Versão do Custódia", xalign=0)
-            ver_lbl.add_css_class("field-label")
+            ver_lbl = _left_label_gtk4("Versão para instalar", "field-label")
             ver_lbl.set_hexpand(True)
+            ver_lbl.set_valign(Gtk.Align.CENTER)
             self.ver_model = Gtk.StringList.new([f"v{FALLBACK_VERSION} (Mais recente)"])
             self.ver_dropdown = Gtk.DropDown(model=self.ver_model)
             self.ver_dropdown.set_selected(0)
@@ -1465,14 +1683,26 @@ def run_gtk4() -> bool:
             ver_row.append(self.ver_dropdown)
             top_block.append(ver_row)
 
-            fmt_lbl = Gtk.Label(label="Formato de instalação", xalign=0)
-            fmt_lbl.add_css_class("field-label")
-            top_block.append(fmt_lbl)
+            # Warning shown when user picks an older version instead of the latest.
+            self.old_ver_banner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            self.old_ver_banner.add_css_class("warning-banner")
+            self.old_ver_banner.set_visible(False)
+            warn_ico = _svg_gtk4_image(SVG_WARNING, 18)
+            warn_ico.set_valign(Gtk.Align.CENTER)
+            self.old_ver_lbl = _left_label_gtk4("", "warning-text", wrap=True)
+            self.old_ver_lbl.set_hexpand(True)
+            self.old_ver_banner.append(warn_ico)
+            self.old_ver_banner.append(self.old_ver_lbl)
+            top_block.append(self.old_ver_banner)
+
+            top_block.append(_left_label_gtk4("Escolha o formato para o seu sistema", "field-label"))
 
             fmt_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+            fmt_list.set_hexpand(True)
             for key, name, desc in FORMATS:
                 btn = Gtk.Button()
                 btn.add_css_class("fmt-row")
+                btn.set_hexpand(True)
                 row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
                 row.set_valign(Gtk.Align.CENTER)
 
@@ -1480,27 +1710,20 @@ def run_gtk4() -> bool:
                 dot.add_css_class("fmt-dot")
                 dot.set_valign(Gtk.Align.CENTER)
                 dot.set_halign(Gtk.Align.CENTER)
-                chk = _svg_gtk4_image(SVG_CHECK_WHITE, 11)
-                chk.set_halign(Gtk.Align.CENTER)
-                chk.set_valign(Gtk.Align.CENTER)
-                chk.set_hexpand(True)
-                chk.set_vexpand(True)
+                chk = _svg_gtk4_image(SVG_CHECK_ON_PRIMARY, 11, centered=True)
                 dot.append(chk)
 
                 text_col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
                 text_col.set_hexpand(True)
                 name_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-                t_lbl = Gtk.Label(label=name, xalign=0)
-                t_lbl.add_css_class("fmt-title")
+                t_lbl = _left_label_gtk4(name, "fmt-title")
                 name_row.append(t_lbl)
                 if key == self.recommended_fmt:
                     rec = Gtk.Label(label="Recomendado")
                     rec.add_css_class("badge-rec")
                     name_row.append(rec)
-                d_lbl = Gtk.Label(label=desc, xalign=0)
-                d_lbl.add_css_class("fmt-sub")
                 text_col.append(name_row)
-                text_col.append(d_lbl)
+                text_col.append(_left_label_gtk4(desc, "fmt-sub"))
 
                 row.append(dot)
                 row.append(text_col)
@@ -1517,8 +1740,7 @@ def run_gtk4() -> bool:
 
             action_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
             action_row.add_css_class("card-footer-row")
-            distro_lbl = Gtk.Label(label=f"Sistema: {self.distro_label}", xalign=0)
-            distro_lbl.add_css_class("distro-hint")
+            distro_lbl = _left_label_gtk4(f"Seu sistema: {self.distro_label}", "distro-hint")
             distro_lbl.set_hexpand(True)
             distro_lbl.set_ellipsize(Pango.EllipsizeMode.END)
 
@@ -1536,38 +1758,33 @@ def run_gtk4() -> bool:
             return shell
 
         def _build_install_page(self) -> Gtk.Widget:
-            shell, col = self._centered_shell()
-            col.append(self._make_banner_card())
+            shell, col = self._full_shell()
 
-            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            hero.set_hexpand(True)
             icon_tile = Gtk.Box()
             icon_tile.add_css_class("hero-icon-blue")
-            icon_tile.set_valign(Gtk.Align.START)
-            icon_tile.set_halign(Gtk.Align.CENTER)
-            icon_tile.append(_svg_gtk4_image(SVG_DOWNLOAD, 20, centered=True))
+            icon_tile.set_valign(Gtk.Align.CENTER)
+            icon_tile.append(_svg_gtk4_image(SVG_DOWNLOAD, 22, centered=True))
 
-            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
-            self.inst_title = Gtk.Label(label="Instalando o Custódia...", xalign=0)
-            self.inst_title.add_css_class("hero-title")
-            self.inst_subtitle = Gtk.Label(
-                label="Baixando o pacote oficial e preparando os atalhos no seu computador.",
-                xalign=0,
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            hero_text.set_hexpand(True)
+            hero_text.set_valign(Gtk.Align.CENTER)
+            self.inst_title = _left_label_gtk4("Instalando o Custódia...", "hero-title")
+            self.inst_subtitle = _left_label_gtk4(
+                "Estamos baixando e preparando o aplicativo no seu computador.",
+                "hero-subtitle",
+                wrap=True,
             )
-            self.inst_subtitle.set_wrap(True)
-            self.inst_subtitle.set_max_width_chars(56)
-            self.inst_subtitle.add_css_class("hero-subtitle")
             hero_text.append(self.inst_title)
             hero_text.append(self.inst_subtitle)
             hero.append(icon_tile)
             hero.append(hero_text)
             col.append(hero)
 
-            source_lbl = Gtk.Label(label="De github.com/TundraLab/Custodia", xalign=0)
-            source_lbl.add_css_class("source-mono")
-            col.append(source_lbl)
-
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
             card.add_css_class("installer-card")
+            card.set_hexpand(True)
 
             prog_block = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
             prog_block.add_css_class("card-section")
@@ -1579,11 +1796,14 @@ def run_gtk4() -> bool:
 
             stats_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
             self.stats_pct = Gtk.Label(label="0%", xalign=0)
+            self.stats_pct.set_halign(Gtk.Align.START)
             self.stats_pct.add_css_class("stats-pct")
             self.stats_bytes = Gtk.Label(label="", xalign=0)
+            self.stats_bytes.set_halign(Gtk.Align.START)
             self.stats_bytes.add_css_class("stats-mono")
             self.stats_bytes.set_hexpand(True)
             self.stats_speed = Gtk.Label(label="", xalign=1)
+            self.stats_speed.set_halign(Gtk.Align.END)
             self.stats_speed.add_css_class("stats-mono")
             stats_row.append(self.stats_pct)
             stats_row.append(self.stats_bytes)
@@ -1591,16 +1811,17 @@ def run_gtk4() -> bool:
             prog_block.append(stats_row)
             card.append(prog_block)
 
-            steps_block = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            steps_block = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             steps_block.add_css_class("card-section-tight")
             self.step_widgets = []
             for label_text in STEPS:
-                row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+                row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
                 row.add_css_class("step-row")
+                row.set_hexpand(True)
 
                 icon_stack = Gtk.Stack()
                 icon_stack.set_valign(Gtk.Align.CENTER)
-                icon_stack.set_size_request(22, 22)
+                icon_stack.set_size_request(24, 24)
 
                 pending_wrap = Gtk.Box()
                 pending_wrap.set_halign(Gtk.Align.CENTER)
@@ -1611,13 +1832,13 @@ def run_gtk4() -> bool:
 
                 spinner = Gtk.Spinner()
                 spinner.add_css_class("step-spinner")
-                spinner.set_size_request(18, 18)
+                spinner.set_size_request(20, 20)
 
                 done_wrap = Gtk.Box()
                 done_wrap.add_css_class("step-circle-done")
                 done_wrap.set_halign(Gtk.Align.CENTER)
                 done_wrap.set_valign(Gtk.Align.CENTER)
-                done_wrap.append(_svg_gtk4_image(SVG_CHECK_BLUE, 12, centered=True))
+                done_wrap.append(_svg_gtk4_image(SVG_CHECK_SUCCESS, 12, centered=True))
 
                 icon_stack.add_named(pending_wrap, "pending")
                 icon_stack.add_named(spinner, "active")
@@ -1626,10 +1847,9 @@ def run_gtk4() -> bool:
 
                 text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
                 text_box.set_hexpand(True)
-                t_lbl = Gtk.Label(label=label_text, xalign=0)
-                t_lbl.add_css_class("step-title-pending")
-                sub_lbl = Gtk.Label(label="", xalign=0)
-                sub_lbl.add_css_class("step-sub")
+                text_box.set_valign(Gtk.Align.CENTER)
+                t_lbl = _left_label_gtk4(label_text, "step-title-pending")
+                sub_lbl = _left_label_gtk4("", "step-sub")
                 sub_lbl.set_ellipsize(Pango.EllipsizeMode.END)
                 sub_lbl.set_visible(False)
                 text_box.append(t_lbl)
@@ -1647,15 +1867,13 @@ def run_gtk4() -> bool:
                 })
             card.append(steps_block)
 
-            # Error banner shown when download or install fails.
             self.error_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
             self.error_box.add_css_class("error-box")
-            self.error_box.set_margin_start(16)
-            self.error_box.set_margin_end(16)
+            self.error_box.set_margin_start(18)
+            self.error_box.set_margin_end(18)
             self.error_box.set_margin_bottom(14)
             self.error_box.set_visible(False)
-            self.error_lbl = Gtk.Label(label="", xalign=0)
-            self.error_lbl.set_wrap(True)
+            self.error_lbl = _left_label_gtk4("", "dialog-body", wrap=True)
             err_actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
             back_btn = Gtk.Button(label="Voltar")
             back_btn.add_css_class("btn-secondary")
@@ -1669,18 +1887,17 @@ def run_gtk4() -> bool:
             self.error_box.append(err_actions)
             card.append(self.error_box)
 
-            # Collapsible log viewer.
             self.log_revealer = Gtk.Revealer()
             self.log_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_DOWN)
-            self.log_revealer.set_transition_duration(180)
+            self.log_revealer.set_transition_duration(200)
             self.log_revealer.set_reveal_child(False)
             log_wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            log_wrap.set_margin_start(16)
-            log_wrap.set_margin_end(16)
+            log_wrap.set_margin_start(18)
+            log_wrap.set_margin_end(18)
             log_wrap.set_margin_bottom(14)
             log_scroll = Gtk.ScrolledWindow()
-            log_scroll.set_min_content_height(108)
-            log_scroll.set_max_content_height(145)
+            log_scroll.set_min_content_height(110)
+            log_scroll.set_max_content_height(150)
             self.log_view = Gtk.TextView()
             self.log_view.set_editable(False)
             self.log_view.set_cursor_visible(False)
@@ -1713,7 +1930,7 @@ def run_gtk4() -> bool:
             spacer = Gtk.Box()
             spacer.set_hexpand(True)
 
-            self.elapsed_lbl = Gtk.Label(label="0 s decorridos")
+            self.elapsed_lbl = Gtk.Label(label="0 s")
             self.elapsed_lbl.add_css_class("stats-mono")
 
             self.cancel_btn = Gtk.Button(label="Cancelar")
@@ -1731,27 +1948,30 @@ def run_gtk4() -> bool:
             return shell
 
         def _build_done_page(self) -> Gtk.Widget:
-            shell, col = self._centered_shell()
-            col.append(self._make_banner_card())
+            shell, col = self._full_shell()
 
-            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            hero.set_hexpand(True)
             icon_tile = Gtk.Box()
             icon_tile.add_css_class("hero-icon-green")
-            icon_tile.set_valign(Gtk.Align.START)
-            icon_tile.set_halign(Gtk.Align.CENTER)
-            icon_tile.append(_svg_gtk4_image(SVG_CHECK_GREEN, 22, centered=True))
+            icon_tile.set_valign(Gtk.Align.CENTER)
+            icon_tile.append(_svg_gtk4_image(SVG_CHECK_GREEN_LG, 24, centered=True))
 
-            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
-            title = Gtk.Label(label="Tudo pronto!", xalign=0)
-            title.add_css_class("hero-title")
-            self.done_sub = Gtk.Label(
-                label="O Custódia foi instalado e este instalador já foi removido automaticamente.",
-                xalign=0,
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            hero_text.set_hexpand(True)
+            hero_text.set_valign(Gtk.Align.CENTER)
+
+            top_badge_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            self.done_pill = Gtk.Label(label="Instalação concluída")
+            self.done_pill.add_css_class("badge-success-pill")
+            top_badge_row.append(self.done_pill)
+            hero_text.append(top_badge_row)
+            hero_text.append(_left_label_gtk4("Tudo pronto! O Custódia foi instalado", "hero-title"))
+            self.done_sub = _left_label_gtk4(
+                "Você já pode começar a sincronizar seus arquivos no Google Drive.",
+                "hero-subtitle",
+                wrap=True,
             )
-            self.done_sub.set_wrap(True)
-            self.done_sub.set_max_width_chars(56)
-            self.done_sub.add_css_class("hero-subtitle")
-            hero_text.append(title)
             hero_text.append(self.done_sub)
             hero.append(icon_tile)
             hero.append(hero_text)
@@ -1759,26 +1979,39 @@ def run_gtk4() -> bool:
 
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
             card.add_css_class("installer-card")
+            card.set_hexpand(True)
 
-            summary_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-            summary_box.add_css_class("card-section")
-            self.done_summary = Gtk.Label(label="", xalign=0)
-            self.done_summary.set_wrap(True)
-            self.done_summary.add_css_class("fmt-sub")
-            summary_box.append(self.done_summary)
-            card.append(summary_box)
+            summary_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+            summary_list.add_css_class("card-section")
+
+            self.done_item_ver = self._make_done_row("Aplicativo pronto", "Custódia instalado no sistema")
+            self.done_item_shortcut = self._make_done_row("Atalhos criados", "Disponível no menu de aplicativos do sistema")
+            self.done_item_cleanup = self._make_done_row("Limpeza concluída", "O arquivo do instalador foi removido automaticamente")
+
+            summary_list.append(self.done_item_ver["box"])
+            summary_list.append(self.done_item_shortcut["box"])
+            summary_list.append(self.done_item_cleanup["box"])
+            card.append(summary_list)
             card.append(self._make_divider())
 
             btn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
             btn_row.add_css_class("card-footer-row")
-            btn_row.set_halign(Gtk.Align.END)
+            btn_row.set_hexpand(True)
+
+            brand_end = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            brand_end.set_hexpand(True)
+            brand_end.set_valign(Gtk.Align.CENTER)
+            brand_end.append(_app_icon_gtk4_image(24))
+            brand_end.append(_left_label_gtk4("Custódia by TundraLab", "distro-hint"))
 
             close_btn = Gtk.Button(label="Fechar")
             close_btn.add_css_class("btn-secondary")
-            close_btn.connect("clicked", lambda *_: self.quit())
-            open_btn = Gtk.Button(label="Abrir Custódia")
+            close_btn.connect("clicked", lambda *_: self._request_quit())
+            open_btn = Gtk.Button(label="Abrir Custódia agora")
             open_btn.add_css_class("btn-primary")
             open_btn.connect("clicked", self._on_open_and_close)
+
+            btn_row.append(brand_end)
             btn_row.append(close_btn)
             btn_row.append(open_btn)
             card.append(btn_row)
@@ -1786,6 +2019,28 @@ def run_gtk4() -> bool:
             col.append(card)
             col.append(self._build_support_links())
             return shell
+
+        def _make_done_row(self, title: str, subtitle: str) -> dict:
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            row.add_css_class("done-item-row")
+            row.set_hexpand(True)
+
+            badge = Gtk.Box()
+            badge.add_css_class("step-circle-done")
+            badge.set_halign(Gtk.Align.CENTER)
+            badge.set_valign(Gtk.Align.CENTER)
+            badge.append(_svg_gtk4_image(SVG_CHECK_SUCCESS, 12, centered=True))
+
+            txt = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            txt.set_hexpand(True)
+            t_lbl = _left_label_gtk4(title, "done-item-title")
+            s_lbl = _left_label_gtk4(subtitle, "done-item-sub", wrap=True)
+            txt.append(t_lbl)
+            txt.append(s_lbl)
+
+            row.append(badge)
+            row.append(txt)
+            return {"box": row, "title": t_lbl, "sub": s_lbl}
 
         def _toggle_details(self, *_args) -> None:
             shown = not self.log_revealer.get_reveal_child()
@@ -1829,13 +2084,24 @@ def run_gtk4() -> bool:
             return self.releases[0]
 
         def _on_release_changed(self, *_args) -> None:
+            idx = int(self.ver_dropdown.get_selected())
             rel = self._selected_release()
             self.topbar_ver.set_label(rel["tag"])
+
+            latest_tag = self.releases[0]["tag"]
+            if idx > 0:
+                self.old_ver_lbl.set_label(
+                    f"Você escolheu uma versão anterior ({rel['tag']}). Recomendamos instalar a versão mais recente ({latest_tag}) para ter todas as novidades e correções."
+                )
+                self.old_ver_banner.set_visible(True)
+            else:
+                self.old_ver_banner.set_visible(False)
+
             assets = rel.get("assets") or {}
             for k, btn in self.fmt_buttons.items():
                 available = k in assets
                 btn.set_sensitive(available)
-                btn.set_tooltip_text("" if available else f"Formato indisponível na versão {rel['tag']}")
+                btn.set_tooltip_text("" if available else f"Não disponível na versão {rel['tag']}")
             if self.selected_fmt not in assets:
                 for k in (self.recommended_fmt, "deb", "rpm", "appimage"):
                     if k in assets:
@@ -1894,20 +2160,18 @@ def run_gtk4() -> bool:
 
         def _set_step_sub(self, idx: int, sub_text: str) -> None:
             def _ui() -> bool:
-                if 0 <= idx < len(self.step_widgets):
+                if 0 <= idx < len(self.step_widgets) and sub_text:
                     sub = self.step_widgets[idx]["sub"]
-                    if sub_text:
-                        sub.set_label(sub_text)
-                        sub.set_visible(True)
+                    sub.set_label(sub_text)
+                    sub.set_visible(True)
                 return False
 
             GLib.idle_add(_ui)
 
         def _set_progress(self, fraction: float, bytes_text: str = "", speed_text: str | None = None) -> None:
+            self.target_fraction = max(0.0, min(1.0, fraction))
+
             def _ui() -> bool:
-                clamped = max(0.0, min(1.0, fraction))
-                self.progress_bar.set_fraction(clamped)
-                self.stats_pct.set_label(f"{int(round(clamped * 100))}%")
                 if bytes_text:
                     self.stats_bytes.set_label(f"·  {bytes_text}")
                 if speed_text is not None:
@@ -1916,10 +2180,29 @@ def run_gtk4() -> bool:
 
             GLib.idle_add(_ui)
 
-        def _stop_timer(self) -> None:
+        def _tick_anim(self) -> bool:
+            if not self.installing and abs(self.target_fraction - self.display_fraction) < 0.004:
+                self.display_fraction = self.target_fraction
+                self.progress_bar.set_fraction(self.display_fraction)
+                self.stats_pct.set_label(f"{int(round(self.display_fraction * 100))}%")
+                self.anim_source_id = None
+                return False
+            diff = self.target_fraction - self.display_fraction
+            if abs(diff) < 0.003:
+                self.display_fraction = self.target_fraction
+            else:
+                self.display_fraction += diff * 0.22
+            self.progress_bar.set_fraction(self.display_fraction)
+            self.stats_pct.set_label(f"{int(round(self.display_fraction * 100))}%")
+            return True
+
+        def _stop_timers(self) -> None:
             if self.timer_source_id is not None:
                 GLib.source_remove(self.timer_source_id)
                 self.timer_source_id = None
+            if self.anim_source_id is not None:
+                GLib.source_remove(self.anim_source_id)
+                self.anim_source_id = None
 
         def _tick_elapsed(self) -> bool:
             if not self.installing:
@@ -1942,10 +2225,12 @@ def run_gtk4() -> bool:
             if not asset:
                 return
 
-            self._stop_timer()
+            self._stop_timers()
             self.cancel_event.clear()
             self.installing = True
             self.install_started_at = time.monotonic()
+            self.target_fraction = 0.0
+            self.display_fraction = 0.0
             self.all_log_lines.clear()
             self.error_box.set_visible(False)
             self.cancel_btn.set_sensitive(True)
@@ -1955,11 +2240,11 @@ def run_gtk4() -> bool:
             self.stats_speed.set_label("")
             self.progress_bar.set_fraction(0.0)
             self.elapsed_lbl.set_label("0 s decorridos")
-            fmt_disp = ".AppImage" if fmt == "appimage" else f".{fmt}"
-            self.step_widgets[1]["title"].set_label(f"Baixando Custódia {rel['tag']} ({fmt_disp})")
+            self.step_widgets[1]["title"].set_label(f"Baixando o Custódia {rel['tag']}")
 
             self.stack.set_visible_child_name("install")
             self.timer_source_id = GLib.timeout_add(1000, self._tick_elapsed)
+            self.anim_source_id = GLib.timeout_add(33, self._tick_anim)
 
             threading.Thread(
                 target=self._install_worker,
@@ -1971,17 +2256,17 @@ def run_gtk4() -> bool:
             tmp_dir = Path(tempfile.mkdtemp(prefix="custodia-install-"))
             os.chmod(tmp_dir, 0o755)
             try:
-                self._set_step(0, self.distro_label)
-                self._set_progress(0.04)
+                self._set_step(0, f"Verificando compatibilidade em {self.distro_label}")
+                self._set_progress(0.04, speed_text="Preparando...")
                 self._append_log(f"Sistema detectado: {self.distro_label}")
                 stop_running_custodia()
 
                 pkg_path = tmp_dir / asset["name"]
-                self._set_step(1, asset["name"])
+                self._set_step(1, f"Versão {rel['tag']}")
                 self._append_log(f"Baixando {asset['url']}")
 
                 def on_dl(done: int, total: int, speed: float, eta: float) -> None:
-                    frac = 0.08 + 0.64 * (done / total) if total > 0 else 0.35
+                    frac = 0.08 + 0.62 * (done / total) if total > 0 else 0.35
                     b_txt = f"{format_bytes(done)} / {format_bytes(total)}" if total > 0 else format_bytes(done)
                     spd = f"{speed / (1024 * 1024):.1f} MB/s".replace(".", ",")
                     eta_s = format_eta(eta)
@@ -1991,23 +2276,23 @@ def run_gtk4() -> bool:
                 download_file(asset["url"], pkg_path, on_dl, self.cancel_event, int(asset.get("size") or 0))
                 os.chmod(pkg_path, 0o644)
 
-                self._set_step(2, "Conferindo SHA256SUMS.txt")
-                self._set_progress(0.76, speed_text="Validando...")
+                self._set_step(2, "Confirmando autenticidade do download")
+                self._set_progress(0.75, speed_text="Verificando...")
                 sums_asset = (rel.get("assets") or {}).get("sums")
                 verify_sha256(pkg_path, sums_asset["url"] if sums_asset else None, asset["name"], self._append_log)
 
-                self._set_step(3, "Aplicando pacote no sistema")
-                self._set_progress(0.86, speed_text="Instalando...")
+                self._set_step(3, "Aplicando pacote no computador...")
+                self._set_progress(0.84, speed_text="Instalando...")
                 on_sub = lambda text: self._set_step_sub(3, text)
                 if fmt == "deb":
-                    install_deb(pkg_path, self._append_log, on_sub)
+                    self.priv_session.run_package_install("install_deb", pkg_path, self._append_log, on_sub)
                 elif fmt == "rpm":
-                    install_rpm(pkg_path, self._append_log, on_sub)
+                    self.priv_session.run_package_install("install_rpm", pkg_path, self._append_log, on_sub)
                 else:
                     install_appimage(pkg_path, self._append_log, on_sub)
 
-                self._set_step(4, "Removendo arquivo do instalador")
-                self._set_progress(0.96, speed_text="Finalizando...")
+                self._set_step(4, "Removendo arquivos temporários")
+                self._set_progress(0.97, speed_text="Finalizando...")
                 deleted = self_delete_installer(self._append_log)
 
                 self._set_step(5)
@@ -2022,18 +2307,19 @@ def run_gtk4() -> bool:
                 shutil.rmtree(tmp_dir, ignore_errors=True)
 
         def _show_done(self, tag: str, fmt: str, deleted: bool) -> bool:
-            self._stop_timer()
-            fmt_name = ".AppImage" if fmt == "appimage" else f".{fmt}"
+            self.done_pill.set_label(f"Custódia {tag} pronto para usar")
+            self.done_item_ver["sub"].set_label(f"Versão {tag} configurada no {self.distro_label}")
             if deleted:
-                self.done_sub.set_label("Tudo pronto para usar. O arquivo do instalador foi removido automaticamente.")
+                self.done_item_cleanup["title"].set_label("Instalador removido automaticamente")
+                self.done_item_cleanup["sub"].set_label("O arquivo usado na instalação já foi apagado da sua pasta")
             else:
-                self.done_sub.set_label("Tudo pronto. O Custódia já está disponível no menu de aplicativos.")
-            self.done_summary.set_label(f"Versão instalada: Custódia {tag} ({fmt_name}) no {self.distro_label}.")
+                self.done_item_cleanup["title"].set_label("Instalação finalizada")
+                self.done_item_cleanup["sub"].set_label("Tudo configurado e pronto para abrir")
             self.stack.set_visible_child_name("done")
             return False
 
         def _show_error(self, message: str) -> bool:
-            self._stop_timer()
+            self._stop_timers()
             self.error_lbl.set_label(message)
             self.error_box.set_visible(True)
             self.cancel_btn.set_sensitive(True)
@@ -2043,6 +2329,7 @@ def run_gtk4() -> bool:
 
         def _on_open_and_close(self, *_args) -> None:
             launch_custodia()
+            self.priv_session.close()
             self.quit()
 
     app = CustodiaInstallerApp()
@@ -2073,24 +2360,15 @@ def _app_icon_gtk3_image(size: int):
     return _svg_gtk3_image(SVG_BRAND_FALLBACK, size)
 
 
-def _banner_gtk3_image(max_width: int, max_height: int):
-    from gi.repository import GdkPixbuf, Gtk  # type: ignore
+def _left_label_gtk3(text: str, css_class: str, wrap: bool = False):
+    from gi.repository import Gtk  # type: ignore
 
-    banner_path = _resolve_banner_path()
-    if banner_path is not None:
-        try:
-            pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(banner_path), max_width, max_height, True)
-            return Gtk.Image.new_from_pixbuf(pb)
-        except Exception:
-            pass
-    fallback = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-    t = Gtk.Label(label="Custódia by TundraLab", xalign=0)
-    t.get_style_context().add_class("banner-fallback-title")
-    s = Gtk.Label(label="Seus arquivos. Sempre seguros.", xalign=0)
-    s.get_style_context().add_class("banner-fallback-sub")
-    fallback.pack_start(t, False, False, 0)
-    fallback.pack_start(s, False, False, 0)
-    return fallback
+    lbl = Gtk.Label(label=text, xalign=0)
+    lbl.set_halign(Gtk.Align.START)
+    if wrap:
+        lbl.set_line_wrap(True)
+    lbl.get_style_context().add_class(css_class)
+    return lbl
 
 
 def run_gtk3() -> bool:
@@ -2107,10 +2385,7 @@ def run_gtk3() -> bool:
         def __init__(self) -> None:
             settings = Gtk.Settings.get_default()
             if settings is not None:
-                if hasattr(Gtk, "InterfaceColorScheme") and settings.find_property("gtk-interface-color-scheme"):
-                    settings.set_property("gtk-interface-color-scheme", Gtk.InterfaceColorScheme.DARK)
-                else:
-                    settings.set_property("gtk-application-prefer-dark-theme", True)
+                settings.set_property("gtk-application-prefer-dark-theme", True)
 
             provider = Gtk.CssProvider()
             provider.load_from_data((SHARED_CSS + GTK3_EXTRA_CSS).encode("utf-8"))
@@ -2127,8 +2402,12 @@ def run_gtk3() -> bool:
             self.cancel_event = threading.Event()
             self.install_started_at = 0.0
             self.timer_source_id: int | None = None
+            self.anim_source_id: int | None = None
             self.installing = False
             self.all_log_lines: list[str] = []
+            self.target_fraction = 0.0
+            self.display_fraction = 0.0
+            self.priv_session = PrivilegedSession()
 
             self.fmt_buttons: dict[str, Gtk.Button] = {}
             self.fmt_dots: dict[str, Gtk.Box] = {}
@@ -2137,7 +2416,7 @@ def run_gtk3() -> bool:
             self.save_log_buttons: list[Gtk.Button] = []
 
             self.win = Gtk.Window(title="Custódia")
-            self.win.set_default_size(840, 710)
+            self.win.set_default_size(940, 680)
             icon_path = _resolve_app_icon_path()
             if icon_path is not None:
                 try:
@@ -2158,9 +2437,9 @@ def run_gtk3() -> bool:
             brand_lbl.get_style_context().add_class("topbar-brand")
             self.topbar_ver = Gtk.Label(label=f"v{FALLBACK_VERSION}")
             self.topbar_ver.get_style_context().add_class("topbar-version")
-            whats_new = Gtk.Button(label="Novidades")
+            whats_new = Gtk.Button(label="O que há de novo")
             whats_new.get_style_context().add_class("topbar-link")
-            whats_new.connect("clicked", lambda *_: webbrowser.open(RELEASES_URL))
+            whats_new.connect("clicked", self._show_whats_new_dialog)
             brand_box.pack_start(brand_lbl, False, False, 0)
             brand_box.pack_start(self.topbar_ver, False, False, 0)
             brand_box.pack_start(whats_new, False, False, 0)
@@ -2173,15 +2452,16 @@ def run_gtk3() -> bool:
             bell_pop = Gtk.Popover.new(bell_btn)
             bell_pop.get_style_context().add_class("info-popover")
             pop_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-            t_pop = Gtk.Label(label="Instalador oficial Custódia", xalign=0)
-            t_pop.get_style_context().add_class("field-label")
-            b_pop = Gtk.Label(
-                label=f"Sistema: {self.distro_label}\nFormato indicado: .{self.recommended_fmt}\nVerificação SHA-256 ativa",
-                xalign=0,
+            pop_box.pack_start(_left_label_gtk3("Instalador oficial Custódia", "field-label"), False, False, 0)
+            pop_box.pack_start(
+                _left_label_gtk3(
+                    f"Sistema: {self.distro_label}\nPacote indicado: .{self.recommended_fmt}\nVerificação automática de integridade",
+                    "fmt-sub",
+                ),
+                False,
+                False,
+                0,
             )
-            b_pop.get_style_context().add_class("fmt-sub")
-            pop_box.pack_start(t_pop, False, False, 0)
-            pop_box.pack_start(b_pop, False, False, 0)
             pop_box.show_all()
             bell_pop.add(pop_box)
             bell_btn.set_popover(bell_pop)
@@ -2197,15 +2477,21 @@ def run_gtk3() -> bool:
             self.win.set_titlebar(header)
 
             self.stack = Gtk.Stack()
-            self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-            self.stack.set_transition_duration(180)
+            self.stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+            self.stack.set_transition_duration(240)
             self.stack.add_named(self._build_select_page(), "select")
             self.stack.add_named(self._build_install_page(), "install")
             self.stack.add_named(self._build_done_page(), "done")
             self.stack.set_visible_child_name("select")
 
-            self.win.add(self.stack)
+            overlay = Gtk.Overlay()
+            overlay.get_style_context().add_class("hero-bg")
+            overlay.add(_svg_gtk3_image(SVG_HERO_BACKDROP, 940))
+            overlay.add_overlay(self.stack)
+
+            self.win.add(overlay)
             self.win.show_all()
+            self.old_ver_banner.set_visible(False)
             for k, chk in self.fmt_checks.items():
                 chk.set_visible(k == self.selected_fmt)
             self.error_box.set_visible(False)
@@ -2213,11 +2499,18 @@ def run_gtk3() -> bool:
                 w["sub"].set_visible(False)
 
             threading.Thread(target=self._load_releases_bg, daemon=True).start()
+            if not os.environ.get("CUSTODIA_NO_EARLY_AUTH"):
+                GLib.timeout_add(220, self._trigger_upfront_auth)
+
+        def _trigger_upfront_auth(self) -> bool:
+            threading.Thread(target=self.priv_session.start_upfront, daemon=True).start()
+            return False
 
         def _on_delete(self, *_args) -> bool:
             if self.installing:
                 self._confirm_cancel(quit_after=True)
                 return True
+            self.priv_session.close()
             Gtk.main_quit()
             return False
 
@@ -2225,7 +2518,51 @@ def run_gtk3() -> bool:
             if self.installing:
                 self._confirm_cancel(quit_after=True)
             else:
+                self.priv_session.close()
                 Gtk.main_quit()
+
+        def _show_whats_new_dialog(self, *_args) -> None:
+            rel = self._selected_release()
+            dlg = Gtk.Window(transient_for=self.win, modal=True, title=f"Novidades — {rel['tag']}")
+            dlg.set_default_size(580, 470)
+            dlg.get_style_context().add_class("installer-root")
+
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+            box.get_style_context().add_class("dialog-card")
+
+            hdr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            hdr.pack_start(_app_icon_gtk3_image(36), False, False, 0)
+            hdr_txt = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            hdr_txt.pack_start(_left_label_gtk3(rel.get("title") or f"Custódia {rel['tag']}", "dialog-title"), False, False, 0)
+            date_txt = f"Publicado em {rel['published_at']}" if rel.get("published_at") else "Lançamento oficial no GitHub"
+            hdr_txt.pack_start(_left_label_gtk3(date_txt, "distro-hint"), False, False, 0)
+            hdr.pack_start(hdr_txt, True, True, 0)
+            box.pack_start(hdr, False, False, 0)
+
+            scroll = Gtk.ScrolledWindow()
+            scroll.set_min_content_height(260)
+            tv = Gtk.TextView()
+            tv.set_editable(False)
+            tv.set_cursor_visible(False)
+            tv.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+            tv.get_style_context().add_class("notes-view")
+            tv.get_buffer().set_text(format_release_notes_plain(rel.get("body", "")))
+            scroll.add(tv)
+            box.pack_start(scroll, True, True, 0)
+
+            btn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            gh_btn = Gtk.Button(label="Abrir no GitHub")
+            gh_btn.get_style_context().add_class("btn-ghost")
+            gh_btn.connect("clicked", lambda *_: webbrowser.open(rel.get("url") or RELEASES_URL))
+            close_btn = Gtk.Button(label="Fechar")
+            close_btn.get_style_context().add_class("btn-primary")
+            close_btn.connect("clicked", lambda *_: dlg.destroy())
+            btn_row.pack_start(gh_btn, False, False, 0)
+            btn_row.pack_end(close_btn, False, False, 0)
+            box.pack_start(btn_row, False, False, 0)
+
+            dlg.add(box)
+            dlg.show_all()
 
         def _confirm_cancel(self, quit_after: bool = False) -> None:
             dlg = Gtk.MessageDialog(
@@ -2233,9 +2570,9 @@ def run_gtk3() -> bool:
                 modal=True,
                 message_type=Gtk.MessageType.QUESTION,
                 buttons=Gtk.ButtonsType.NONE,
-                text="Cancelar instalação em andamento?",
+                text="Cancelar a instalação agora?",
             )
-            dlg.format_secondary_text("O processo atual será interrompido e os arquivos temporários serão removidos.")
+            dlg.format_secondary_text("O processo atual será interrompido e nada parcial ficará salvo.")
             dlg.add_button("Continuar", Gtk.ResponseType.CANCEL)
             dlg.add_button("Cancelar instalação", Gtk.ResponseType.OK)
             resp = dlg.run()
@@ -2245,22 +2582,19 @@ def run_gtk3() -> bool:
                 self.cancel_btn.set_sensitive(False)
                 if quit_after:
                     self.installing = False
+                    self.priv_session.close()
                     Gtk.main_quit()
 
-        def _centered_shell(self):
+        def _full_shell(self):
             scroll = Gtk.ScrolledWindow()
             scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-            outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            outer.set_halign(Gtk.Align.CENTER)
-            outer.set_valign(Gtk.Align.CENTER)
-            outer.set_margin_top(24)
-            outer.set_margin_bottom(24)
-            outer.set_margin_start(28)
-            outer.set_margin_end(28)
-            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
-            col.set_size_request(580, -1)
-            outer.pack_start(col, False, False, 0)
-            scroll.add(outer)
+            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+            col.set_valign(Gtk.Align.CENTER)
+            col.set_margin_top(24)
+            col.set_margin_bottom(22)
+            col.set_margin_start(38)
+            col.set_margin_end(38)
+            scroll.add(col)
             return scroll, col
 
         def _make_divider(self, css_class: str = "h-divider") -> Gtk.Box:
@@ -2287,7 +2621,7 @@ def run_gtk3() -> bool:
         def _build_support_links(self) -> Gtk.Box:
             wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
             wrap.pack_start(self._make_divider("support-divider"), False, False, 0)
-            row1 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            row1 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
             save_btn = Gtk.Button(label="Baixar registro da instalação")
             save_btn.get_style_context().add_class("footer-link")
             save_btn.connect("clicked", self._on_save_log_clicked)
@@ -2297,50 +2631,32 @@ def run_gtk3() -> bool:
                 ("Guia de instalação", GUIDE_URL),
                 ("Solução de problemas", TROUBLESHOOTING_URL),
                 ("Relatar um problema", ISSUES_URL),
+                ("Comunidade", DISCUSSIONS_URL),
             ):
                 btn = Gtk.Button(label=label)
                 btn.get_style_context().add_class("footer-link")
                 btn.connect("clicked", lambda _b, u=url: webbrowser.open(u))
                 row1.pack_start(btn, False, False, 0)
-            row2 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
-            comm_btn = Gtk.Button(label="Obter ajuda na comunidade")
-            comm_btn.get_style_context().add_class("footer-link")
-            comm_btn.connect("clicked", lambda *_: webbrowser.open(DISCUSSIONS_URL))
-            row2.pack_start(comm_btn, False, False, 0)
             wrap.pack_start(row1, False, False, 0)
-            wrap.pack_start(row2, False, False, 0)
             return wrap
 
-        def _make_banner_card(self) -> Gtk.Box:
-            card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
-            card.get_style_context().add_class("m3-banner-card")
-            inner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
-            inner.set_halign(Gtk.Align.CENTER)
-            inner.set_valign(Gtk.Align.CENTER)
-            inner.pack_start(_app_icon_gtk3_image(64), False, False, 0)
-            inner.pack_start(_banner_gtk3_image(296, 102), False, False, 0)
-            card.pack_start(inner, True, True, 0)
-            return card
-
         def _build_select_page(self):
-            shell, col = self._centered_shell()
-            col.pack_start(self._make_banner_card(), False, False, 0)
-            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
-            icon_tile = Gtk.Box()
-            icon_tile.get_style_context().add_class("hero-icon-blue")
-            icon_tile.pack_start(_svg_gtk3_image(SVG_DOWNLOAD, 20), True, True, 0)
-            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
-            title = Gtk.Label(label="Instalar no seu Linux", xalign=0)
-            title.get_style_context().add_class("hero-title")
-            sub = Gtk.Label(
-                label="Já escolhemos a opção ideal para o seu computador. Quando terminar, o instalador se apaga sozinho.",
-                xalign=0,
+            shell, col = self._full_shell()
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            hero.pack_start(_app_icon_gtk3_image(58), False, False, 0)
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            hero_text.pack_start(_left_label_gtk3("CUSTÓDIA BY TUNDRALAB  •  SEUS ARQUIVOS. SEMPRE SEGUROS.", "hero-brand-sub"), False, False, 0)
+            hero_text.pack_start(_left_label_gtk3("Instalar no seu Linux", "hero-title"), False, False, 0)
+            hero_text.pack_start(
+                _left_label_gtk3(
+                    "Já deixamos marcada a melhor opção para o seu computador. Ao terminar, o instalador se apaga sozinho.",
+                    "hero-subtitle",
+                    wrap=True,
+                ),
+                False,
+                False,
+                0,
             )
-            sub.set_line_wrap(True)
-            sub.get_style_context().add_class("hero-subtitle")
-            hero_text.pack_start(title, False, False, 0)
-            hero_text.pack_start(sub, False, False, 0)
-            hero.pack_start(icon_tile, False, False, 0)
             hero.pack_start(hero_text, True, True, 0)
             col.pack_start(hero, False, False, 0)
 
@@ -2350,8 +2666,7 @@ def run_gtk3() -> bool:
             top_block.get_style_context().add_class("card-section")
 
             ver_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-            ver_lbl = Gtk.Label(label="Versão do Custódia", xalign=0)
-            ver_lbl.get_style_context().add_class("field-label")
+            ver_lbl = _left_label_gtk3("Versão para instalar", "field-label")
             self.ver_combo = Gtk.ComboBoxText()
             self.ver_combo.append_text(f"v{FALLBACK_VERSION} (Mais recente)")
             self.ver_combo.set_active(0)
@@ -2360,9 +2675,14 @@ def run_gtk3() -> bool:
             ver_row.pack_start(self.ver_combo, False, False, 0)
             top_block.pack_start(ver_row, False, False, 0)
 
-            fmt_lbl = Gtk.Label(label="Formato de instalação", xalign=0)
-            fmt_lbl.get_style_context().add_class("field-label")
-            top_block.pack_start(fmt_lbl, False, False, 0)
+            self.old_ver_banner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            self.old_ver_banner.get_style_context().add_class("warning-banner")
+            self.old_ver_lbl = _left_label_gtk3("", "warning-text", wrap=True)
+            self.old_ver_banner.pack_start(_svg_gtk3_image(SVG_WARNING, 18), False, False, 0)
+            self.old_ver_banner.pack_start(self.old_ver_lbl, True, True, 0)
+            top_block.pack_start(self.old_ver_banner, False, False, 0)
+
+            top_block.pack_start(_left_label_gtk3("Escolha o formato para o seu sistema", "field-label"), False, False, 0)
 
             fmt_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
             for key, name, desc in FORMATS:
@@ -2371,21 +2691,17 @@ def run_gtk3() -> bool:
                 row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
                 dot = Gtk.Box()
                 dot.get_style_context().add_class("fmt-dot")
-                chk = _svg_gtk3_image(SVG_CHECK_WHITE, 11)
+                chk = _svg_gtk3_image(SVG_CHECK_ON_PRIMARY, 11)
                 dot.pack_start(chk, True, True, 0)
                 text_col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
                 name_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-                t_lbl = Gtk.Label(label=name, xalign=0)
-                t_lbl.get_style_context().add_class("fmt-title")
-                name_row.pack_start(t_lbl, False, False, 0)
+                name_row.pack_start(_left_label_gtk3(name, "fmt-title"), False, False, 0)
                 if key == self.recommended_fmt:
                     rec = Gtk.Label(label="Recomendado")
                     rec.get_style_context().add_class("badge-rec")
                     name_row.pack_start(rec, False, False, 0)
-                d_lbl = Gtk.Label(label=desc, xalign=0)
-                d_lbl.get_style_context().add_class("fmt-sub")
                 text_col.pack_start(name_row, False, False, 0)
-                text_col.pack_start(d_lbl, False, False, 0)
+                text_col.pack_start(_left_label_gtk3(desc, "fmt-sub"), False, False, 0)
                 row.pack_start(dot, False, False, 0)
                 row.pack_start(text_col, True, True, 0)
                 btn.add(row)
@@ -2401,8 +2717,7 @@ def run_gtk3() -> bool:
 
             action_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
             action_row.get_style_context().add_class("card-footer-row")
-            distro_lbl = Gtk.Label(label=f"Sistema: {self.distro_label}", xalign=0)
-            distro_lbl.get_style_context().add_class("distro-hint")
+            distro_lbl = _left_label_gtk3(f"Seu sistema: {self.distro_label}", "distro-hint")
             distro_lbl.set_ellipsize(Pango.EllipsizeMode.END)
             self.install_btn = Gtk.Button(label="Instalar agora")
             self.install_btn.get_style_context().add_class("btn-primary")
@@ -2417,30 +2732,22 @@ def run_gtk3() -> bool:
             return shell
 
         def _build_install_page(self):
-            shell, col = self._centered_shell()
-            col.pack_start(self._make_banner_card(), False, False, 0)
-            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            shell, col = self._full_shell()
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
             icon_tile = Gtk.Box()
             icon_tile.get_style_context().add_class("hero-icon-blue")
-            icon_tile.pack_start(_svg_gtk3_image(SVG_DOWNLOAD, 20), True, True, 0)
-            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
-            title = Gtk.Label(label="Instalando o Custódia...", xalign=0)
-            title.get_style_context().add_class("hero-title")
-            sub = Gtk.Label(
-                label="Baixando o pacote oficial e preparando os atalhos no seu computador.",
-                xalign=0,
+            icon_tile.pack_start(_svg_gtk3_image(SVG_DOWNLOAD, 22), True, True, 0)
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            hero_text.pack_start(_left_label_gtk3("Instalando o Custódia...", "hero-title"), False, False, 0)
+            hero_text.pack_start(
+                _left_label_gtk3("Estamos baixando e preparando o aplicativo no seu computador.", "hero-subtitle", wrap=True),
+                False,
+                False,
+                0,
             )
-            sub.set_line_wrap(True)
-            sub.get_style_context().add_class("hero-subtitle")
-            hero_text.pack_start(title, False, False, 0)
-            hero_text.pack_start(sub, False, False, 0)
             hero.pack_start(icon_tile, False, False, 0)
             hero.pack_start(hero_text, True, True, 0)
             col.pack_start(hero, False, False, 0)
-
-            source_lbl = Gtk.Label(label="De github.com/TundraLab/Custodia", xalign=0)
-            source_lbl.get_style_context().add_class("source-mono")
-            col.pack_start(source_lbl, False, False, 0)
 
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
             card.get_style_context().add_class("installer-card")
@@ -2452,11 +2759,10 @@ def run_gtk3() -> bool:
             prog_block.pack_start(self.progress_bar, False, False, 0)
 
             stats_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-            self.stats_pct = Gtk.Label(label="0%", xalign=0)
-            self.stats_pct.get_style_context().add_class("stats-pct")
-            self.stats_bytes = Gtk.Label(label="", xalign=0)
-            self.stats_bytes.get_style_context().add_class("stats-mono")
+            self.stats_pct = _left_label_gtk3("0%", "stats-pct")
+            self.stats_bytes = _left_label_gtk3("", "stats-mono")
             self.stats_speed = Gtk.Label(label="", xalign=1)
+            self.stats_speed.set_halign(Gtk.Align.END)
             self.stats_speed.get_style_context().add_class("stats-mono")
             stats_row.pack_start(self.stats_pct, False, False, 0)
             stats_row.pack_start(self.stats_bytes, True, True, 0)
@@ -2464,14 +2770,14 @@ def run_gtk3() -> bool:
             prog_block.pack_start(stats_row, False, False, 0)
             card.pack_start(prog_block, False, False, 0)
 
-            steps_block = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            steps_block = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             steps_block.get_style_context().add_class("card-section-tight")
             self.step_widgets = []
             for label_text in STEPS:
-                row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+                row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
                 row.get_style_context().add_class("step-row")
                 icon_stack = Gtk.Stack()
-                icon_stack.set_size_request(22, 22)
+                icon_stack.set_size_request(24, 24)
                 pending_wrap = Gtk.Box()
                 pending_wrap.set_halign(Gtk.Align.CENTER)
                 pending_wrap.set_valign(Gtk.Align.CENTER)
@@ -2482,17 +2788,15 @@ def run_gtk3() -> bool:
                 spinner.get_style_context().add_class("step-spinner")
                 done_wrap = Gtk.Box()
                 done_wrap.get_style_context().add_class("step-circle-done")
-                done_wrap.add(_svg_gtk3_image(SVG_CHECK_BLUE, 12))
+                done_wrap.add(_svg_gtk3_image(SVG_CHECK_SUCCESS, 12))
                 icon_stack.add_named(pending_wrap, "pending")
                 icon_stack.add_named(spinner, "active")
                 icon_stack.add_named(done_wrap, "done")
                 icon_stack.set_visible_child_name("pending")
 
                 text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-                t_lbl = Gtk.Label(label=label_text, xalign=0)
-                t_lbl.get_style_context().add_class("step-title-pending")
-                sub_lbl = Gtk.Label(label="", xalign=0)
-                sub_lbl.get_style_context().add_class("step-sub")
+                t_lbl = _left_label_gtk3(label_text, "step-title-pending")
+                sub_lbl = _left_label_gtk3("", "step-sub")
                 text_box.pack_start(t_lbl, False, False, 0)
                 text_box.pack_start(sub_lbl, False, False, 0)
 
@@ -2510,11 +2814,10 @@ def run_gtk3() -> bool:
 
             self.error_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
             self.error_box.get_style_context().add_class("error-box")
-            self.error_box.set_margin_start(16)
-            self.error_box.set_margin_end(16)
+            self.error_box.set_margin_start(18)
+            self.error_box.set_margin_end(18)
             self.error_box.set_margin_bottom(14)
-            self.error_lbl = Gtk.Label(label="", xalign=0)
-            self.error_lbl.set_line_wrap(True)
+            self.error_lbl = _left_label_gtk3("", "dialog-body", wrap=True)
             err_actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
             back_btn = Gtk.Button(label="Voltar")
             back_btn.get_style_context().add_class("btn-secondary")
@@ -2532,11 +2835,11 @@ def run_gtk3() -> bool:
             self.log_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_DOWN)
             self.log_revealer.set_reveal_child(False)
             log_wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            log_wrap.set_margin_start(16)
-            log_wrap.set_margin_end(16)
+            log_wrap.set_margin_start(18)
+            log_wrap.set_margin_end(18)
             log_wrap.set_margin_bottom(14)
             log_scroll = Gtk.ScrolledWindow()
-            log_scroll.set_min_content_height(108)
+            log_scroll.set_min_content_height(110)
             self.log_view = Gtk.TextView()
             self.log_view.set_editable(False)
             self.log_view.set_cursor_visible(False)
@@ -2579,23 +2882,38 @@ def run_gtk3() -> bool:
             col.pack_start(self._build_support_links(), False, False, 0)
             return shell
 
+        def _make_done_row(self, title: str, subtitle: str) -> dict:
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            row.get_style_context().add_class("done-item-row")
+            badge = Gtk.Box()
+            badge.get_style_context().add_class("step-circle-done")
+            badge.pack_start(_svg_gtk3_image(SVG_CHECK_SUCCESS, 12), True, True, 0)
+            txt = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            t_lbl = _left_label_gtk3(title, "done-item-title")
+            s_lbl = _left_label_gtk3(subtitle, "done-item-sub", wrap=True)
+            txt.pack_start(t_lbl, False, False, 0)
+            txt.pack_start(s_lbl, False, False, 0)
+            row.pack_start(badge, False, False, 0)
+            row.pack_start(txt, True, True, 0)
+            return {"box": row, "title": t_lbl, "sub": s_lbl}
+
         def _build_done_page(self):
-            shell, col = self._centered_shell()
-            col.pack_start(self._make_banner_card(), False, False, 0)
-            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            shell, col = self._full_shell()
+            hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
             icon_tile = Gtk.Box()
             icon_tile.get_style_context().add_class("hero-icon-green")
-            icon_tile.pack_start(_svg_gtk3_image(SVG_CHECK_GREEN, 22), True, True, 0)
-            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
-            title = Gtk.Label(label="Tudo pronto!", xalign=0)
-            title.get_style_context().add_class("hero-title")
-            self.done_sub = Gtk.Label(
-                label="O Custódia foi instalado e este instalador já foi removido automaticamente.",
-                xalign=0,
+            icon_tile.pack_start(_svg_gtk3_image(SVG_CHECK_GREEN_LG, 24), True, True, 0)
+            hero_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            self.done_pill = Gtk.Label(label="Instalação concluída")
+            self.done_pill.set_halign(Gtk.Align.START)
+            self.done_pill.get_style_context().add_class("badge-success-pill")
+            hero_text.pack_start(self.done_pill, False, False, 0)
+            hero_text.pack_start(_left_label_gtk3("Tudo pronto! O Custódia foi instalado", "hero-title"), False, False, 0)
+            self.done_sub = _left_label_gtk3(
+                "Você já pode começar a sincronizar seus arquivos no Google Drive.",
+                "hero-subtitle",
+                wrap=True,
             )
-            self.done_sub.set_line_wrap(True)
-            self.done_sub.get_style_context().add_class("hero-subtitle")
-            hero_text.pack_start(title, False, False, 0)
             hero_text.pack_start(self.done_sub, False, False, 0)
             hero.pack_start(icon_tile, False, False, 0)
             hero.pack_start(hero_text, True, True, 0)
@@ -2603,23 +2921,27 @@ def run_gtk3() -> bool:
 
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
             card.get_style_context().add_class("installer-card")
-            sbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            sbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
             sbox.get_style_context().add_class("card-section")
-            self.done_summary = Gtk.Label(label="", xalign=0)
-            self.done_summary.set_line_wrap(True)
-            self.done_summary.get_style_context().add_class("fmt-sub")
-            sbox.pack_start(self.done_summary, False, False, 0)
+            self.done_item_ver = self._make_done_row("Aplicativo pronto", "Custódia instalado no sistema")
+            self.done_item_shortcut = self._make_done_row("Atalhos criados", "Disponível no menu de aplicativos do sistema")
+            self.done_item_cleanup = self._make_done_row("Limpeza concluída", "O arquivo do instalador foi removido automaticamente")
+            sbox.pack_start(self.done_item_ver["box"], False, False, 0)
+            sbox.pack_start(self.done_item_shortcut["box"], False, False, 0)
+            sbox.pack_start(self.done_item_cleanup["box"], False, False, 0)
             card.pack_start(sbox, False, False, 0)
             card.pack_start(self._make_divider(), False, False, 0)
 
             btn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
             btn_row.get_style_context().add_class("card-footer-row")
-            open_btn = Gtk.Button(label="Abrir Custódia")
+            btn_row.pack_start(_app_icon_gtk3_image(24), False, False, 0)
+            btn_row.pack_start(_left_label_gtk3("Custódia by TundraLab", "distro-hint"), True, True, 0)
+            open_btn = Gtk.Button(label="Abrir Custódia agora")
             open_btn.get_style_context().add_class("btn-primary")
             open_btn.connect("clicked", self._on_open_and_close)
             close_btn = Gtk.Button(label="Fechar")
             close_btn.get_style_context().add_class("btn-secondary")
-            close_btn.connect("clicked", lambda *_: Gtk.main_quit())
+            close_btn.connect("clicked", lambda *_: self._request_quit())
             btn_row.pack_end(open_btn, False, False, 0)
             btn_row.pack_end(close_btn, False, False, 0)
             card.pack_start(btn_row, False, False, 0)
@@ -2669,13 +2991,24 @@ def run_gtk3() -> bool:
             return self.releases[0]
 
         def _on_release_changed(self, *_args) -> None:
+            idx = int(self.ver_combo.get_active())
             rel = self._selected_release()
             self.topbar_ver.set_text(rel["tag"])
+
+            latest_tag = self.releases[0]["tag"]
+            if idx > 0:
+                self.old_ver_lbl.set_text(
+                    f"Você escolheu uma versão anterior ({rel['tag']}). Recomendamos instalar a versão mais recente ({latest_tag}) para ter todas as novidades e correções."
+                )
+                self.old_ver_banner.set_visible(True)
+            else:
+                self.old_ver_banner.set_visible(False)
+
             assets = rel.get("assets") or {}
             for k, btn in self.fmt_buttons.items():
                 available = k in assets
                 btn.set_sensitive(available)
-                btn.set_tooltip_text("" if available else f"Formato indisponível na versão {rel['tag']}")
+                btn.set_tooltip_text("" if available else f"Não disponível na versão {rel['tag']}")
             if self.selected_fmt not in assets:
                 for k in (self.recommended_fmt, "deb", "rpm", "appimage"):
                     if k in assets:
@@ -2743,10 +3076,9 @@ def run_gtk3() -> bool:
             GLib.idle_add(_ui)
 
         def _set_progress(self, fraction: float, bytes_text: str = "", speed_text: str | None = None) -> None:
+            self.target_fraction = max(0.0, min(1.0, fraction))
+
             def _ui() -> bool:
-                clamped = max(0.0, min(1.0, fraction))
-                self.progress_bar.set_fraction(clamped)
-                self.stats_pct.set_text(f"{int(round(clamped * 100))}%")
                 if bytes_text:
                     self.stats_bytes.set_text(f"·  {bytes_text}")
                 if speed_text is not None:
@@ -2755,10 +3087,29 @@ def run_gtk3() -> bool:
 
             GLib.idle_add(_ui)
 
-        def _stop_timer(self) -> None:
+        def _tick_anim(self) -> bool:
+            if not self.installing and abs(self.target_fraction - self.display_fraction) < 0.004:
+                self.display_fraction = self.target_fraction
+                self.progress_bar.set_fraction(self.display_fraction)
+                self.stats_pct.set_text(f"{int(round(self.display_fraction * 100))}%")
+                self.anim_source_id = None
+                return False
+            diff = self.target_fraction - self.display_fraction
+            if abs(diff) < 0.003:
+                self.display_fraction = self.target_fraction
+            else:
+                self.display_fraction += diff * 0.22
+            self.progress_bar.set_fraction(self.display_fraction)
+            self.stats_pct.set_text(f"{int(round(self.display_fraction * 100))}%")
+            return True
+
+        def _stop_timers(self) -> None:
             if self.timer_source_id is not None:
                 GLib.source_remove(self.timer_source_id)
                 self.timer_source_id = None
+            if self.anim_source_id is not None:
+                GLib.source_remove(self.anim_source_id)
+                self.anim_source_id = None
 
         def _tick_elapsed(self) -> bool:
             if not self.installing:
@@ -2780,10 +3131,12 @@ def run_gtk3() -> bool:
             asset = (rel.get("assets") or {}).get(fmt)
             if not asset:
                 return
-            self._stop_timer()
+            self._stop_timers()
             self.cancel_event.clear()
             self.installing = True
             self.install_started_at = time.monotonic()
+            self.target_fraction = 0.0
+            self.display_fraction = 0.0
             self.all_log_lines.clear()
             self.error_box.set_visible(False)
             self.cancel_btn.set_sensitive(True)
@@ -2793,10 +3146,10 @@ def run_gtk3() -> bool:
             self.stats_speed.set_text("")
             self.progress_bar.set_fraction(0.0)
             self.elapsed_lbl.set_text("0 s decorridos")
-            fmt_disp = ".AppImage" if fmt == "appimage" else f".{fmt}"
-            self.step_widgets[1]["title"].set_text(f"Baixando Custódia {rel['tag']} ({fmt_disp})")
+            self.step_widgets[1]["title"].set_text(f"Baixando o Custódia {rel['tag']}")
             self.stack.set_visible_child_name("install")
             self.timer_source_id = GLib.timeout_add(1000, self._tick_elapsed)
+            self.anim_source_id = GLib.timeout_add(33, self._tick_anim)
 
             threading.Thread(
                 target=self._install_worker,
@@ -2808,17 +3161,17 @@ def run_gtk3() -> bool:
             tmp_dir = Path(tempfile.mkdtemp(prefix="custodia-install-"))
             os.chmod(tmp_dir, 0o755)
             try:
-                self._set_step(0, self.distro_label)
-                self._set_progress(0.04)
+                self._set_step(0, f"Verificando compatibilidade em {self.distro_label}")
+                self._set_progress(0.04, speed_text="Preparando...")
                 self._append_log(f"Sistema detectado: {self.distro_label}")
                 stop_running_custodia()
 
                 pkg_path = tmp_dir / asset["name"]
-                self._set_step(1, asset["name"])
+                self._set_step(1, f"Versão {rel['tag']}")
                 self._append_log(f"Baixando {asset['url']}")
 
                 def on_dl(done: int, total: int, speed: float, eta: float) -> None:
-                    frac = 0.08 + 0.64 * (done / total) if total > 0 else 0.35
+                    frac = 0.08 + 0.62 * (done / total) if total > 0 else 0.35
                     b_txt = f"{format_bytes(done)} / {format_bytes(total)}" if total > 0 else format_bytes(done)
                     spd = f"{speed / (1024 * 1024):.1f} MB/s".replace(".", ",")
                     eta_s = format_eta(eta)
@@ -2828,23 +3181,23 @@ def run_gtk3() -> bool:
                 download_file(asset["url"], pkg_path, on_dl, self.cancel_event, int(asset.get("size") or 0))
                 os.chmod(pkg_path, 0o644)
 
-                self._set_step(2, "Conferindo SHA256SUMS.txt")
-                self._set_progress(0.76, speed_text="Validando...")
+                self._set_step(2, "Confirmando autenticidade do download")
+                self._set_progress(0.75, speed_text="Verificando...")
                 sums_asset = (rel.get("assets") or {}).get("sums")
                 verify_sha256(pkg_path, sums_asset["url"] if sums_asset else None, asset["name"], self._append_log)
 
-                self._set_step(3, "Aplicando pacote no sistema")
-                self._set_progress(0.86, speed_text="Instalando...")
+                self._set_step(3, "Aplicando pacote no computador...")
+                self._set_progress(0.84, speed_text="Instalando...")
                 on_sub = lambda text: self._set_step_sub(3, text)
                 if fmt == "deb":
-                    install_deb(pkg_path, self._append_log, on_sub)
+                    self.priv_session.run_package_install("install_deb", pkg_path, self._append_log, on_sub)
                 elif fmt == "rpm":
-                    install_rpm(pkg_path, self._append_log, on_sub)
+                    self.priv_session.run_package_install("install_rpm", pkg_path, self._append_log, on_sub)
                 else:
                     install_appimage(pkg_path, self._append_log, on_sub)
 
-                self._set_step(4, "Removendo arquivo do instalador")
-                self._set_progress(0.96, speed_text="Finalizando...")
+                self._set_step(4, "Removendo arquivos temporários")
+                self._set_progress(0.97, speed_text="Finalizando...")
                 deleted = self_delete_installer(self._append_log)
 
                 self._set_step(5)
@@ -2859,18 +3212,19 @@ def run_gtk3() -> bool:
                 shutil.rmtree(tmp_dir, ignore_errors=True)
 
         def _show_done(self, tag: str, fmt: str, deleted: bool) -> bool:
-            self._stop_timer()
-            fmt_name = ".AppImage" if fmt == "appimage" else f".{fmt}"
+            self.done_pill.set_text(f"Custódia {tag} pronto para usar")
+            self.done_item_ver["sub"].set_text(f"Versão {tag} configurada no {self.distro_label}")
             if deleted:
-                self.done_sub.set_text("Tudo pronto para usar. O arquivo do instalador foi removido automaticamente.")
+                self.done_item_cleanup["title"].set_text("Instalador removido automaticamente")
+                self.done_item_cleanup["sub"].set_text("O arquivo usado na instalação já foi apagado da sua pasta")
             else:
-                self.done_sub.set_text("Tudo pronto. O Custódia já está disponível no menu de aplicativos.")
-            self.done_summary.set_text(f"Versão instalada: Custódia {tag} ({fmt_name}) no {self.distro_label}.")
+                self.done_item_cleanup["title"].set_text("Instalação finalizada")
+                self.done_item_cleanup["sub"].set_text("Tudo configurado e pronto para abrir")
             self.stack.set_visible_child_name("done")
             return False
 
         def _show_error(self, message: str) -> bool:
-            self._stop_timer()
+            self._stop_timers()
             self.error_lbl.set_text(message)
             self.error_box.set_visible(True)
             self.cancel_btn.set_sensitive(True)
@@ -2880,6 +3234,7 @@ def run_gtk3() -> bool:
 
         def _on_open_and_close(self, *_args) -> None:
             launch_custodia()
+            self.priv_session.close()
             Gtk.main_quit()
 
     CustodiaInstallerGtk3()
@@ -2919,6 +3274,7 @@ def run_cli_fallback() -> None:
     asset = rel["assets"][fmt]
     tmp_dir = Path(tempfile.mkdtemp(prefix="custodia-install-"))
     os.chmod(tmp_dir, 0o755)
+    priv = PrivilegedSession()
     try:
         pkg = tmp_dir / asset["name"]
         print(f"Baixando {asset['name']}...")
@@ -2928,14 +3284,15 @@ def run_cli_fallback() -> None:
         verify_sha256(pkg, sums["url"] if sums else None, asset["name"], print)
         stop_running_custodia()
         if fmt == "deb":
-            install_deb(pkg, print)
+            priv.run_package_install("install_deb", pkg, print)
         elif fmt == "rpm":
-            install_rpm(pkg, print)
+            priv.run_package_install("install_rpm", pkg, print)
         else:
             install_appimage(pkg, print)
         self_delete_installer(print)
         print("Custódia instalado com sucesso!")
     finally:
+        priv.close()
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 

@@ -28,9 +28,11 @@ chmod 755 "${APPDIR}/usr/bin/custodia-installer.py"
 if [[ -f "${ASSETS_DIR}/custodia-icon.png" ]]; then
   cp -f "${ASSETS_DIR}/custodia-icon.png" "${APPDIR}/custodia-installer.png"
   cp -f "${ASSETS_DIR}/custodia-icon.png" "${APPDIR}/usr/share/icons/hicolor/256x256/apps/custodia-installer.png"
+  cp -f "${ASSETS_DIR}/custodia-icon.png" "${APPDIR}/usr/share/icons/hicolor/256x256/apps/com.tundralab.CustodiaInstaller.png"
 fi
 if [[ -f "${ASSETS_DIR}/custodia-icon.svg" ]]; then
   cp -f "${ASSETS_DIR}/custodia-icon.svg" "${APPDIR}/usr/share/icons/hicolor/scalable/apps/custodia-installer.svg"
+  cp -f "${ASSETS_DIR}/custodia-icon.svg" "${APPDIR}/usr/share/icons/hicolor/scalable/apps/com.tundralab.CustodiaInstaller.svg"
 fi
 if [[ -f "${SITE_BANNER}" ]]; then
   cp -f "${SITE_BANNER}" "${APPDIR}/custodia-banner.jpg"
@@ -52,6 +54,7 @@ cp -f "${APPDIR}/custodia-installer.desktop" "${APPDIR}/usr/share/applications/c
 cat > "${APPDIR}/AppRun" <<'EOF'
 #!/usr/bin/env bash
 HERE="$(dirname "$(readlink -f "$0")")"
+export XDG_DATA_DIRS="${HERE}/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 if [[ -f "${HERE}/custodia-installer.png" ]]; then
   export CUSTODIA_INSTALLER_ICON="${HERE}/custodia-installer.png"
 elif [[ -f "${HERE}/usr/share/icons/hicolor/scalable/apps/custodia-installer.svg" ]]; then
