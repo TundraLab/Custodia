@@ -21,7 +21,7 @@
 
 ## Quality
 
-- **Build & distribution:** clean `.NET 10.0` compilation for Linux `x86_64` with native `.rpm` and `.AppImage` packaging verified by SHA-256
+- **Build & distribution:** clean `.NET 10.0` compilation for Linux `x86_64` with native **`.deb`**, **`.rpm`**, **`.AppImage`** packages and a lightweight **`.run`** graphical installer (~30 KB), all verified by SHA-256
 - **Test suite:** **94 xUnit unit & UI tests passing (`0` failures)** covering sync engine, transfer queue & retry, SQLite persistence, OAuth2 account isolation, updater, support diagnostics sanitization, terms/privacy acceptance, and lifecycle emails
 - **Primary platform:** Linux `x86_64` (Fedora Workstation/KDE, Pop!_OS GNOME/COSMIC, and KDE Plasma 5/6)
 - **Technical documentation:** live OpenAPI `3.0.3` (`GET /api/v1/openapi.json`), [API.md](API.md), [Custodia-API.en.pdf](Custodia-API.en.pdf), and full history in [CHANGELOG.md](../../CHANGELOG.md)
@@ -61,31 +61,31 @@
 
 ## Systems and Formats
 
-- Tested on **Fedora** and **Pop!_OS** (including modest hardware), with support for **GNOME**, **COSMIC**, and **KDE Plasma 5/6** — see the full matrix in **[COMPATIBILITY.md](COMPATIBILITY.md)**.
-- **Distributed formats:** native **`.rpm`** package (Fedora / RHEL / openSUSE) and standalone **`.AppImage` (`x86_64`)** with the `.NET 10` runtime bundled (Pop!_OS, Ubuntu, Debian, and other Linux distros, without installing `.NET` dependencies), both verified by **SHA-256** (`SHA256SUMS.txt`).
+- Tested on **Fedora**, **Ubuntu**, and **Pop!_OS** (including modest hardware), with support for **GNOME**, **COSMIC**, and **KDE Plasma 5/6** — see the full matrix in **[COMPATIBILITY.md](COMPATIBILITY.md)**.
+- **Distributed formats:** lightweight graphical installer **`.run`** (~30 KB, pick version and format), native **`.deb`** package (Ubuntu / Debian / Pop!_OS / Linux Mint), native **`.rpm`** package (Fedora / RHEL / openSUSE), and standalone **`.AppImage` (`x86_64`)** with the `.NET 10` runtime bundled, all verified by **SHA-256** (`SHA256SUMS.txt`).
 
 ### System Requirements
 
 | Resource | Minimum | Recommended |
 | :--- | :--- | :--- |
-| **OS / Architecture** | Linux `x86_64` (Wayland or X11) | Fedora Workstation/KDE or Pop!_OS (GNOME/COSMIC) |
+| **OS / Architecture** | Linux `x86_64` (Wayland or X11) | Fedora Workstation/KDE, Ubuntu, or Pop!_OS (GNOME/COSMIC) |
 | **Processor** | Dual-core `x86_64` | Quad-core `x86_64` |
 | **Memory (RAM)** | `2 GB` | `4 GB` or more |
 | **Disk space** | `200 MB` free *(+ space for your synced files)* | SSD with headroom for cache and synced files |
-| **Extra dependencies** | None for `.rpm`; `libfuse2` for `.AppImage` *(or `--appimage-extract-and-run`)* | `poppler-utils`, `ghostscript`, `ffmpeg`, `libreoffice`, `ImageMagick` *(for full media/doc previews)* |
+| **Extra dependencies** | None for `.deb`/`.rpm`; `libfuse2` for `.AppImage` *(or `--appimage-extract-and-run`)* | `poppler-utils`, `ghostscript`, `ffmpeg`, `libreoffice`, `ImageMagick` *(for full media/doc previews)* |
 
 ## What the App Does
 
-- **My Files with full right-click context menu:** browse **My Drive**, **Local Folders**, and **Trash** in List or Grid mode with thumbnails, multi-selection (`Ctrl + Click`, `Shift + Click`, `Ctrl + A`), drag-and-drop or multi-file upload, and context menus on both files/folders and empty areas (**New Folder**, **Upload File**, **Customize folder**, **Refresh**, **Back**, **Select All**, and **Move to Trash** highlighted in red).
+- **Clean My Files with Shared With Me and Trash:** browse **My Drive**, **Shared with me**, **Local Folders**, and **Trash** in List or Grid mode with fast background thumbnails, multi-selection (`Ctrl + Click`, `Shift + Click`, `Ctrl + A`), drag-and-drop uploads, **Save As** destination picker, and right-click menus for files, folders, and empty space.
+- **Sharing links and permissions:** generate or revoke shareable Google Drive links (`anyone` view or edit) and invite people by email directly from the app.
 - **Folder customization (color, symbol, and nickname):** customize directly via right-click in **My Files** or on the **Sync Folders** tab, with colors and icons preserved across sessions.
-- **Built-in multimedia preview:** images, videos (thumbnail, duration, and player), audio (waveform and built-in player), PDFs with page navigation, Office documents (`DOCX`, `XLSX`, `PPTX`, `ODT`, `ODS`, `ODP`), Google Workspace files, and text/code.
-- **Non-blocking queue and dynamic tray icon:** queue with no 200-item cap, expanded history, animated banners on upload/download failures, and a pulsing top-bar icon that grows and switches color/symbol by state (`↑` blue upload, `↓` green download, `✕` red delete, `↻` syncing, and `!` error), synchronized with the native menu without freezing stale statuses.
+- **Built-in multimedia preview:** images, videos (including **Google Vids**), audio with built-in player, PDFs with page navigation, Office documents (`DOCX`, `XLSX`, `PPTX`, `ODT`, `ODS`, `ODP`), Google Workspace files, and text/code.
+- **Transfer queue with filters, retry, and persistent resume:** filter by all, uploads, downloads, and failures, retry failed transfers with one click, resume interrupted large uploads (`UploadSessionUri`) and partial downloads (`.tundratmp.*` with HTTP `Range`), and set an optional bandwidth limit.
 - **Flexible per-folder sync:** **Two-Way (`PC <-> Drive`)** or **One-Way Backup (`PC -> Drive`)** mode, multiple mappings preserving names and empty subfolders, MD5/SHA256 hash validation, conflict policy, ignore patterns, and continuous real-time local change monitoring.
 - **Safe Trash:** deletions in synced folders send items to Google Drive Trash (or to the system FreeDesktop Trash compatible with GNOME Files and KDE Dolphin); permanent deletion only happens manually inside Trash.
-- **Advanced multi-account management:** dedicated, human-readable folders per email in `~/.config/custodia/contas/<email>/` (`credentials.json`, `conta.json`, and `pastas-sincronizadas.json`), automatic detection of `client_secret_*.json` in `~/Downloads`, drag-and-drop import in Settings, `Project ID` / `Client ID` inspection, fast switching, reconnection, and automatic folder preservation when removing/re-adding an account (with an explicit option to delete the configuration).
-- **TundraLab welcome and revocation notices:** optional automatic emails sent from **`contato.tundralab@gmail.com`** via TundraLab's dedicated service, without needing to enable the Gmail API on users' OAuth projects.
-- **Support and updates on the About tab:** scheduled release check with offline protection, unified form with **Bug / Error** (`&labels=bug`) vs **Suggestion** (`&labels=enhancement`) selector, optional sanitized technical diagnostics for bug reports (preview via **View data** and safe URL limit preserving the full log via **Copy text**).
-- **Language, zoom, RAM, and sound:** PT-BR and EN-US, zoom from 100% to 300% (`Ctrl++`, `Ctrl+-`, `Ctrl+0`), periodic RAM cleaner, and 6 synthesized D-Bus notification ringtones (or silent mode).
+- **Advanced multi-account management:** dedicated folders per email in `~/.config/custodia/contas/<email>/` (`credentials.json`, `conta.json`, and `pastas-sincronizadas.json`), automatic detection of `client_secret_*.json` in `~/Downloads`, drag-and-drop import in Settings, fast switching, reconnection, and folder preservation when removing/re-adding an account.
+- **Instant auto-save Settings, language, zoom, and sound:** changes in Settings save automatically without a manual Save button, with PT-BR and EN-US, zoom from 100% to 300%, periodic RAM cleaner, and synthesized D-Bus notification sounds.
+- **Support and updates on the About tab:** scheduled release check with offline protection, unified Bug / Suggestion form, and optional sanitized diagnostics.
 
 ## Architecture
 
@@ -111,7 +111,7 @@
 - **Avalonia UI (`11.3.8`):** chosen to deliver a fluid, consistent UI across GNOME, COSMIC, and KDE Plasma (X11 and Wayland) with low memory footprint and testable MVVM architecture.
 - **SQLite + Dapper:** chosen for a lightweight, transactional (ACID), low-latency local relational database without requiring an external service installed on the user's PC.
 - **Direct Google Drive API v3:** chosen so files and tokens travel strictly between the user's computer and Google Drive, with no intermediary servers.
-- **AppImage and RPM (`x86_64`):** `.rpm` provides native integration on Fedora and derivatives, while `.AppImage` ensures universal execution on Ubuntu/Pop!_OS and other distros without requiring an external SDK or runtime.
+- **Native `.deb`, `.rpm`, and `.AppImage` (`x86_64`) + lightweight `.run` installer:** `.deb` and `.rpm` provide native integration on Debian/Ubuntu/Mint/Pop!_OS and Fedora/RHEL/openSUSE, `.AppImage` runs portably across distros, and the ~30 KB graphical `.run` installer lets users choose both version and format.
 - **Local API on `127.0.0.1:5080`:** restricts automations and AI agents to the local machine, allowing file operations without exposing OAuth tokens or opening external network ports.
 
 ## Sync Modes
@@ -127,13 +127,13 @@ Each mapped folder can operate in **Two-Way Mirror (`PC <-> Drive`)** or **One-W
 
 ## Installation
 
-### 1. Custom Graphical Installer (`Custódia by TundraLab` — Recommended)
+### 1. Lightweight Graphical Installer (`Custódia by TundraLab`)
 
-The simplest and recommended way to install with zero terminal steps (does not depend on AppImage or FUSE):
+A lightweight graphical installer (~30 KB, no AppImage or FUSE required) where you pick the release version and package format (`.deb`, `.rpm`, or `.AppImage`):
 
 1. Download the official installer: **[Custodia-Installer-x86_64.run](https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-Installer-x86_64.run)**
 2. Right-click the file → **Properties** → allow executing as a program *(or `chmod +x Custodia-Installer-x86_64.run`)*, then open it.
-3. The graphical installer detects your Linux distribution (**`.deb`** on Ubuntu/Pop!_OS/Mint/Debian, **`.rpm`** on Fedora/RHEL/openSUSE, or universal **`.AppImage`**), verifies the **SHA-256** checksum, installs silently in the background, creates shortcuts, and **auto-deletes itself once finished**.
+3. Choose the version and format (`.deb`, `.rpm`, or `.AppImage`). The installer downloads the package, verifies **SHA-256**, installs in the background, creates shortcuts, and **auto-deletes itself once finished**.
 
 <details>
 <summary>Other installation methods (direct .deb / .rpm / .AppImage packages, terminal, and advanced options)</summary>
@@ -254,7 +254,7 @@ Complete guide with examples, Function Calling schemas, and Python client: **[Cu
 Copyright © 2026 TundraLab and Gustavo Henrique Novaes Gomes (@GustaHerin).
 
 - **Source Code Access (Portfolio, Study, and Audit):** Although this repository is public — technically allowing users to view, clone locally, or fork on GitHub strictly for viewing, reading, study, and technical evaluation — it is **not open source**. No permission or license is granted to copy, reproduce, modify, adapt, create derivative works, sublicense, distribute, publish, or use excerpts of the source code (in whole or in part) in other projects (commercial or otherwise) without prior express written authorization from the rights holders.
-- **Use of Official Binaries (`.AppImage` / `.rpm`):** End users receive a free, non-exclusive, non-transferable, revocable license to download, install, and run the official packages published under [Releases](https://github.com/TundraLab/Custodia/releases), strictly for personal or internal corporate use; redistribution (free or commercial), resale, offering as a service (SaaS), modification, or reverse engineering beyond limits expressly permitted by law is prohibited.
+- **Use of Official Binaries (`.deb` / `.rpm` / `.AppImage` / `.run`):** End users receive a free, non-exclusive, non-transferable, revocable license to download, install, and run the official packages published under [Releases](https://github.com/TundraLab/Custodia/releases), strictly for personal or internal corporate use; redistribution (free or commercial), resale, offering as a service (SaaS), modification, or reverse engineering beyond limits expressly permitted by law is prohibited.
 - **External Contributions, Trademarks, and Third Parties:** Any suggestions, bug reports, or Pull Requests grant the authors an irrevocable, royalty-free license to incorporate them into the Software; this license does not authorize use of the names **"TundraLab"**, **"Custódia"**, or visual identity, and third-party libraries remain governed by their respective original licenses.
 
 Read the full binding text in [LICENSE](../../LICENSE).

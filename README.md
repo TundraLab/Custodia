@@ -21,7 +21,7 @@
 
 ## Qualidade
 
-- **Build e distribuição:** compilação limpa em `.NET 10.0` para Linux `x86_64` com empacotamento nativo `.rpm` e `.AppImage` verificado por SHA-256
+- **Build e distribuição:** compilação limpa em `.NET 10.0` para Linux `x86_64` com pacotes nativos **`.deb`**, **`.rpm`**, **`.AppImage`** e instalador gráfico leve **`.run`** (~30 KB), todos verificados por SHA-256
 - **Suíte de testes:** **94 testes unitários e de interface xUnit aprovados (`0` falhas)** cobrindo motor de sincronização, fila e retomada de transferências, persistência SQLite, isolamento de contas OAuth2, atualizador, sanitização de suporte, aceite de termos/privacidade e e-mails de ciclo de vida
 - **Plataforma principal:** Linux `x86_64` (Fedora Workstation/KDE, Pop!_OS GNOME/COSMIC e KDE Plasma 5/6)
 - **Documentação técnica:** OpenAPI `3.0.3` em tempo real (`GET /api/v1/openapi.json`), guia [docs/API.md](docs/API.md), [Custodia-API.pdf](Custodia-API.pdf) e histórico completo em [CHANGELOG.md](CHANGELOG.md)
@@ -61,31 +61,30 @@
 
 ## Sistemas e formatos
 
-- Testado em **Fedora** e **Pop!_OS** (incluindo hardware modesto), com suporte aos ambientes **GNOME**, **COSMIC** e **KDE Plasma 5/6** — veja a matriz completa em **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)**.
-- **Formatos distribuídos:** pacote nativo **`.rpm`** (Fedora / RHEL / openSUSE) e **`.AppImage` (`x86_64`)** independente com o runtime `.NET 10` embutido (Pop!_OS, Ubuntu, Debian e demais distribuições Linux, sem instalar dependências do `.NET`), ambos verificados por **SHA-256** (`SHA256SUMS.txt`).
+- Testado em **Fedora**, **Ubuntu**, **Pop!_OS**, **Linux Mint** e **Debian** (incluindo hardware modesto), com suporte aos ambientes **GNOME**, **COSMIC** e **KDE Plasma 5/6** — veja a matriz completa em **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)**.
+- **Formatos distribuídos:** instalador gráfico leve **`.run`** (~30 KB, escolhe versão e formato e se apaga ao concluir), pacote nativo **`.deb`** (Ubuntu / Debian / Pop!_OS / Linux Mint), pacote nativo **`.rpm`** (Fedora / RHEL / openSUSE) e **`.AppImage` (`x86_64`)** portátil, todos verificados por **SHA-256** (`SHA256SUMS.txt`).
 
 ### Requisitos do sistema
 
 | Recurso | Mínimo | Recomendado |
 | :--- | :--- | :--- |
-| **Sistema / Arquitetura** | Linux `x86_64` (Wayland ou X11) | Fedora Workstation/KDE ou Pop!_OS (GNOME/COSMIC) |
+| **Sistema / Arquitetura** | Linux `x86_64` (Wayland ou X11) | Fedora, Ubuntu, Pop!_OS ou Linux Mint (GNOME/COSMIC/KDE) |
 | **Processador** | Dual-core `x86_64` | Quad-core `x86_64` |
 | **Memória RAM** | `2 GB` | `4 GB` ou mais |
 | **Espaço em disco** | `200 MB` livres *(+ espaço dos seus arquivos)* | SSD com folga para cache e arquivos sincronizados |
-| **Dependências extras** | Nenhuma no `.rpm`; `libfuse2` no `.AppImage` *(ou `--appimage-extract-and-run`)* | `poppler-utils`, `ghostscript`, `ffmpeg`, `libreoffice`, `ImageMagick` *(para pré-visualização completa)* |
+| **Dependências extras** | Nenhuma no `.deb`/`.rpm`; `libfuse2` no `.AppImage` *(ou `--appimage-extract-and-run`)* | `poppler-utils`, `ghostscript`, `ffmpeg`, `libreoffice`, `ImageMagick` *(para pré-visualização completa)* |
 
 ## O que o aplicativo faz
 
-- **Meus Arquivos com menu completo de botão direito:** navegação por **Meu Drive**, **Pastas Locais** e **Lixeira** em modo Lista ou Grade com miniaturas, seleção múltipla (`Ctrl + Clique`, `Shift + Clique`, `Ctrl + A`), upload por arrastar e soltar ou seleção múltipla e menu de contexto tanto sobre arquivos/pastas quanto em áreas vazias (**Nova Pasta**, **Enviar Arquivo**, **Personalizar pasta**, **Atualizar**, **Voltar**, **Selecionar Tudo** e **Mover para Lixeira** destacado em vermelho).
+- **Meus Arquivos redesenhado com compartilhamento e favoritos:** navegue por **Google Drive**, **Sincronizados**, **Favoritos**, **Compartilhados comigo** e **Lixeira** em Lista ou Grade com miniaturas rápidas fora da thread da UI, ícones proprietários da TundraLab, seleção múltipla, **Salvar como...** para escolher a pasta destino ao baixar, upload por arrastar e soltar e painel de **Compartilhamento e permissões** (link público de leitura/edição, revogação e convites por e-mail).
 - **Personalização de pastas (cor, símbolo e apelido):** personalize diretamente com o botão direito em **Meus Arquivos** ou na aba **Pastas de Sincronização**, com cores e ícones preservados entre sessões.
-- **Pré-visualização multimídia integrada:** imagens, vídeos (miniatura, duração e player), áudios (forma de onda e player interno), PDFs com navegação por páginas, documentos Office (`DOCX`, `XLSX`, `PPTX`, `ODT`, `ODS`, `ODP`), arquivos Google Workspace e texto/código.
-- **Fila e ícone dinâmico na bandeja sem travamento:** fila sem teto de 200 itens, histórico expandido, banners animados em falhas de upload/download e ícone pulsante na barra superior que cresce e troca de cor/símbolo conforme o estado (`↑` upload azul, `↓` download verde, `✕` exclusão vermelho, `↻` sincronização e `!` erro), sincronizado com o menu nativo sem congelar status antigos.
-- **Sincronização flexível por pasta:** modo **Bidirecional (`PC <-> Drive`)** ou **Backup Unidirecional (`PC -> Drive`)**, mapeamento múltiplo preservando nomes e subpastas vazias, validação por hash MD5/SHA256, política de conflitos, padrões ignorados e monitoramento contínuo de alterações locais em tempo real.
-- **Lixeira segura:** exclusões em pastas sincronizadas enviam os itens para a Lixeira do Google Drive (ou para a Lixeira FreeDesktop do sistema compatível com GNOME Files e KDE Dolphin); exclusões permanentes ocorrem apenas manualmente na Lixeira.
-- **Gestão avançada de múltiplas contas:** pastas dedicadas e legíveis por e-mail em `~/.config/custodia/contas/<email>/` (`credentials.json`, `conta.json` e `pastas-sincronizadas.json`), detecção automática de `client_secret_*.json` em `~/Downloads`, importação por arrastar e soltar em Configurações, inspeção de `Project ID` / `Client ID`, alternância rápida, reconexão e preservação automática de pastas ao remover/readicionar uma conta (com opção explícita para excluir a configuração).
-- **Avisos de boas-vindas e revogação TundraLab:** envio opcional automático a partir de **`contato.tundralab@gmail.com`** via serviço dedicado TundraLab, sem precisar ativar a Gmail API nos projetos OAuth dos usuários.
-- **Suporte e atualizações na aba Sobre:** verificação agendada de releases com proteção offline, formulário unificado com seletor **Bug / Erro** (`&labels=bug`) vs **Sugestão** (`&labels=enhancement`), diagnóstico técnico opcional e sanitizado apenas em relatórios de bug (prévia via **Ver dados** e limite seguro de URL preservando o log completo em **Copiar texto**).
-- **Idioma, zoom, RAM e som:** PT-BR e EN-US, zoom de 100% a 300% (`Ctrl++`, `Ctrl+-`, `Ctrl+0`), limpador periódico de RAM e 6 variações de toques sintetizados nas notificações D-Bus (ou modo silencioso).
+- **Pré-visualização multimídia integrada:** imagens, vídeos (inclusive **Google Vids** via download direto), áudios (forma de onda e player interno), PDFs com navegação por páginas, documentos Office (`DOCX`, `XLSX`, `PPTX`, `ODT`, `ODS`, `ODP`), arquivos Google Workspace (Docs, Sheets, Slides, Drawings) e texto/código.
+- **Fila de Transferências com filtros, retomada e limite de banda:** filtre por **Todos**, **Envios**, **Downloads** e **Falhas**, retome itens individuais ou todas as falhas com um clique, conte com retomada persistente de envios/downloads grandes após queda de internet ou fechamento do app e configure limite opcional de velocidade em **Configurações**.
+- **Sincronização flexível por pasta:** modo **Bidirecional (`PC <-> Drive`)** ou **Backup Unidirecional (`PC -> Drive`)**, mapeamento múltiplo preservando nomes e subpastas vazias, validação por hash MD5/SHA256, política de conflitos, padrões ignorados e monitoramento contínuo em tempo real.
+- **Lixeira segura:** exclusões em pastas sincronizadas enviam os itens para a Lixeira do Google Drive ou para a Lixeira do sistema (GNOME Files / KDE Dolphin); exclusões permanentes ocorrem apenas manualmente na Lixeira.
+- **Gestão avançada de múltiplas contas:** pastas dedicadas por e-mail em `~/.config/custodia/contas/<email>/`, detecção automática de `client_secret_*.json` em `~/Downloads`, importação por arrastar e soltar em Configurações, alternância rápida e preservação automática das pastas mapeadas.
+- **Configurações com salvamento automático, temas e cores:** alterações salvas instantaneamente, tema **Escuro**, **Claro** ou **Automático (Sistema)**, 6 cores de destaque, PT-BR / EN-US, zoom de 100% a 300%, limpador periódico de RAM e 6 toques sintetizados nas notificações.
+- **Sobre, atualizador e GitHub:** verificação agendada de novas versões com instalador gráfico embutido, atalho visível para o GitHub e formulário unificado para relatar erros ou enviar sugestões.
 
 ## Arquitetura
 
@@ -111,7 +110,7 @@
 - **Avalonia UI (`11.3.8`):** escolhida para entregar uma UI fluida e consistente entre GNOME, COSMIC e KDE Plasma (X11 e Wayland) com baixo consumo de memória e arquitetura MVVM testável.
 - **SQLite + Dapper:** escolhidos por oferecerem banco relacional local leve, transacional (ACID) e de baixa latência sem exigir serviço externo instalado no PC do usuário.
 - **Google Drive API v3 direta:** escolhida para que arquivos e tokens trafeguem somente entre o computador do usuário e o Google Drive, sem servidores intermediários.
-- **AppImage e RPM (`x86_64`):** `.rpm` oferece integração nativa no Fedora e derivados, enquanto o `.AppImage` garante execução universal em Ubuntu/Pop!_OS e outras distros sem exigir SDK ou runtime externo.
+- **Pacotes `.deb`, `.rpm`, `.AppImage` e instalador leve `.run` (`x86_64`):** `.deb` e `.rpm` entregam integração nativa no Ubuntu/Debian/Mint/Pop!_OS e Fedora/openSUSE, o `.AppImage` cobre qualquer outra distro e o instalador `.run` (~30 KB) baixa e instala a versão escolhida sem exigir terminal.
 - **API Local em `127.0.0.1:5080`:** restringe automações e agentes de IA à própria máquina, permitindo operar arquivos sem expor tokens OAuth nem abrir portas na rede externa.
 
 ## Modos de sincronização
@@ -127,13 +126,13 @@ Cada pasta mapeada pode operar em **Espelho Bidirecional (`PC <-> Drive`)** ou *
 
 ## Instalação
 
-### 1. Instalador Gráfico Personalizado (`Custódia by TundraLab` — Recomendado)
+### 1. Instalador Gráfico Leve (`Custódia by TundraLab`)
 
-A forma mais simples e recomendada de instalar sem usar o terminal (não depende de AppImage nem FUSE):
+Um instalador gráfico leve (~30 KB, sem AppImage nem FUSE) onde você escolhe a versão do lançamento e o formato de instalação (`.deb`, `.rpm` ou `.AppImage`):
 
 1. Baixe o instalador oficial: **[Custodia-Installer-x86_64.run](https://github.com/TundraLab/Custodia/releases/latest/download/Custodia-Installer-x86_64.run)**
 2. Clique com o botão direito no arquivo → **Propriedades** → marque **Permitir execução** *(ou `chmod +x Custodia-Installer-x86_64.run`)* e abra o arquivo.
-3. O instalador gráfico detecta sua distribuição Linux (**`.deb`** no Ubuntu/Pop!_OS/Mint/Debian, **`.rpm`** no Fedora/RHEL/openSUSE ou **`.AppImage`** universal), valida via **SHA-256**, instala em segundo plano, cria os atalhos e **se apaga automaticamente ao concluir**.
+3. Escolha a versão e o formato (`.deb` para Ubuntu/Pop!_OS/Mint/Debian, `.rpm` para Fedora/RHEL/openSUSE ou `.AppImage` portátil). O instalador baixa o pacote escolhido, valida via **SHA-256**, instala em segundo plano, cria os atalhos e **se apaga automaticamente ao concluir**.
 
 <details>
 <summary>Outros métodos de instalação (pacotes diretos .deb / .rpm / .AppImage, terminal e opções avançadas)</summary>
@@ -254,7 +253,7 @@ Guia completo com exemplos, schemas de Function Calling e cliente Python: **[Cus
 Copyright © 2026 TundraLab e Gustavo Henrique Novaes Gomes (@GustaHerin).
 
 - **Acesso ao Código-Fonte (Portfólio, Estudo e Auditoria):** Embora este repositório seja público — permitindo tecnicamente que usuários visualizem, clonem localmente ou criem *fork* no GitHub estritamente para visualização, leitura, estudo e avaliação técnica —, **não é código aberto (*open source*)**. Nenhuma permissão ou licença é concedida para copiar, reproduzir, modificar, adaptar, criar obras derivadas, sublicenciar, distribuir, publicar ou utilizar trechos do código-fonte (no todo ou em parte) em outros projetos (comerciais ou não) sem autorização prévia e expressa por escrito dos titulares.
-- **Uso dos Binários Oficiais (`.AppImage` / `.rpm`):** Usuários finais recebem licença gratuita, não exclusiva, intransferível e revogável para baixar, instalar e executar os pacotes oficiais publicados em [Releases](https://github.com/TundraLab/Custodia/releases), exclusivamente para uso pessoal ou corporativo interno, sendo vedada a redistribuição (gratuita ou comercial), revenda, oferta como serviço (SaaS), modificação ou engenharia reversa fora dos limites expressos em lei.
+- **Uso dos Binários Oficiais (`.deb` / `.rpm` / `.AppImage`):** Usuários finais recebem licença gratuita, não exclusiva, intransferível e revogável para baixar, instalar e executar os pacotes oficiais publicados em [Releases](https://github.com/TundraLab/Custodia/releases), exclusivamente para uso pessoal ou corporativo interno, sendo vedada a redistribuição (gratuita ou comercial), revenda, oferta como serviço (SaaS), modificação ou engenharia reversa fora dos limites expressos em lei.
 - **Contribuições Externas, Marcas e Terceiros:** Eventuais sugestões, relatórios de erro ou Pull Requests concedem aos autores licença irrevogável e livre de royalties para incorporação ao Software; esta licença não autoriza o uso dos nomes **"TundraLab"**, **"Custódia"** ou da identidade visual, e bibliotecas de terceiros seguem suas respectivas licenças originais.
 
 Consulte o texto integral e vinculante em [LICENSE](./LICENSE).

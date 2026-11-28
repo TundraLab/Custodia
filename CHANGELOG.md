@@ -4,19 +4,14 @@ Todas as mudanças principais do Custódia seguem versionamento semântico (`MAJ
 
 ## [4.0.0] - 2026-11-27
 
-### Adicionado
-- **Instalador gráfico personalizado nativo (`.run`) e suporte nativo a `.deb`:** novo instalador gráfico próprio (`Custodia-Installer-x86_64.run`, sem depender de AppImage/FUSE) que detecta automaticamente sua distribuição (`.deb` para Ubuntu/Debian/Pop!_OS/Mint, `.rpm` para Fedora/RHEL/openSUSE ou `.AppImage` universal), valida via SHA-256, instala em segundo plano e se remove automaticamente ao concluir.
-- **Aba "Compartilhados comigo" e painel de Compartilhamento:** liste, navegue e baixe arquivos compartilhados com sua conta, gere ou revogue links públicos de leitura/edição e convide colaboradores por e-mail diretamente em **Meus Arquivos**.
-- **Filtros e retomada na Fila de Transferências:** filtre facilmente por **Envios**, **Downloads** e **Falhas**, retome transferências individuais ou todas as falhas com um clique e conte com retomada automática de envios e downloads grandes caso a conexão caia ou o aplicativo feche.
-- **Escolha rápida de pasta ao baixar e limite de banda:** nova opção **Salvar como...** em **Meus Arquivos** e controle opcional de velocidade máxima nas configurações de sincronização.
-
-### Alterado
-- **Aba Meus Arquivos redesenhada:** interface mais limpa e organizada em linha única, com carregamento instantâneo de miniaturas em grade, pré-visualização simplificada e ícones proprietários da TundraLab em toda a barra, menus e cartões.
-- **Configurações com salvamento automático:** todas as preferências passam a ser aplicadas e salvas instantaneamente ao editar, removendo botões manuais de recarregar e salvar.
-- **Botão direto para o repositório no GitHub:** acesso visível na aba **Sobre** para abrir o projeto, acompanhar lançamentos ou enviar sugestões.
-
-### Corrigido
-- **Retomada de falhas e animações de interface:** corrigido o fluxo de retomada quando uma sincronização falha com erro, corrigido o ícone do botão de tentar novamente e restauradas todas as animações giratórias de carregamento e transferência em torno do eixo central.
+### Novidades
+- **Instalador leve para Linux (`Custodia-Installer-x86_64.run`):** interface gráfica leve (~30 KB, sem AppImage nem FUSE) onde você escolhe a versão e o formato (`.deb`, `.rpm` ou `.AppImage`). Ele baixa o pacote, valida a integridade, instala e se apaga sozinho ao terminar.
+- **Pacote `.deb` nativo:** suporte oficial em `.deb` para Ubuntu, Debian, Pop!_OS e Linux Mint, além de `.rpm` e `.AppImage`.
+- **Compartilhamento e aba "Compartilhados comigo":** navegue e baixe arquivos compartilhados com sua conta, gere ou remova links públicos (leitura ou edição) e convide pessoas por e-mail direto pelo app.
+- **Meus Arquivos renovado:** visual mais limpo em linha única, miniaturas carregando rápido na grade, ícones próprios da TundraLab, suporte a Google Vids e opção **Salvar como...** para escolher a pasta ao baixar.
+- **Fila de Transferências com filtros e retomada:** filtre por envios, downloads ou falhas, retome qualquer item com erro em um clique, retome envios/downloads grandes se a internet cair e limite a velocidade nas configurações se quiser.
+- **Configurações com salvamento automático:** as opções passam a salvar na hora, sem botões manuais de recarregar ou salvar, e a aba **Sobre** agora tem atalho direto para o repositório no GitHub.
+- **Correções de estabilidade e fluidez:** eliminados travamentos durante transferências e decodificação de miniaturas, corrigida a direção da animação de reload e removidos ajustes visuais pendentes na Lixeira e na fila.
 
 ## [3.0.5] - 2026-11-26
 
